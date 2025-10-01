@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Candy Match — Swipe, Pop & Fall</title>
+<style>
+  :root{ --cols:8; --rows:8; --gap:8px; --tile-size:56px; --accent:#ff6aa8; --pop-dur:420ms; --fall-dur:360ms; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#fff9fc,#f2f7ff)}
+  .stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+  .card{width:100%;max-width:980px;height:calc(100vh - 24px);padding:14px;border-radius:14px;background:#fff;box-shadow:0 20px 60px rgba(20,20,50,0.06);display:flex;flex-direction:column;gap:12px;overflow:hidden}
+  header{display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:flex;align-items:center;justify-content:center;font-size:28px}
+  .hud{display:flex;gap:10px;align-items:center}
+  .pill{background:linear-gradient(180deg,#fff,#fff8fb);padding:8px 12px;border-radius:999px;font-weight:700;display:flex;flex-direction:column;align-items:center;min-width:72px}
+  .main{flex:1 1 auto;display:flex;gap:12px;align-items:flex-start;min-height:0}
+  .left{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:6px}
+  .grid-wrap{width:100%;max-width:760px;height:calc(100vh - 260px);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:10px;border-radius:12px;background:linear-gradient(180deg,#fff,#fff7fb)}
+  .grid-inner{position:absolute;left:50%;top:50%;transform-origin:center center;transform:translate(-50%,-50%) scale(1)}
+  .grid{display:grid;grid-template-columns:repeat(var(--cols), var(--tile-size));grid-auto-rows:var(--tile-size);gap:var(--gap);pointer-events:auto}
+  .cell{width:var(--tile-size);height:var(--tile-size);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-size)*0.6);background:linear-gradient(180deg,#fff,#fff6f9);border:1px solid rgba(0,0,0,0.06);box-shadow:0 10px 30px rgba(10,10,30,0.05);cursor:grab;user-select:none;position:relative;overflow:visible;touch-action:none;transition:transform 160ms linear}
+  .cell.empty{background:linear-gradient(180deg,#fbfbfd,#fff);opacity:.9}
+  /* pop animation (scale up then shrink+fade) */
+  .pop {
+    animation: popAnim var(--pop-dur) cubic-bezier(.2,.9,.2,1) forwards;
+  }
+  @keyframes popAnim{
+    0%{transform:scale(1);opacity:1}
+    45%{transform:scale(1.35)}
+    100%{transform:scale(0);opacity:0}
+  }
+
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .btn{padding:10px 14px;border-radius:12px;border:0;font-weight:800;background:#fff;cursor:pointer;box-shadow:0 8px 22px rgba(20,20,60,0.06)}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff}
+
+  .footer{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:8px 6px;gap:12px}
+  .progress{height:12px;width:160px;background:#eee;border-radius:999px;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9ac8,#ff6aa8);transition:width 300ms ease}
+  /* responsive tweaks */
+  @media(max-width:720px){ .grid-wrap{height:60vh;min-height:260px} }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <header>
+        <div class="brand">
+          <div class="logo">🍭</div>
+          <div>
+            <div style="font-weight:900;font-size:18px">Candy Match</div>
+            <div style="font-size:13px;color:#666">Swipe — Pop — Fall</div>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="pill"><small>Score</small><div id="score">0</div></div>
+          <div class="pill"><small>Moves</small><div id="moves">20</div></div>
+        </div>
+      </header>
+
+      <div class="main">
+        <div class="left">
+          <div id="gridWrap" class="grid-wrap">
+            <div id="gridInner" class="grid-inner">
+              <div id="grid" class="grid" role="grid" aria-label="Candy grid"></div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="restart" class="btn primary">Restart</button>
+            <button id="shuffle" class="btn">Shuffle</button>
+            <button id="hint" class="btn">Hint</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div style="font-weight:900;color:var(--accent)">Combo ×<span id="combo">1</span></div>
+        <div class="progress"><i id="progressBar"></i></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Full swipe -> swap -> pop -> gravity+refill implementation
+   - grid is WIDTH x HEIGHT
+   - drag adjacent tiles to swap
+   - matches (3+) pop, then tiles above fall; new tiles appear from top
+   - animations: pop (scale fade), fall (translateY)
+*/
+
+const WIDTH = 8, HEIGHT = 8;
+const TYPES = ['🧀','🍞','🥜','🧇','🥖','🍟','🥪','🍗','🫔','🌮','🌯','🥙','🧆','🥘','🍢','🍧','🧁','🍭','🍬','🍫','🍩','🍪','🍡','🍥','🍰','🍹','🍍','🥯','🍔']; // varied
+const grid = document.getElementById('grid');
+const gridInner = document.getElementById('gridInner');
+const gridWrap = document.getElementById('gridWrap');
+const scoreEl = document.getElementById('score');
+const movesEl = document.getElementById('moves');
+const comboEl = document.getElementById('combo');
+const progressBar = document.getElementById('progressBar');
+const restartBtn = document.getElementById('restart');
+const shuffleBtn = document.getElementById('shuffle');
+const hintBtn = document.getElementById('hint');
+
+let board = [], nextId = 1, score = 0, moves = 20, combo = 1;
+let dragging=false, pointerId=null, lastIndex=null;
+let locked=false;
+
+/* helpers */
+function makeTile(){ return { id: nextId++, type: TYPES[Math.floor(Math.random()*TYPES.length)] }; }
+function randTile(){ return makeTile(); }
+function cloneBoard(b){ return b.map(x => x ? {...x} : null); }
+
+/* sizing */
+function updateTileSizeAndCenter(){
+  const gap = 8;
+  const areaW = Math.max(240, gridWrap.clientWidth - 16);
+  const areaH = Math.max(240, gridWrap.clientHeight - 16);
+  const tileByW = Math.floor((areaW - (WIDTH-1)*gap) / WIDTH);
+  const tileByH = Math.floor((areaH - (HEIGHT-1)*gap) / HEIGHT);
+  const baseTile = Math.max(36, Math.min(tileByW, tileByH));
+  document.documentElement.style.setProperty('--tile-size', baseTile + 'px');
+  const requiredW = baseTile*WIDTH + gap*(WIDTH-1);
+  const requiredH = baseTile*HEIGHT + gap*(HEIGHT-1);
+  const scale = Math.min(1, areaW/requiredW, areaH/requiredH);
+  gridInner.style.transform = `translate(-50%,-50%) scale(${scale})`;
+}
+
+/* render with no animation for initial draw */
+function render(baseMap){
+  grid.innerHTML = '';
+  grid.style.setProperty('--cols', WIDTH);
+  for(let i=0;i<WIDTH*HEIGHT;i++){
+    const t = board[i];
+    const btn = document.createElement('button');
+    btn.className = 'cell';
+    btn.dataset.index = i;
+    if(t){
+      btn.dataset.id = t.id;
+      btn.innerHTML = `<span>${t.type}</span>`;
+    } else {
+      btn.classList.add('empty');
+      btn.innerHTML = `<span></span>`;
+    }
+    // if baseMap provides initial translate (for fall animation), apply it
+    if(baseMap && t && baseMap[t.id]){
+      btn.style.transform = `translateY(${baseMap[t.id]})`;
+      // force reflow to allow transition to 0
+      requestAnimationFrame(()=> {
+        requestAnimationFrame(()=> btn.style.transition = `transform var(--fall-dur) cubic-bezier(.2,.8,.2,1), opacity 200ms linear`);
+        requestAnimationFrame(()=> btn.style.transform = 'translateY(0)');
+      });
+    }
+    btn.addEventListener('pointerdown', onPointerDown);
+    grid.appendChild(btn);
+  }
+}
+
+/* find matches (rows + cols) */
+function findMatches(bd){
+  const matches=[];
+  // rows
+  for(let r=0;r<HEIGHT;r++){
+    let run=[r*WIDTH];
+    for(let c=1;c<WIDTH;c++){
+      const p=r*WIDTH+c-1, i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].type===bd[p].type) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  // cols
+  for(let c=0;c<WIDTH;c++){
+    let run=[c];
+    for(let r=1;r<HEIGHT;r++){
+      const p=(r-1)*WIDTH+c, i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].type===bd[p].type) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  return matches;
+}
+
+/* swap */
+function swapIndices(i,j){ [board[i], board[j]] = [board[j], board[i]]; }
+
+/* main resolve flow: find matches, pop, gravity+refill with animated fall */
+function resolveChain(){
+  if(locked) return;
+  locked = true;
+  combo = 1;
+  (function step(){
+    const matches = findMatches(board);
+    if(matches.length === 0){ locked = false; updateHUD(); return; }
+    // build remove set
+    const removeSet = new Set();
+    matches.forEach(run => run.forEach(i => removeSet.add(i)));
+    const removeIdx = Array.from(removeSet).sort((a,b)=>a-b);
+
+    // award score & mark pop animation
+    const removedCount = removeIdx.length;
+    score += removedCount * 10 * combo;
+    combo++;
+    updateHUD();
+
+    // animate pop: add .pop to matched DOM nodes
+    removeIdx.forEach(i=>{
+      const el = grid.querySelector(`.cell[data-index='${i}']`);
+      if(el){ el.classList.add('pop'); }
+    });
+
+    // after pop duration, remove and apply gravity/refill with fall animation
+    setTimeout(()=>{
+      // clear those positions
+      removeIdx.forEach(i=> board[i] = null);
+
+      // compute columns as stacks
+      const cols = [];
+      for(let c=0;c<WIDTH;c++){
+        const stack = [];
+        for(let r=HEIGHT-1;r>=0;r--){
+          const idx = r*WIDTH + c;
+          if(board[idx] !== null) stack.push(board[idx]);
+        }
+        cols.push(stack);
+      }
+
+      // create newBoard with nulls and compute drop distances for each tile id
+      const newBoard = new Array(WIDTH*HEIGHT).fill(null);
+      const dropMap = {}; // id -> translateY string (negative px from above)
+      const tileSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 56;
+
+      for(let c=0;c<WIDTH;c++){
+        const stack = cols[c];
+        // how many new tiles needed
+        const need = HEIGHT - stack.length;
+        // new tiles come on top
+        for(let i=0;i<need;i++){
+          stack.push(randTile());
+        }
+        // now fill downwards
+        for(let r=HEIGHT-1, si=0; r>=0; r--, si++){
+          const tile = stack[si];
+          newBoard[r*WIDTH + c] = tile;
+          // compute original row of this tile if it existed in old board
+          // find old index
+          let oldIndex = -1;
+          for(let oi=0; oi<board.length; oi++){
+            const t = board[oi];
+            if(t && t.id === tile.id){ oldIndex = oi; break; }
+          }
+          if(oldIndex === -1){
+            // brand new tile (created above), animate from above (negative distance)
+            const fromRowsAbove = si + 1; // approximate distance
+            dropMap[tile.id] = `-${(fromRowsAbove + 0)*tileSize}px`;
+          } else {
+            const oldRow = Math.floor(oldIndex / WIDTH);
+            const newRow = Math.floor((r*WIDTH + c) / WIDTH);
+            const dr = oldRow - newRow;
+            if(dr > 0){
+              dropMap[tile.id] = `-${dr * tileSize}px`;
+            }
+          }
+        }
+      }
+
+      board = newBoard;
+      // render with baseMap so tiles start translated and transition into place
+      render(dropMap);
+
+      // after fall animation finish, continue resolving chain (in case cascade)
+      setTimeout(()=>{ updateHUD(); setTimeout(step, 260); }, 380);
+
+    }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pop-dur')) || 420);
+  })();
+}
+
+/* pointer drag handlers for swipe swapping */
+function onPointerDown(e){
+  if(e.button && e.button !== 0) return;
+  if(locked) return;
+  e.preventDefault();
+  const el = e.currentTarget;
+  el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  dragging = true; pointerId = e.pointerId; lastIndex = Number(el.dataset.index);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+}
+function onPointerMove(e){
+  if(!dragging || e.pointerId !== pointerId) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if(!target) return;
+  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
+  if(!cell) return;
+  const idx = Number(cell.dataset.index);
+  if(Number.isNaN(idx)) return;
+  if(isAdjacent(lastIndex, idx) && idx !== lastIndex){
+    // swap and render immediately; then check matches
+    swapIndices(lastIndex, idx);
+    render();
+    moves = Math.max(0, moves - 1);
+    updateHUD();
+    // if swap made matches -> resolve chain, else swap back after small delay
+    const matches = findMatches(board);
+    if(matches.length > 0){
+      resolveChain();
+    } else {
+      // no match: revert swap with small shake
+      setTimeout(()=>{ swapIndices(lastIndex, idx); render(); }, 200);
+    }
+    lastIndex = idx;
+  }
+}
+function onPointerUp(e){
+  dragging = false; pointerId = null; lastIndex = null;
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+  checkLevel();
+}
+function isAdjacent(a,b){
+  if(a==null||b==null) return false;
+  const r1=Math.floor(a/WIDTH), c1=a%WIDTH, r2=Math.floor(b/WIDTH), c2=b%WIDTH;
+  return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
+}
+
+/* UI helpers */
+function updateHUD(){
+  scoreEl.textContent = score;
+  movesEl.textContent = moves;
+  comboEl.textContent = Math.max(1, combo-1);
+  progressBar.style.width = Math.min(100, Math.round(score / 800 * 100)) + '%';
+}
+
+/* initial render + event wiring */
+function initialRender(){
+  grid.innerHTML = '';
+  grid.style.setProperty('--cols', WIDTH);
+  for(let i=0;i<WIDTH*HEIGHT;i++){
+    const t = board[i];
+    const btn = document.createElement('button');
+    btn.className = 'cell';
+    btn.dataset.index = i;
+    if(t){
+      btn.dataset.id = t.id;
+      btn.innerHTML = `<span>${t.type}</span>`;
+    } else {
+      btn.classList.add('empty');
+      btn.innerHTML = `<span></span>`;
+    }
+    btn.addEventListener('pointerdown', onPointerDown);
+    grid.appendChild(btn);
+  }
+}
+
+/* init board without immediate matches */
+function initBoard(){
+  nextId = 1;
+  board = new Array(WIDTH*HEIGHT).fill(null).map(()=>randTile());
+  let safety=0;
+  while(findMatches(board).length > 0 && safety++ < 400){
+    board = new Array(WIDTH*HEIGHT).fill(null).map(()=>randTile());
+  }
+  score = 0; moves = 20; combo = 1;
+  updateTileSizeAndCenter();
+  initialRender();
+  updateHUD();
+}
+
+/* hint function */
+function findHint(){
+  for(let i=0;i<board.length;i++){
+    const r=Math.floor(i/WIDTH), c=i%WIDTH;
+    const dirs=[[0,1],[1,0],[0,-1],[-1,0]];
+    for(const d of dirs){
+      const nr=r+d[0], nc=c+d[1];
+      if(nr<0||nr>=HEIGHT||nc<0||nc>=WIDTH) continue;
+      const j = nr*WIDTH + nc;
+      swapIndices(i,j);
+      const m = findMatches(board);
+      swapIndices(i,j);
+      if(m.length>0) return [i,j];
+    }
+  }
+  return null;
+}
+
+/* small helpers */
+function shuffleBoard(){ board = board.sort(()=>Math.random()-0.5); initialRender(); }
+function checkLevel(){ if(moves<=0){ setTimeout(()=>alert('Out of moves — Restart to play again'), 20); } }
+
+/* controls wiring */
+restartBtn.addEventListener('click', ()=> initBoard());
+shuffleBtn.addEventListener('click', ()=> { shuffleBoard(); });
+hintBtn.addEventListener('click', ()=> {
+  const h = findHint();
+  if(!h) alert('No hints available');
+  else {
+    const el = grid.querySelector(`[data-index='${h[0]}']`);
+    if(el) el.animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:700});
+  }
+});
+
+/* responsive */
+window.addEventListener('resize', ()=> { updateTileSizeAndCenter(); });
+
+// start
+requestAnimationFrame(()=>{ initBoard(); updateTileSizeAndCenter(); });
+
+</script>
+</body>
+</html>
