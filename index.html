@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Candy Match — Fixed Swap Continuity</title>
+<style>
+:root{
+  --cols:8; --rows:8;
+  --gap:6px;
+  --tile:66px; /* JS will fit */
+  --accent:#ff4d9e;
+  --pop-dur:320ms;
+  --fall-dur:360ms;
+  --swap-dur:200ms;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#fff9fc,#f2f7ff);color:#222}
+.stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+.card{width:100%;max-width:980px;height:calc(100vh - 24px);padding:14px;border-radius:14px;background:#fff;box-shadow:0 28px 80px rgba(20,20,50,.06);display:flex;flex-direction:column;gap:12px;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:flex;align-items:center;justify-content:center;font-size:26px}
+.hud{display:flex;gap:8px;align-items:center}
+.pill{background:linear-gradient(180deg,#fff,#fff7fb);padding:8px 12px;border-radius:999px;font-weight:800;display:flex;flex-direction:column;align-items:center}
+
+/* grid */
+.content{display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0}
+.grid-area{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:6px;min-height:0}
+.grid-wrap{width:100%;max-width:880px;border-radius:14px;background:linear-gradient(180deg,#fff,#fff7fb);padding:10px;box-shadow:inset 0 8px 30px rgba(250,240,250,0.4);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;max-height:calc(100vh - 240px)}
+.grid{display:grid; gap:var(--gap); grid-template-columns:repeat(var(--cols), var(--tile)); grid-auto-rows:var(--tile); touch-action:none; user-select:none; justify-content:center; align-content:center; position:relative}
+
+/* cell */
+.cell{width:var(--tile); height:var(--tile); border-radius:12px; background:linear-gradient(180deg,#fff,#fffefc); box-shadow:0 8px 18px rgba(10,10,30,0.05); display:flex;align-items:center;justify-content:center; cursor:grab; position:relative; overflow:visible; border:1px solid rgba(0,0,0,0.04); padding:0; transform:translateZ(0); will-change: transform, opacity;}
+.cell img{ width:78%; height:78%; object-fit:contain; pointer-events:none; display:block; user-select:none; }
+.cell.pop{animation:pop var(--pop-dur) cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes pop{0%{transform:scale(1);opacity:1}40%{transform:scale(1.4)}100%{transform:scale(0);opacity:0}}
+
+/* controls */
+.controls{display:flex;gap:10px;justify-content:center;padding:8px 6px}
+.btn{padding:10px 14px;border-radius:12px;border:0;font-weight:800;background:#fff;cursor:pointer;box-shadow:0 10px 28px rgba(20,20,60,0.06)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff}
+.footer{display:flex;align-items:center;justify-content:space-between;padding:10px;gap:12px}
+.progress{height:12px;width:220px;background:#eee;border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9ac8,#ff6aa8);transition:width 320ms ease}
+
+/* particles canvas */
+#particleCanvas{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none}
+
+/* mobile */
+@media(max-width:720px){ :root{--tile:52px;--gap:4px} .card{height:auto} .grid-wrap{max-height:60vh} }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <header>
+        <div class="brand">
+          <div class="logo">🍬</div>
+          <div>
+            <div style="font-weight:900;font-size:18px">Candy Match — Fixed</div>
+            <div style="font-size:12px;color:#666">Swap continuity fixed</div>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="pill"><small>Level</small><div id="level">1</div></div>
+          <div class="pill"><small>Score</small><div id="score">0</div></div>
+          <div class="pill"><small>Moves</small><div id="moves">40</div></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="grid-area">
+          <div id="gridWrap" class="grid-wrap">
+            <canvas id="particleCanvas"></canvas>
+            <div id="grid" class="grid" role="grid" aria-label="Candy grid"></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="restart" class="btn primary">Restart</button>
+          <button id="shuffle" class="btn">Shuffle</button>
+          <button id="bombBtn" class="btn">Place Bomb</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div style="font-size:13px;color:#666">Images loaded: <span id="imgCount">0</span></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="comboText" style="font-weight:900;color:var(--accent)">Combo ×1</div>
+          <div class="progress" aria-hidden><i id="progressBar"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ====== CONFIG ====== */
+const IMAGE_FILES = [
+  'images/candy1.png','images/candy2.png','images/candy3.png','images/candy4.png',
+  'images/candy5.png','images/candy6.png','images/candy7.png','images/candy8.png',
+  'images/candy9.png','images/candy10.png'
+];
+const BOMB_SRC = 'images/bomb.jpg';
+const COLS = 8, ROWS = 8, SIZE = COLS * ROWS;
+const FALLBACK_SRC = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="100%" height="100%" fill="%23fff"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="28">🍬</text></svg>');
+
+/* ====== DOM refs ====== */
+const grid = document.getElementById('grid');
+const gridWrap = document.getElementById('gridWrap');
+const particleCanvas = document.getElementById('particleCanvas');
+const scoreEl = document.getElementById('score');
+const movesEl = document.getElementById('moves');
+const levelEl = document.getElementById('level');
+const comboText = document.getElementById('comboText');
+const progressBar = document.getElementById('progressBar');
+const imgCountEl = document.getElementById('imgCount');
+
+let state = { nextId:1, board:[], score:0, moves:40, combo:1, level:1 };
+let cellEls = [];               // fixed DOM cells (btn,img) — DO NOT recreate each render
+let pool = [];                  // loaded image URLs
+let tilePx = 64;
+let dragging=false, pointerId=null, startIndex=null;
+let locked=false;
+
+/* ====== Particle canvas ====== */
+const ctx = particleCanvas.getContext ? particleCanvas.getContext('2d') : null;
+let particles = [];
+function resizeCanvas(){
+  const r = gridWrap.getBoundingClientRect();
+  particleCanvas.width = Math.round(r.width * devicePixelRatio);
+  particleCanvas.height = Math.round(r.height * devicePixelRatio);
+  particleCanvas.style.width = r.width + 'px';
+  particleCanvas.style.height = r.height + 'px';
+  if(ctx) ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+function createParticle(x,y){
+  particles.push({x,y,vx:(Math.random()-0.5)*6,vy:(Math.random()-1.5)*6,life:40+Math.random()*30,size:4+Math.random()*6,alpha:1});
+}
+function tickParticles(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,particleCanvas.width,particleCanvas.height);
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= 1; p.alpha = Math.max(0, p.life/80);
+    if(p.life<=0){ particles.splice(i,1); continue; }
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,100,150,${p.alpha})`;
+    ctx.arc(p.x, p.y, p.size * (p.alpha+0.2), 0, Math.PI*2);
+    ctx.fill();
+  }
+  requestAnimationFrame(tickParticles);
+}
+tickParticles();
+
+/* ====== Image probe & preload ====== */
+function probeImages(list){
+  return Promise.all(list.map(src => new Promise(res=>{
+    const i = new Image(); i.onload = ()=> res(src); i.onerror = ()=> res(null); i.src = src;
+  }))).then(results => results.filter(Boolean));
+}
+
+/* ====== layout & cells ====== */
+function fitTiles(){
+  const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 6;
+  const avail = gridWrap.getBoundingClientRect();
+  const candidateH = Math.floor((avail.height - gap*(ROWS-1)) / ROWS);
+  const candidateW = Math.floor((avail.width - gap*(COLS-1)) / COLS);
+  let base = Math.max(20, Math.min(candidateH, candidateW));
+  tilePx = Math.floor(base * 1.02);
+  document.documentElement.style.setProperty('--tile', tilePx + 'px');
+  resizeCanvas();
+}
+
+function createCellsOnce(){
+  grid.innerHTML = '';
+  cellEls = [];
+  grid.style.setProperty('--cols', COLS);
+  for(let i=0;i<SIZE;i++){
+    const btn = document.createElement('button');
+    btn.className = 'cell';
+    btn.dataset.index = i;
+    const img = document.createElement('img');
+    img.alt = 'candy';
+    img.draggable = false;
+    img.dataset.src = '';
+    btn.appendChild(img);
+    btn.addEventListener('pointerdown', onPointerDown);
+    grid.appendChild(btn);
+    cellEls.push({btn,img});
+  }
+}
+
+/* ====== board & render (fixed DOM cells) ====== */
+function makeTile(src){
+  return { id: state.nextId++, src: src || pool[Math.floor(Math.random()*pool.length)] || FALLBACK_SRC, power:null };
+}
+function randTile(){ return makeTile(); }
+
+function render(dropMap){
+  // ensure board filled (but do not recreate DOM cells)
+  for(let i=0;i<SIZE;i++) if(!state.board[i]) state.board[i] = randTile();
+  for(let i=0;i<SIZE;i++){
+    const tile = state.board[i];
+    const entry = cellEls[i];
+    if(!entry) continue;
+    const {btn,img} = entry;
+    const src = tile && tile.src ? tile.src : FALLBACK_SRC;
+    if(img.dataset.src !== src){
+      img.dataset.src = src;
+      img.src = src;
+    }
+    btn.style.transition = '';
+    btn.style.transform = '';
+    if(dropMap && tile && dropMap[tile.id]){
+      btn.style.transform = `translateY(${dropMap[tile.id]})`;
+      requestAnimationFrame(()=> requestAnimationFrame(()=> {
+        btn.style.transition = `transform var(--fall-dur) cubic-bezier(.2,.8,.2,1)`;
+        btn.style.transform = 'translateY(0)';
+      }));
+    }
+    btn.classList.remove('pop');
+  }
+  updateHUD();
+}
+
+/* ====== matches ====== */
+function findMatches(board){
+  const matches = [];
+  // horizontal
+  for(let r=0;r<ROWS;r++){
+    let run=[r*COLS];
+    for(let c=1;c<COLS;c++){
+      const p=r*COLS+c-1, i=r*COLS+c;
+      if(board[i] && board[p] && board[i].src === board[p].src) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  // vertical
+  for(let c=0;c<COLS;c++){
+    let run=[c];
+    for(let r=1;r<ROWS;r++){
+      const p=(r-1)*COLS+c, i=r*COLS+c;
+      if(board[i] && board[p] && board[i].src === board[p].src) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  return matches;
+}
+function detectSpecials(matches){
+  const assign = {};
+  matches.forEach(run=>{
+    if(run.length>=5){ assign[run[Math.floor(run.length/2)]] = {type:'color'}; }
+    else if(run.length===4){ assign[run[Math.floor(run.length/2)]] = {type:'stripe'}; }
+  });
+  return assign;
+}
+
+/* ====== HUD ====== */
+function updateHUD(){
+  scoreEl.textContent = state.score;
+  movesEl.textContent = state.moves;
+  levelEl.textContent = state.level;
+  comboText.textContent = `Combo ×${Math.max(1, state.combo-1)}`;
+  progressBar.style.width = Math.min(100, Math.round(state.score/(1500 + (state.level-1)*500) * 100)) + '%';
+}
+
+/* ====== swap animation & commit WITHOUT recreating DOM ===== */
+/* animate two cells using translate; after animation, *commit* by swapping state.board objects
+   but do not rebuild all cells. Instead only update the two img.dataset/src to reflect tile positions.
+*/
+function swapAnimate(i, j){
+  return new Promise(res=>{
+    const a = cellEls[i].btn, b = cellEls[j].btn;
+    const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+    const dx = br.left - ar.left, dy = br.top - ar.top;
+    a.style.transition = `transform var(--swap-dur) cubic-bezier(.2,.9,.2,1)`;
+    b.style.transition = `transform var(--swap-dur) cubic-bezier(.2,.9,.2,1)`;
+    a.style.transform = `translate(${dx}px, ${dy}px)`;
+    b.style.transform = `translate(${-dx}px, ${-dy}px)`;
+    setTimeout(()=> {
+      // clear transforms (visual elements back to grid) - but we'll commit the data next
+      a.style.transition=''; a.style.transform='';
+      b.style.transition=''; b.style.transform='';
+      res();
+    }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--swap-dur')) || 200);
+  });
+}
+function commitSwap(i,j){
+  // swap objects in state.board
+  const tmp = state.board[i];
+  state.board[i] = state.board[j];
+  state.board[j] = tmp;
+  // update only the two images (do not re-create DOM)
+  const aImg = cellEls[i].img, bImg = cellEls[j].img;
+  aImg.dataset.src = state.board[i].src; aImg.src = state.board[i].src;
+  bImg.dataset.src = state.board[j].src; bImg.src = state.board[j].src;
+}
+
+/* ====== chain resolution (pop -> gravity -> refill) ====== */
+function resolveChain(){
+  if(locked) return;
+  locked = true;
+  state.combo = 1;
+  (function step(){
+    const matches = findMatches(state.board);
+    if(matches.length === 0){ locked = false; updateHUD(); return; }
+    const specialMap = detectSpecials(matches);
+    const removeSet = new Set();
+    matches.forEach(run=> run.forEach(i=> removeSet.add(i)));
+    const removeIdx = Array.from(removeSet).sort((a,b)=>a-b);
+    const removedCount = removeIdx.length;
+    state.score += removedCount * 10 * state.combo;
+    state.combo++;
+    updateHUD();
+
+    // pop animation + particles
+    let cx=0, cy=0, cnt=0;
+    removeIdx.forEach(i=>{
+      const el = cellEls[i].btn;
+      if(el){
+        const r = el.getBoundingClientRect();
+        cx += r.left + r.width/2; cy += r.top + r.height/2; cnt++;
+        el.classList.add('pop');
+      }
+      state.board[i] = null;
+    });
+    if(cnt>0){
+      const gx = cx/cnt - gridWrap.getBoundingClientRect().left;
+      const gy = cy/cnt - gridWrap.getBoundingClientRect().top;
+      for(let p=0;p<Math.min(18, 6+cnt); p++) createParticle(gx + (Math.random()-0.5)*60, gy + (Math.random()-0.5)*60);
+    }
+
+    setTimeout(()=>{
+      try{
+        // gravity per column
+        const cols = [];
+        for(let c=0;c<COLS;c++){
+          const col = [];
+          for(let r=ROWS-1;r>=0;r--){
+            const idx = r*COLS + c;
+            if(state.board[idx]) col.push(state.board[idx]);
+          }
+          cols.push(col);
+        }
+        const newBoard = new Array(SIZE).fill(null);
+        const dropMap = {};
+        const oldIds = new Set(state.board.filter(Boolean).map(t=>t.id));
+        for(let c=0;c<COLS;c++){
+          const col = cols[c];
+          while(col.length < ROWS) col.push(randTile());
+          for(let r=ROWS-1,i=0;r>=0;r--,i++){
+            const tile = col[i];
+            newBoard[r*COLS + c] = tile;
+            if(!oldIds.has(tile.id)) dropMap[tile.id] = `-${(i+1)*tilePx}px`;
+          }
+        }
+        // specials
+        Object.keys(specialMap).forEach(k=>{
+          const idx = Number(k);
+          if(newBoard[idx]) newBoard[idx].power = specialMap[k];
+        });
+
+        state.board = newBoard;
+        fitTiles(); render(dropMap);
+      }catch(e){ console.error('gravity/refill error', e); }
+      setTimeout(()=> setTimeout(step, 160), parseInt(getComputedStyle(document.documentElement).getPropertyValue('--fall-dur')) || 360);
+    }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pop-dur')) || 320);
+  })();
+}
+
+/* ====== input handlers (pointer) ====== */
+function onPointerDown(e){
+  if(locked) return;
+  const el = e.currentTarget; el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  dragging = true; pointerId = e.pointerId; startIndex = Number(el.dataset.index);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+}
+function onPointerMove(e){
+  if(!dragging || e.pointerId !== pointerId) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if(!target) return;
+  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
+  if(!cell) return;
+  const idx = Number(cell.dataset.index);
+  if(Number.isNaN(idx)) return;
+  if(isAdjacent(startIndex, idx) && idx !== startIndex){
+    // do swap animation then commit swap WITHOUT full re-render
+    swapAnimate(startIndex, idx).then(()=>{
+      commitSwap(startIndex, idx);
+      // check matches
+      state.moves = Math.max(0, state.moves - 1);
+      updateHUD();
+      const matches = findMatches(state.board);
+      if(matches.length > 0){
+        resolveChain();
+      } else {
+        // revert visually and logically
+        setTimeout(()=> {
+          swapAnimate(startIndex, idx).then(()=>{
+            commitSwap(startIndex, idx); // swap back
+          });
+        }, 260);
+      }
+    });
+    dragging = false;
+  }
+}
+function onPointerUp(e){
+  dragging=false; pointerId=null; startIndex=null;
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+}
+function isAdjacent(a,b){
+  if(a==null||b==null) return false;
+  const r1 = Math.floor(a/COLS), c1 = a%COLS, r2 = Math.floor(b/COLS), c2 = b%COLS;
+  return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
+}
+
+/* ====== bomb button (place and explode) ====== */
+document.getElementById('bombBtn').addEventListener('click', ()=>{
+  if(locked) return;
+  const valid = state.board.map((t,i)=> t ? i : -1).filter(i=> i>=0);
+  if(valid.length === 0) return;
+  const idx = valid[Math.floor(Math.random()*valid.length)];
+  state.board[idx] = makeTile(BOMB_SRC || FALLBACK_SRC);
+  state.board[idx].power = {type:'bomb'};
+  // update only that img
+  const entry = cellEls[idx];
+  if(entry){ entry.img.dataset.src = state.board[idx].src; entry.img.src = state.board[idx].src; }
+  setTimeout(()=> {
+    const removed = new Set();
+    const r0 = Math.floor(idx/COLS), c0 = idx%COLS;
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++){
+      const nr=r0+dr, nc=c0+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) removed.add(nr*COLS+nc);
+    }
+    let cx=0, cy=0, cnt=0;
+    Array.from(removed).forEach(i=>{
+      const el = cellEls[i].btn;
+      if(el){ const rc = el.getBoundingClientRect(); cx+=rc.left+rc.width/2; cy+=rc.top+rc.height/2; cnt++; el.classList.add('pop'); }
+      state.board[i] = null;
+    });
+    if(cnt>0){ const gx = cx/cnt - gridWrap.getBoundingClientRect().left; const gy = cy/cnt - gridWrap.getBoundingClientRect().top; for(let p=0;p<18;p++) createParticle(gx + (Math.random()-0.5)*60, gy + (Math.random()-0.5)*60); }
+    state.score += removed.size * 12; updateHUD();
+    setTimeout(()=> resolveChain(), 260);
+  }, 240);
+});
+
+/* ====== controls ====== */
+document.getElementById('shuffle').addEventListener('click', ()=> { state.board.sort(()=>Math.random()-0.5); render(); });
+document.getElementById('restart').addEventListener('click', ()=> initBoard());
+
+/* ====== init board & start ====== */
+function initBoard(){
+  state.nextId = 1;
+  state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  let tries=0;
+  while(findMatches(state.board).length>0 && tries++ < 800) state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  state.score = 0; state.moves = 40; state.combo = 1;
+  fitTiles(); render();
+}
+
+/* probe images then start */
+(async function start(){
+  const ok = await probeImages(IMAGE_FILES);
+  pool = ok.length ? ok : IMAGE_FILES.filter(Boolean);
+  if(pool.length === 0) pool = [FALLBACK_SRC];
+  imgCountEl.textContent = pool.length;
+  createCellsOnce();
+  fitTiles();
+  window.addEventListener('resize', ()=> { fitTiles(); render(); });
+  initBoard();
+})();
+
+/* expose debug */
+window._cm = { state, render, resolveChain, fitTiles };
+
+</script>
+</body>
+</html>
