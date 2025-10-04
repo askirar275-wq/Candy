@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Candy Match — Fast GitHub images</title>
+<style>
+:root{
+  --cols:8;
+  --rows:8;
+  --gap:4px;      /* tighter gap */
+  --tile:64px;    /* overridden by JS */
+  --accent:#ff4d9e;
+  --pop-dur:300ms;
+  --fall-dur:320ms;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#fff9fc,#f2f7ff);color:#222}
+.stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+
+.card{
+  width:100%;max-width:980px;height:calc(100vh - 24px);padding:14px;border-radius:14px;background:#fff;
+  box-shadow:0 20px 60px rgba(20,20,50,.06);display:flex;flex-direction:column;gap:12px;overflow:hidden;
+}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:flex;align-items:center;justify-content:center;font-size:28px}
+.meta{font-size:13px;color:#666}
+.hud{display:flex;gap:14px;align-items:center}
+.hud .pill{background:linear-gradient(180deg,#fff,#fff7fb);padding:10px 18px;border-radius:40px;box-shadow:0 10px 28px rgba(20,20,60,0.04);text-align:center;font-weight:800}
+
+.content{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0}
+
+/* grid area */
+.grid-area{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
+.grid-wrap{
+  width:100%;max-width:860px;border-radius:12px;background:linear-gradient(180deg,#fff,#fff7fb);
+  padding:12px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 8px 30px rgba(250,240,250,0.4);
+  max-height: calc(100vh - 24px - 64px - 140px);
+  overflow:hidden;
+}
+
+.grid{
+  display:grid; gap:var(--gap); grid-template-columns:repeat(var(--cols), var(--tile));
+  grid-auto-rows:var(--tile); justify-content:center; align-content:center; touch-action:none; user-select:none;
+  transform-origin:center center;
+}
+
+.cell{
+  width:var(--tile); height:var(--tile); border-radius:14px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#fff,#fffefc); box-shadow:0 4px 10px rgba(10,10,30,0.04);
+  cursor:grab; transition:transform .12s,opacity .12s; position:relative; border:1px solid rgba(0,0,0,0.04);
+  overflow:visible;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  padding:0;
+}
+.cell img{ width:68%; height:68%; object-fit:contain; pointer-events:none; display:block; }
+
+.cell.pop{animation:pop var(--pop-dur) cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes pop{0%{transform:scale(1);opacity:1}40%{transform:scale(1.45)}100%{transform:scale(0);opacity:0}}
+
+.controls{flex:0 0 auto;display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 6px;flex-wrap:wrap}
+.btn{padding:12px 18px;border-radius:14px;border:0;font-weight:800;background:#fff;cursor:pointer;box-shadow:0 10px 28px rgba(20,20,60,0.06)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff}
+
+.footer{flex:0 0 86px;display:flex;align-items:center;justify-content:space-between;padding:10px 6px;gap:12px}
+.progress{height:14px;width:240px;background:#eee;border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9ac8,#ff6aa8);transition:width 320ms ease}
+
+/* modal not used here, keep responsive */
+@media(max-width:720px){
+  :root{ --tile:52px; --gap:3px; }
+  .cell{ border-radius:12px; }
+}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <header>
+        <div class="brand">
+          <div class="logo">🍭</div>
+          <div>
+            <div style="font-weight:900;font-size:18px">Candy Match</div>
+            <div class="meta">Images from your GitHub — no upload</div>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="pill"><small>Level</small><div id="level">1</div></div>
+          <div class="pill"><small>Score</small><div id="score">0</div></div>
+          <div class="pill"><small>Moves</small><div id="moves">40</div></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="grid-area">
+          <div id="gridWrap" class="grid-wrap">
+            <div id="grid" class="grid" role="grid" aria-label="Candy grid"></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="restart" class="btn primary">Restart</button>
+          <button id="shuffle" class="btn">Shuffle</button>
+          <button id="useBombBtn" class="btn">Use Bomb</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div id="comboText" style="font-weight:900;color:var(--accent)">Combo ×1</div>
+        <div class="progress" aria-hidden><i id="progressBar"></i></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Final fast single-file candy match using GitHub images in /images/ */
+const WIDTH = 8, HEIGHT = 8, SIZE = WIDTH * HEIGHT;
+const IMAGE_FILES = [
+  'images/candy1.png','images/candy2.png','images/candy3.png','images/candy4.png','images/candy5.png',
+  'images/candy6.png','images/candy7.png','images/candy8.png','images/candy9.png','images/candy10.png'
+];
+const BOMB_FILE = 'images/bomb.jpg';
+
+const grid = document.getElementById('grid');
+const gridWrap = document.getElementById('gridWrap');
+
+let state = { nextId:1, board:[], score:0, moves:40, combo:1, coins:0 };
+let locked=false, dragging=false, pointerId=null, lastIndex=null;
+let CELL_ELEMENTS = [];
+
+/* helper: make tile object with src */
+function makeTile(src){
+  return { id: state.nextId++, src: src || IMAGE_FILES[Math.floor(Math.random()*IMAGE_FILES.length)], power:null };
+}
+function randTile(){ return makeTile(); }
+
+/* FIT Tiles */
+function fitTiles(){
+  const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 4;
+  const cardRect = document.getElementById('card').getBoundingClientRect();
+  const headerH = document.querySelector('header').getBoundingClientRect().height;
+  const controlsH = document.querySelector('.controls').getBoundingClientRect().height;
+  const footerH = document.querySelector('.footer').getBoundingClientRect().height;
+  const padTop = parseFloat(getComputedStyle(document.getElementById('card')).paddingTop) || 0;
+  const padBottom = parseFloat(getComputedStyle(document.getElementById('card')).paddingBottom) || 0;
+
+  const availH = cardRect.height - headerH - controlsH - footerH - padTop - padBottom - 8;
+  const availW = Math.min(gridWrap.getBoundingClientRect().width - 8, cardRect.width - 28);
+
+  const candidateH = Math.floor((availH - gap*(HEIGHT-1)) / HEIGHT);
+  const candidateW = Math.floor((availW - gap*(WIDTH-1)) / WIDTH);
+  let base = Math.max(20, Math.min(candidateH, candidateW));
+  let desired = Math.floor(base * 1.08);
+  const neededW = desired * WIDTH + gap*(WIDTH-1);
+  const neededH = desired * HEIGHT + gap*(HEIGHT-1);
+  if(neededW > availW || neededH > availH) desired = base;
+  if(!isFinite(desired) || desired < 18) desired = 18;
+  document.documentElement.style.setProperty('--tile', desired + 'px');
+}
+
+/* PRECREATE cells once (fast) */
+function createCellsOnce(){
+  grid.innerHTML = '';
+  CELL_ELEMENTS = [];
+  grid.style.setProperty('--cols', WIDTH);
+  for(let i=0;i<SIZE;i++){
+    const el = document.createElement('button');
+    el.className = 'cell';
+    el.dataset.index = i;
+    const img = document.createElement('img');
+    img.alt = 'candy';
+    img.draggable = false;
+    el.appendChild(img);
+    el.addEventListener('pointerdown', onPointerDown);
+    grid.appendChild(el);
+    CELL_ELEMENTS.push({button:el, img});
+  }
+}
+
+/* Lightweight render: only update src if changed; supports dropMap animation */
+function renderFast(dropMap){
+  for(let i=0;i<SIZE;i++) if(!state.board[i]) state.board[i] = randTile();
+  for(let i=0;i<SIZE;i++){
+    const tile = state.board[i];
+    const {button, img} = CELL_ELEMENTS[i];
+    // set special bomb tile image if tile.type is 'bomb'
+    const desiredSrc = tile.src;
+    if(img.src.indexOf(desiredSrc) === -1){
+      img.src = desiredSrc;
+    }
+    // reset transform/transition
+    button.style.transition = '';
+    button.style.transform = '';
+    if(dropMap && dropMap[tile.id]){
+      button.style.transform = `translateY(${dropMap[tile.id]})`;
+      requestAnimationFrame(()=> requestAnimationFrame(()=>{
+        button.style.transition = `transform var(--fall-dur) cubic-bezier(.2,.8,.2,1)`;
+        button.style.transform = 'translateY(0)';
+      }));
+    }
+    // clear pop class if present (pop removed after animation)
+    button.classList.remove('pop');
+  }
+  updateHUD();
+}
+
+/* simple match detection (compare src) */
+function findMatches(bd){
+  const matches=[];
+  for(let r=0;r<HEIGHT;r++){
+    let run=[r*WIDTH];
+    for(let c=1;c<WIDTH;c++){
+      const p=r*WIDTH+c-1,i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].src===bd[p].src) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  for(let c=0;c<WIDTH;c++){
+    let run=[c];
+    for(let r=1;r<HEIGHT;r++){
+      const p=(r-1)*WIDTH+c,i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].src===bd[p].src) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  return matches;
+}
+
+/* detect specials: if length>=5 => bomb tile placed at middle; if length==4 create stripe (we'll treat as bomb for now) */
+function detectSpecials(matches){
+  const assign = {};
+  matches.forEach(run=>{
+    if(run.length>=5){
+      const idx = run[Math.floor(run.length/2)];
+      assign[idx] = {type:'bomb'};
+    } else if(run.length===4){
+      const idx = run[Math.floor(run.length/2)];
+      assign[idx] = {type:'bomb'}; // simplify: 4 also become bomb for now
+    }
+  });
+  return assign;
+}
+
+/* particle burst (lightweight) */
+function burst(x,y,amount=10){
+  // keep small to avoid slowdowns
+  amount = Math.min(10, amount);
+  const rect = grid.getBoundingClientRect();
+  const ox = x - rect.left, oy = y - rect.top;
+  for(let i=0;i<amount;i++){
+    const p = document.createElement('div');
+    p.style.position='absolute'; p.style.left=ox+'px'; p.style.top=oy+'px';
+    const size = 6 + Math.random()*8; p.style.width=p.style.height=size+'px';
+    p.style.borderRadius='50%'; p.style.background = `rgba(255,90,140,${0.4+Math.random()*0.5})`; p.style.pointerEvents='none';
+    grid.parentElement.appendChild(p);
+    const angle = Math.random()*Math.PI*2; const dist = 18 + Math.random()*40;
+    const nx = Math.cos(angle)*dist, ny = Math.sin(angle)*dist;
+    p.animate([{transform:'translate(-50%,-50%) scale(1)', opacity:1},{transform:`translate(-50%,-50%) translate(${nx}px,${ny}px) scale(.3)`, opacity:0}], {duration:500+Math.random()*300, easing:'cubic-bezier(.2,.8,.2,1)'});
+    setTimeout(()=>p.remove(),900);
+  }
+}
+
+/* resolve chain using fast render */
+function resolveChain(){
+  if(locked) return;
+  locked=true; state.combo=1;
+  (function step(){
+    const matches = findMatches(state.board);
+    if(matches.length===0){ locked=false; updateHUD(); return; }
+    const specialMap = detectSpecials(matches);
+    const removeSet = new Set();
+    matches.forEach(run=>run.forEach(i=>removeSet.add(i)));
+    const removeIdx = Array.from(removeSet).sort((a,b)=>a-b);
+    const removedCount = removeIdx.length;
+    state.score += removedCount * 12 * state.combo;
+    state.combo++;
+    updateHUD();
+
+    // mark removed and animate pop
+    let cx=0, cy=0, cnt=0;
+    removeIdx.forEach(i=>{
+      const el = CELL_ELEMENTS[i] && CELL_ELEMENTS[i].button;
+      if(el){ const rc = el.getBoundingClientRect(); cx+=rc.left+rc.width/2; cy+=rc.top+rc.height/2; cnt++; el.classList.add('pop'); }
+      state.board[i] = null;
+    });
+    if(cnt>0) burst(cx/cnt, cy/cnt, Math.min(10, 4+cnt));
+
+    setTimeout(()=>{
+      // gravity
+      const cols=[];
+      for(let c=0;c<WIDTH;c++){
+        const col=[];
+        for(let r=HEIGHT-1;r>=0;r--){
+          const idx = r*WIDTH+c;
+          if(state.board[idx]) col.push(state.board[idx]);
+        }
+        cols.push(col);
+      }
+      const newBoard = new Array(SIZE).fill(null);
+      const dropMap = {};
+      const tilePx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile')) || 64;
+      const oldIds = new Set(state.board.filter(Boolean).map(t=>t.id));
+      for(let c=0;c<WIDTH;c++){
+        const col = cols[c];
+        while(col.length < HEIGHT) col.push(randTile());
+        for(let r=HEIGHT-1,i=0;r>=0;r--,i++){
+          const tile = col[i];
+          newBoard[r*WIDTH+c] = tile;
+          if(!oldIds.has(tile.id)) dropMap[tile.id] = `-${(i+1)*tilePx}px`;
+        }
+      }
+      // apply specials: turn those positions into bomb image
+      Object.keys(specialMap).forEach(k=>{
+        const idx = Number(k);
+        if(newBoard[idx]){
+          newBoard[idx].src = BOMB_FILE;
+          newBoard[idx].power = {type:'bomb'};
+        } else {
+          const pos = newBoard.findIndex(x=>x);
+          if(pos>=0){ newBoard[pos].src = BOMB_FILE; newBoard[pos].power = {type:'bomb'}; }
+        }
+      });
+
+      state.board = newBoard;
+      fitTiles(); renderFast(dropMap);
+
+      setTimeout(()=> setTimeout(step, 240), parseInt(getComputedStyle(document.documentElement).getPropertyValue('--fall-dur')) || 320);
+    }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pop-dur')) || 300);
+  })();
+}
+
+/* Input handlers (drag to swap) */
+function onPointerDown(e){
+  if(locked) return;
+  const el = e.currentTarget; el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  dragging=true; pointerId=e.pointerId; lastIndex = Number(el.dataset.index);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+}
+function onPointerMove(e){
+  if(!dragging || e.pointerId !== pointerId) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if(!target) return;
+  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
+  if(!cell) return;
+  const idx = Number(cell.dataset.index);
+  if(Number.isNaN(idx)) return;
+  if(isAdjacent(lastIndex, idx) && idx !== lastIndex){
+    swap(lastIndex, idx);
+    renderFast();
+    state.moves = Math.max(0, state.moves-1);
+    updateHUD();
+    const matches = findMatches(state.board);
+    if(matches.length>0) resolveChain();
+    else setTimeout(()=>{ swap(lastIndex, idx); renderFast(); }, 220);
+    lastIndex = idx;
+  }
+}
+function onPointerUp(e){
+  dragging=false; pointerId=null; lastIndex=null;
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+}
+function isAdjacent(a,b){ if(a==null||b==null) return false; const r1=Math.floor(a/WIDTH), c1=a%WIDTH, r2=Math.floor(b/WIDTH), c2=b%WIDTH; return Math.abs(r1-r2)+Math.abs(c1-c2)===1; }
+function swap(i,j){ [state.board[i], state.board[j]] = [state.board[j], state.board[i]]; }
+
+/* Use Bomb button: consume and convert a random tile into bomb (for testing) */
+document.getElementById('useBombBtn').addEventListener('click', ()=>{
+  // place a bomb at random tile
+  const idx = Math.floor(Math.random()*SIZE);
+  state.board[idx] = makeTile(BOMB_FILE);
+  state.board[idx].power = {type:'bomb'};
+  renderFast();
+});
+
+/* HUD */
+function updateHUD(){
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('moves').textContent = state.moves;
+  document.getElementById('comboText').textContent = `Combo ×${Math.max(1, state.combo-1)}`;
+  document.getElementById('progressBar').style.width = Math.min(100, Math.round(state.score/1000*100)) + '%';
+}
+
+/* Shuffle + Restart */
+document.getElementById('restart').addEventListener('click', ()=> initBoardFast());
+document.getElementById('shuffle').addEventListener('click', ()=>{
+  state.board = state.board.sort(()=>Math.random()-0.5);
+  renderFast();
+});
+
+/* init board ensuring no initial matches */
+function initBoardFast(){
+  state.nextId = 1;
+  state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  let tries=0;
+  while(findMatches(state.board).length>0 && tries++ < 800){
+    state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  }
+  state.score = 0; state.moves = 40; state.combo = 1;
+  fitTiles(); renderFast();
+}
+
+/* debounce resize */
+let resizeTO;
+window.addEventListener('resize', ()=>{ clearTimeout(resizeTO); resizeTO = setTimeout(()=>{ fitTiles(); renderFast(); }, 120); });
+
+/* preload images from GitHub images folder */
+(function preloadAll(){
+  const all = IMAGE_FILES.concat([BOMB_FILE]);
+  all.forEach(u=>{ const i=new Image(); i.src = u; });
+})();
+
+/* Start */
+createCellsOnce();
+initBoardFast();
+updateHUD();
+
+/* expose for debug */
+window._cm = { state, renderFast, initBoardFast, fitTiles };
+
+</script>
+</body>
+</html>
