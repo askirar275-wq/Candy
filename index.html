@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Candy Match — All candies embedded</title>
+<style>
+:root{
+  --cols:8; --rows:8; --gap:6px; --tile:64px; --accent:#ff4d9e;
+  --pop-dur:380ms; --fall-dur:380ms;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#fff9fc,#f2f7ff);color:#222}
+.stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+.card{width:100%;max-width:980px;height:calc(100vh - 24px);padding:14px;border-radius:14px;background:#fff;box-shadow:0 28px 80px rgba(20,20,50,.06);display:flex;flex-direction:column;gap:12px;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:flex;align-items:center;justify-content:center;font-size:28px}
+.meta{font-size:13px;color:#666}
+.hud{display:flex;gap:12px;align-items:center}
+.hud .pill{background:linear-gradient(180deg,#fff,#fff7fb);padding:10px 14px;border-radius:40px;box-shadow:0 10px 28px rgba(20,20,60,0.04);text-align:center;font-weight:800}
+
+.content{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0}
+.grid-area{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
+.grid-wrap{width:100%;max-width:860px;border-radius:12px;background:linear-gradient(180deg,#fff,#fff7fb);padding:14px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 8px 30px rgba(250,240,250,0.4);max-height:calc(100vh - 24px - 64px - 140px);overflow:hidden}
+.grid{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--cols), var(--tile));grid-auto-rows:var(--tile);justify-content:center;align-content:center;touch-action:none;user-select:none;transform-origin:center center}
+.cell{width:var(--tile);height:var(--tile);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile) * 0.56);background:linear-gradient(180deg,#fff,#fffefc);box-shadow:0 8px 18px rgba(10,10,30,0.05);cursor:grab;transition:transform .12s,opacity .12s;position:relative;border:1px solid rgba(0,0,0,0.04);overflow:visible}
+.cell .icon{width:75%;height:75%}
+.cell.empty{opacity:.9}
+.cell.pop{animation:pop var(--pop-dur) cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes pop{0%{transform:scale(1);opacity:1}45%{transform:scale(1.4)}100%{transform:scale(0);opacity:0}}
+
+.controls{flex:0 0 auto;display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 6px;flex-wrap:wrap}
+.btn{padding:12px 16px;border-radius:14px;border:0;font-weight:800;background:#fff;cursor:pointer;box-shadow:0 10px 28px rgba(20,20,60,0.06)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff}
+.footer{flex:0 0 86px;display:flex;align-items:center;justify-content:space-between;padding:10px 6px;gap:12px}
+.progress{height:14px;width:240px;background:#eee;border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9ac8,#ff6aa8);transition:width 320ms ease}
+
+.modal-bg{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(10,8,18,0.36);display:none;align-items:center;justify-content:center;z-index:999}
+.modal{width:94%;max-width:720px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 30px 80px rgba(10,10,30,0.25);max-height:86vh;overflow:auto}
+.small{font-size:13px;color:#666}
+
+@media(max-width:720px){
+  :root{ --tile:52px; --gap:4px; }
+  .logo{width:48px;height:48px}
+}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <header>
+        <div class="brand">
+          <div class="logo">🍭</div>
+          <div>
+            <div style="font-weight:900;font-size:18px">Candy Match</div>
+            <div class="meta small">Images embedded — कोई upload नहीं चाहिए</div>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="pill"><small>Level</small><div id="level">1</div></div>
+          <div class="pill"><small>Score</small><div id="score">0</div></div>
+          <div class="pill"><small>Moves</small><div id="moves">20</div></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="grid-area">
+          <div id="gridWrap" class="grid-wrap">
+            <div id="grid" class="grid" role="grid" aria-label="Candy grid"></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="restart" class="btn primary">Restart</button>
+          <button id="shuffle" class="btn">Shuffle</button>
+          <button id="shopBtn" class="btn">Shop</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div id="comboText" style="font-weight:900;color:var(--accent)">Combo ×1</div>
+        <div class="progress" aria-hidden><i id="progressBar"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalBg" class="modal-bg" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0">Shop (Demo)</h3>
+      <p class="small">Demo shop — coins हमेशा localStorage में सँवरते हैं</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+        <div style="flex:1;min-width:140px;padding:10px;border-radius:12px;background:#fff8fb;text-align:center">
+          <div style="font-size:28px">🔀</div><div style="margin-top:6px">Shuffle</div><div style="font-weight:900;color:#ff5a9f">150</div>
+          <button class="buy btn" data-item="shuffle" data-price="150">Buy</button>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;border-radius:12px;background:#fff8fb;text-align:center">
+          <div style="font-size:28px">💣</div><div style="margin-top:6px">Bomb</div><div style="font-weight:900;color:#ff5a9f">220</div>
+          <button class="buy btn" data-item="bomb" data-price="220">Buy</button>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;border-radius:12px;background:#fff8fb;text-align:center">
+          <div style="font-size:28px">⭐</div><div style="margin-top:6px">Color-bomb</div><div style="font-weight:900;color:#ff5a9f">350</div>
+          <button class="buy btn" data-item="color" data-price="350">Buy</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+        <button id="closeShop" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Complete embedded game:
+   - 8x8 grid
+   - 10 inline SVG candy icons + bomb icon
+   - drag-to-swap, match detection, pop animation, gravity/fall, refill
+   - shop (demo)
+*/
+
+const WIDTH = 8, HEIGHT = 8, SIZE = WIDTH*HEIGHT;
+const gridEl = document.getElementById('grid');
+const gridWrap = document.getElementById('gridWrap');
+const scoreEl = document.getElementById('score');
+const movesEl = document.getElementById('moves');
+const comboText = document.getElementById('comboText');
+const progressBar = document.getElementById('progressBar');
+const modalBg = document.getElementById('modalBg');
+
+let state = { nextId:1, board:[], score:0, moves:20, coins:300, combo:1, inv:{shuffle:0,bomb:0,color:0} };
+let dragging=false, pointerId=null, lastIndex=null, locked=false;
+
+/* Inline SVG icons — array of SVG strings (10 candies). These are embedded "real" looking vector candies.
+   If you want to swap graphics, edit these SVG strings.
+*/
+const SVG_ICONS = [
+  // donut (will be used as normal candy too)
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" class="icon-svg"><circle cx="64" cy="64" r="48" fill="#a35" /><circle cx="64" cy="64" r="20" fill="#fff" /><g fill="#ffd54d"><circle cx="44" cy="50" r="5"/><circle cx="80" cy="44" r="5"/><circle cx="92" cy="76" r="5"/><circle cx="58" cy="90" r="5"/><circle cx="36" cy="78" r="5"/></g></svg>`,
+  // pink wrapped
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><ellipse cx="64" cy="64" rx="36" ry="30" fill="#ff6da6"/><path d="M12 60 C26 36, 28 30, 36 50" fill="#ff6da6" transform="translate(0,0)"/><path d="M116 60 C102 36, 100 30, 92 50" fill="#ff6da6"/></svg>`,
+  // green ring
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="48" fill="#ffc107"/><path d="M20 64a44 44 0 0 0 88 0" fill="#76c043" opacity="0.95"/></svg>`,
+  // colorful ball
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="46" fill="#6b3"/><g fill="#ff8"><circle cx="42" cy="42" r="8"/><circle cx="86" cy="44" r="8"/><circle cx="64" cy="86" r="8"/><circle cx="92" cy="78" r="6"/></g></svg>`,
+  // red glossy
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="46" fill="#f33"/><ellipse cx="48" cy="44" rx="12" ry="8" fill="#fff" opacity="0.28"/></svg>`,
+  // blue star candy
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="46" fill="#2196f3"/><g fill="#bbdefb"><path d="M64 36l8 12 14 2-10 10 2 14-14-6-14 6 2-14-10-10 14-2z"/></g></svg>`,
+  // orange swirl
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="46" fill="#ffb300"/><path d="M64 64 m-30 0 a30 30 0 1 0 60 0 a20 20 0 1 1 -60 0" fill="#ffcc80" opacity="0.95"/></svg>`,
+  // purple wrapped
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><ellipse cx="64" cy="64" rx="36" ry="30" fill="#b07df0"/><path d="M12 60 C26 36, 28 30, 36 50" fill="#a050d9"/><path d="M116 60 C102 36, 100 30, 92 50" fill="#a050d9"/></svg>`,
+  // yellow drop candy
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><ellipse cx="64" cy="64" rx="36" ry="30" fill="#ffd54d"/><ellipse cx="48" cy="44" rx="8" ry="5" fill="#fff" opacity="0.28"/></svg>`,
+  // small sprinkled donut (used as special candy too)
+  `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="46" fill="#6b3"/><g fill="#fdd835"><circle cx="44" cy="44" r="6"/><circle cx="84" cy="46" r="6"/><circle cx="64" cy="86" r="6"/></g></svg>`
+];
+
+// bomb SVG (for special)
+const SVG_BOMB = `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="40" fill="#222"/><rect x="44" y="18" width="40" height="10" rx="4" fill="#666"/><path d="M88 18 l14 -14" stroke="#f5a623" stroke-width="6" stroke-linecap="round"/></svg>`;
+
+/* helpers */
+function makeTile(typeIndex){
+  return { id: state.nextId++, type: typeIndex, power: null };
+}
+function randTile(){ return makeTile(Math.floor(Math.random()*SVG_ICONS.length)); }
+
+/* FIT tiles so UI always shows whole grid */
+function fitTiles(){
+  const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 6;
+  const cardRect = document.getElementById('card').getBoundingClientRect();
+  const headerH = document.querySelector('header').getBoundingClientRect().height;
+  const controlsH = document.querySelector('.controls').getBoundingClientRect().height;
+  const footerH = document.querySelector('.footer').getBoundingClientRect().height;
+  const pad = 28;
+  const availH = cardRect.height - headerH - controlsH - footerH - pad;
+  const availW = Math.min(gridWrap.getBoundingClientRect().width-8, cardRect.width-28);
+  const candidateH = Math.floor((availH - gap*(HEIGHT-1)) / HEIGHT);
+  const candidateW = Math.floor((availW - gap*(WIDTH-1)) / WIDTH);
+  let base = Math.max(28, Math.min(candidateH, candidateW));
+  if(base < 28) base = 28;
+  document.documentElement.style.setProperty('--tile', base + 'px');
+}
+
+/* render */
+function render(dropMap){
+  // ensure board full
+  for(let i=0;i<SIZE;i++) if(!state.board[i]) state.board[i] = randTile();
+  gridEl.innerHTML = '';
+  gridEl.style.setProperty('--cols', WIDTH);
+  for(let i=0;i<SIZE;i++){
+    const tile = state.board[i];
+    const el = document.createElement('button');
+    el.className = 'cell';
+    el.dataset.index = i;
+    if(!tile) { el.classList.add('empty'); el.innerHTML = `<span></span>`; }
+    else {
+      const svg = tile.power && tile.power.type === 'bomb' ? SVG_BOMB : SVG_ICONS[tile.type % SVG_ICONS.length];
+      el.innerHTML = `<div class="icon">${svg}</div>`;
+      if(tile.power && tile.power.type === 'color') el.style.boxShadow = '0 0 0 6px rgba(255,200,50,0.12) inset';
+    }
+    if(dropMap && tile && dropMap[tile.id]){
+      el.style.transform = `translateY(${dropMap[tile.id]})`;
+      requestAnimationFrame(()=> requestAnimationFrame(()=> { el.style.transition = `transform var(--fall-dur) cubic-bezier(.2,.8,.2,1)`; el.style.transform = 'translateY(0)'; }));
+    }
+    el.addEventListener('pointerdown', onPointerDown);
+    gridEl.appendChild(el);
+  }
+  updateHUD();
+}
+
+/* match detection (rows + cols) */
+function findMatches(bd){
+  const matches=[];
+  for(let r=0;r<HEIGHT;r++){
+    let run=[r*WIDTH];
+    for(let c=1;c<WIDTH;c++){
+      const p=r*WIDTH+c-1,i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].type===bd[p].type) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  for(let c=0;c<WIDTH;c++){
+    let run=[c];
+    for(let r=1;r<HEIGHT;r++){
+      const p=(r-1)*WIDTH+c,i=r*WIDTH+c;
+      if(bd[i] && bd[p] && bd[i].type===bd[p].type) run.push(i);
+      else { if(run.length>=3) matches.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) matches.push([...run]);
+  }
+  return matches;
+}
+
+/* specials detection (4->stripe,5+->color) */
+function detectSpecials(matches){
+  const assign = {};
+  matches.forEach(run=>{
+    if(run.length >= 5){
+      const idx = run[Math.floor(run.length/2)]; assign[idx] = {type:'color'};
+    } else if(run.length === 4){
+      const a=run[0], b=run[1]; const isH = Math.floor(a/WIDTH) === Math.floor(b/WIDTH);
+      const idx = run[Math.floor(run.length/2)]; assign[idx] = {type:'stripe', dir:isH ? 'h' : 'v'};
+    }
+  });
+  return assign;
+}
+
+/* particle burst */
+function burst(x,y,amount=16){
+  const rect = gridEl.getBoundingClientRect();
+  const ox = x - rect.left, oy = y - rect.top;
+  for(let i=0;i<amount;i++){
+    const p = document.createElement('div');
+    p.style.position='absolute'; p.style.left=ox+'px'; p.style.top=oy+'px';
+    const size = 6 + Math.random()*12; p.style.width=p.style.height=size+'px';
+    p.style.borderRadius='50%'; p.style.background = `rgba(255,90,140,${0.4+Math.random()*0.4})`; p.style.pointerEvents='none';
+    gridWrap.appendChild(p);
+    const angle = Math.random()*Math.PI*2; const dist = 16 + Math.random()*60;
+    const nx = Math.cos(angle)*dist, ny = Math.sin(angle)*dist;
+    p.animate([{transform:'translate(-50%,-50%) scale(1)', opacity:1},{transform:`translate(-50%,-50%) translate(${nx}px,${ny}px) scale(.2)`, opacity:0}], {duration:520+Math.random()*240, easing:'cubic-bezier(.2,.8,.2,1)'});
+    setTimeout(()=>p.remove(),1100);
+  }
+}
+
+/* apply power activation */
+function activatePowerAt(idx, otherType=null){
+  const tile = state.board[idx]; if(!tile || !tile.power) return;
+  const p = tile.power; const removed = new Set();
+  if(p.type==='stripe'){
+    if(p.dir==='h'){ const r=Math.floor(idx/WIDTH); for(let c=0;c<WIDTH;c++) removed.add(r*WIDTH+c); }
+    else { const c=idx%WIDTH; for(let r=0;r<HEIGHT;r++) removed.add(r*WIDTH + c); }
+  } else if(p.type==='bomb'){
+    const r0=Math.floor(idx/WIDTH), c0=idx%WIDTH;
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++){ const nr=r0+dr, nc=c0+dc; if(nr>=0&&nr<HEIGHT&&nc>=0&&nc<WIDTH) removed.add(nr*WIDTH+nc); }
+  } else if(p.type==='color'){
+    const target = otherType || tile.type;
+    for(let i=0;i<state.board.length;i++) if(state.board[i] && state.board[i].type===target) removed.add(i);
+  }
+  const arr = Array.from(removed);
+  arr.forEach(i=>{ const el = gridEl.querySelector(`.cell[data-index='${i}']`); if(el) el.classList.add('pop'); state.board[i]=null; });
+  state.score += arr.length*12; state.coins += Math.floor(arr.length*3); saveState();
+  setTimeout(()=> resolveChain(), 360);
+}
+
+/* resolve chain: pop -> gravity -> refill -> repeat */
+function resolveChain(){
+  if(locked) return; locked=true; state.combo=1;
+  (function step(){
+    const matches = findMatches(state.board);
+    if(matches.length===0){ locked=false; updateHUD(); saveState(); return; }
+    const specialMap = detectSpecials(matches);
+    const removeSet = new Set();
+    matches.forEach(run=>run.forEach(i=>removeSet.add(i)));
+    const removeIdx = Array.from(removeSet).sort((a,b)=>a-b);
+    const removedCount = removeIdx.length;
+    state.score += removedCount * 12 * state.combo;
+    state.coins += Math.floor(removedCount * 3);
+    state.combo++;
+    updateHUD();
+
+    // animate pop
+    let cx=0, cy=0, cnt=0;
+    removeIdx.forEach(i=>{
+      const el = gridEl.querySelector(`.cell[data-index='${i}']`);
+      if(el){ const rc = el.getBoundingClientRect(); cx+=rc.left+rc.width/2; cy+=rc.top+rc.height/2; cnt++; el.classList.add('pop'); }
+      state.board[i] = null;
+    });
+    if(cnt>0) burst(cx/cnt, cy/cnt, Math.min(36, 6+cnt));
+
+    setTimeout(()=>{
+      // gravity columns
+      const cols = [];
+      for(let c=0;c<WIDTH;c++){
+        const col=[];
+        for(let r=HEIGHT-1;r>=0;r--){ const idx=r*WIDTH+c; if(state.board[idx]) col.push(state.board[idx]); }
+        cols.push(col);
+      }
+      const newBoard = new Array(SIZE).fill(null);
+      const tilePx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile')) || 64;
+      const oldIds = new Set(state.board.filter(Boolean).map(t=>t.id));
+      const dropMap = {};
+      for(let c=0;c<WIDTH;c++){
+        const col = cols[c];
+        while(col.length < HEIGHT) col.push(randTile());
+        for(let r=HEIGHT-1,i=0;r>=0;r--,i++){
+          const tile = col[i];
+          newBoard[r*WIDTH+c] = tile;
+          if(!oldIds.has(tile.id)) dropMap[tile.id] = `-${(i+1)*tilePx}px`;
+        }
+      }
+      // place specials
+      Object.keys(specialMap).forEach(k=>{
+        const idx = Number(k);
+        if(newBoard[idx]) newBoard[idx].power = specialMap[k];
+        else { const pos = newBoard.findIndex(x=>x); if(pos>=0) newBoard[pos].power = specialMap[k]; }
+      });
+
+      state.board = newBoard;
+      fitTiles(); render(dropMap);
+      saveState();
+      setTimeout(()=> setTimeout(step, 240), parseInt(getComputedStyle(document.documentElement).getPropertyValue('--fall-dur')) || 380);
+    }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pop-dur')) || 380);
+  })();
+}
+
+/* pointer handlers for drag-swap */
+function onPointerDown(e){
+  if(locked) return;
+  const el = e.currentTarget; el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  dragging=true; pointerId=e.pointerId; lastIndex = Number(el.dataset.index);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+}
+function onPointerMove(e){
+  if(!dragging || e.pointerId !== pointerId) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if(!target) return;
+  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
+  if(!cell) return;
+  const idx = Number(cell.dataset.index);
+  if(Number.isNaN(idx) || idx===lastIndex) return;
+  if(isAdjacent(lastIndex, idx)){
+    swap(lastIndex, idx);
+    render();
+    state.moves = Math.max(0, state.moves-1); updateHUD();
+    const A = state.board[idx], B = state.board[lastIndex];
+    // check special activations
+    if(A && A.power && A.power.type === 'color'){ activatePowerAt(idx, B ? B.type : null); }
+    else if(B && B.power && B.power.type === 'color'){ activatePowerAt(lastIndex, A ? A.type : null); }
+    else if(A && A.power){ activatePowerAt(idx, B ? B.type : null); }
+    else if(B && B.power){ activatePowerAt(lastIndex, A ? A.type : null); }
+    else {
+      const matches = findMatches(state.board);
+      if(matches.length>0) resolveChain();
+      else setTimeout(()=>{ swap(lastIndex, idx); render(); }, 240);
+    }
+    lastIndex = idx;
+  }
+}
+function onPointerUp(e){
+  dragging=false; pointerId=null; lastIndex=null;
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+}
+function isAdjacent(a,b){ if(a==null||b==null) return false; const r1=Math.floor(a/WIDTH), c1=a%WIDTH, r2=Math.floor(b/WIDTH), c2=b%WIDTH; return Math.abs(r1-r2)+Math.abs(c1-c2)===1; }
+function swap(i,j){ [state.board[i], state.board[j]] = [state.board[j], state.board[i]]; }
+
+/* HUD + save/load */
+function updateHUD(){ scoreEl.textContent = state.score; movesEl.textContent = state.moves; comboText.textContent = `Combo ×${Math.max(1, state.combo-1)}`; progressBar.style.width = Math.min(100, Math.round(state.score/1200*100)) + '%'; }
+function saveState(){ try{ localStorage.setItem('candy_embedded_v1', JSON.stringify({coins:state.coins,inv:state.inv,score:state.score})); }catch(e){} }
+function loadState(){ try{ const raw = localStorage.getItem('candy_embedded_v1'); if(raw){ const s = JSON.parse(raw); if(s.coins) state.coins = s.coins; if(s.inv) state.inv = Object.assign(state.inv, s.inv); if(s.score) state.score = s.score; } }catch(e){} }
+
+/* shop ui */
+document.getElementById('shopBtn').addEventListener('click', ()=>{ document.getElementById('modalBg').style.display='flex'; document.getElementById('modalBg').setAttribute('aria-hidden','false'); });
+document.getElementById('closeShop').addEventListener('click', ()=>{ document.getElementById('modalBg').style.display='none'; document.getElementById('modalBg').setAttribute('aria-hidden','true'); });
+document.querySelectorAll('.buy').forEach(b=> b.addEventListener('click',(e)=>{ const item = b.dataset.item; const price = Number(b.dataset.price)||0; if(item==='coins'){ state.coins+=500; updateHUD(); alert('Added coins'); } else { if(price>state.coins) { alert('Not enough coins'); return; } state.coins-=price; state.inv[item]=(state.inv[item]||0)+1; alert(item + ' bought'); } saveState(); updateHUD(); }));
+
+/* init board ensuring no immediate matches */
+function initBoard(){
+  state.nextId = 1; state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  let tries=0;
+  while(findMatches(state.board).length>0 && tries++ < 800){
+    state.board = new Array(SIZE).fill(null).map(()=>randTile());
+  }
+  state.score = 0; state.moves = 20; state.combo = 1;
+  fitTiles(); render();
+  saveState();
+}
+
+/* UI buttons */
+document.getElementById('restart').addEventListener('click', ()=> initBoard());
+document.getElementById('shuffle').addEventListener('click', ()=>{ state.board = state.board.sort(()=>Math.random()-0.5); fitTiles(); render(); });
+
+/* load and start */
+loadState(); initBoard(); updateHUD();
+window.addEventListener('resize', ()=>{ fitTiles(); render(); });
+
+/* For debug */
+window._cm = { state, render, resolveChain, fitTiles };
+
+</script>
+</body>
+</html>
