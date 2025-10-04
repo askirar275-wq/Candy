@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candy Match Game</title>
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #ffe6f0, #fff7cc);
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #ff3399;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 70px);
+      gap: 8px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .tile {
+      width: 70px;
+      height: 70px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .tile:hover {
+      transform: scale(1.1);
+    }
+
+    .score {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #333;
+    }
+
+    button {
+      margin: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background-color: #ff66b2;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ff3385;
+    }
+  </style>
+</head>
+<body>
+  <h1>🍭 Candy Match</h1>
+  <div class="score">स्कोर: <span id="score">0</span></div>
+  <div class="grid" id="grid"></div>
+  <button onclick="shuffle()">Shuffle</button>
+  <button onclick="restart()">Restart</button>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const scoreDisplay = document.getElementById("score");
+    const width = 8;
+    let score = 0;
+
+    // 🍬 GitHub पर तुम्हारी candy images का path
+    const basePath = "https://askirar275-wq.github.io/Candy/images/";
+
+    const candyColors = [
+      basePath + "candy1.png",
+      basePath + "candy2.png",
+      basePath + "candy3.png",
+      basePath + "candy4.png",
+      basePath + "candy5.png",
+      basePath + "candy6.png",
+      basePath + "candy7.png",
+      basePath + "candy8.png",
+      basePath + "candy9.png",
+      basePath + "candy10.png",
+      "https://cdn-icons-png.flaticon.com/512/836/836686.png" // 💣 बम
+    ];
+
+    const squares = [];
+
+    // 🎮 गेम शुरू करने का फंक्शन
+    function createBoard() {
+      for (let i = 0; i < width * width; i++) {
+        const square = document.createElement('img');
+        square.setAttribute('src', candyColors[Math.floor(Math.random() * candyColors.length)]);
+        square.setAttribute('data-id', i);
+        square.classList.add('tile');
+        square.addEventListener('click', selectCandy);
+        grid.appendChild(square);
+        squares.push(square);
+      }
+    }
+
+    // 🍭 कैंडियों को चुनने और मैच करने का लॉजिक
+    let selectedCandy = null;
+
+    function selectCandy() {
+      const id = this.getAttribute('data-id');
+      if (!selectedCandy) {
+        selectedCandy = id;
+        this.style.transform = "scale(1.2)";
+      } else {
+        swapCandy(selectedCandy, id);
+        selectedCandy = null;
+      }
+    }
+
+    function swapCandy(firstId, secondId) {
+      const firstSrc = squares[firstId].src;
+      const secondSrc = squares[secondId].src;
+      squares[firstId].src = secondSrc;
+      squares[secondId].src = firstSrc;
+      checkMatches();
+    }
+
+    function checkMatches() {
+      for (let i = 0; i < width * width; i++) {
+        if (
+          squares[i + 1] &&
+          squares[i + 2] &&
+          squares[i].src === squares[i + 1].src &&
+          squares[i].src === squares[i + 2].src
+        ) {
+          score += 50;
+          scoreDisplay.textContent = score;
+          squares[i].src = candyColors[Math.floor(Math.random() * 10)];
+          squares[i + 1].src = candyColors[Math.floor(Math.random() * 10)];
+          squares[i + 2].src = candyColors[Math.floor(Math.random() * 10)];
+        }
+
+        // 💣 Bomb effect
+        if (squares[i].src.includes("836686")) {
+          score += 100;
+          squares[i].src = candyColors[Math.floor(Math.random() * 10)];
+        }
+      }
+    }
+
+    function shuffle() {
+      squares.forEach(square => {
+        square.src = candyColors[Math.floor(Math.random() * candyColors.length)];
+      });
+      score = 0;
+      scoreDisplay.textContent = score;
+    }
+
+    function restart() {
+      grid.innerHTML = "";
+      squares.length = 0;
+      score = 0;
+      scoreDisplay.textContent = score;
+      createBoard();
+    }
+
+    createBoard();
+  </script>
+</body>
+</html>
