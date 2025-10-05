@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Candy — Larger Tiles & Tighter Gap</title>
+<style>
+:root{
+  --cols:8;
+  --tile:84px;    /* default (bigger tile) */
+  --gap:6px;      /* smaller gap */
+  --accent:#ff4d9e;
+  --pop-dur:300ms;
+  --fall-dur:320ms;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#fff9fc,#f2f7ff)}
+body{display:flex;align-items:center;justify-content:center;padding:18px}
+.card{
+  width:100%;max-width:980px;background:#fff;border-radius:14px;padding:18px;
+  box-shadow:0 18px 48px rgba(20,20,50,.06);
+}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.title{font-weight:900;font-size:20px}
+.hud{display:flex;gap:12px;align-items:center;color:#666}
+.grid-wrap{
+  width:100%; border-radius:12px; background:linear-gradient(180deg,#fff,#fff7fb);
+  padding:14px; box-shadow:inset 0 8px 30px rgba(250,240,250,0.4);
+  overflow:hidden;
+}
+.grid{
+  display:grid;
+  grid-template-columns: repeat(var(--cols), var(--tile));
+  grid-auto-rows: var(--tile);
+  gap: var(--gap);
+  justify-content:center;
+  align-content:center;
+  touch-action:none;
+  margin:0 auto;
+}
+.cell{
+  width:var(--tile); height:var(--tile); border-radius:14px;
+  display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(0,0,0,0.04);
+  box-shadow:0 6px 14px rgba(10,10,30,.06); overflow:hidden; position:relative; cursor:grab;
+}
+.cell img{ width:82%; height:82%; object-fit:contain; pointer-events:none; display:block; }
+.controls{display:flex;gap:12px;justify-content:center;margin-top:14px}
+.btn{padding:10px 14px;border-radius:12px;border:0;background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff;font-weight:800;cursor:pointer}
+.note{font-size:13px;color:#666;margin-top:10px; text-align:center}
+@media(max-width:880px){
+  :root{ --tile:72px; --gap:5px }  /* reduce a bit on smaller screens */
+}
+@media(max-width:520px){
+  :root{ --tile:56px; --gap:4px }  /* mobile: still larger but fits */
+  .title{font-size:18px}
+}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="title">Candy — Bigger & Tighter</div>
+      <div class="hud">Score: <span id="score">0</span></div>
+    </div>
+
+    <div class="grid-wrap" id="gridWrap">
+      <div id="grid" class="grid" role="grid" aria-label="Candy grid"></div>
+    </div>
+
+    <div class="controls">
+      <button id="restart" class="btn">Restart</button>
+      <button id="shuffle" class="btn">Shuffle</button>
+    </div>
+
+    <div class="note">Images from <code>images/</code> folder — agar chaho filenames main change karna hai to batao</div>
+  </div>
+
+<script>
+/* Simple game core (uses images/ filenames) */
+const COLS = 8, ROWS = 8, SIZE = COLS * ROWS;
+const IMAGE_BASE = 'images/';
+const IMAGE_NAMES = [
+  'candy1.png','candy2.png','candy3.png','candy4.png','candy5.png',
+  'candy6.png','candy7.png','candy8.png','candy9.png','candy10.png'
+];
+const grid = document.getElementById('grid');
+const scoreEl = document.getElementById('score');
+
+let pool = IMAGE_NAMES.map(n => IMAGE_BASE + n);
+let state = { nextId:1, board: new Array(SIZE).fill(null), score:0 };
+let CELL = [];
+
+function tryLoad(url){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res({ok:true,url}); i.onerror=()=>res({ok:false,url}); i.src=url; }); }
+async function detectPool(){ const res = await Promise.all(pool.map(u=>tryLoad(u))); const ok = res.filter(r=>r.ok).map(r=>r.url); if(ok.length) pool = ok; else pool = ['data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="100%" height="100%" fill="%23eee"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23222" font-size="10">🍭</text></svg>']; }
+
+function fitTiles(){ /* rely on CSS var --tile which already set; keep a safe call here */ const gridWrap = document.getElementById('gridWrap').getBoundingClientRect(); /* no-op for now */ }
+
+function createCells(){
+  grid.innerHTML=''; CELL=[];
+  grid.style.setProperty('--cols', COLS);
+  for(let i=0;i<SIZE;i++){
+    const btn=document.createElement('button'); btn.className='cell'; btn.dataset.index=i;
+    const img=document.createElement('img'); img.alt='candy'; btn.appendChild(img);
+    btn.addEventListener('pointerdown', onDown);
+    grid.appendChild(btn);
+    CELL.push({btn,img});
+  }
+}
+
+function render(){
+  for(let i=0;i<SIZE;i++){
+    const tile = state.board[i];
+    const {btn,img} = CELL[i];
+    btn.childNodes.forEach(n=>{ if(n.nodeType===3) n.remove(); });
+    if(tile){
+      if(img.dataset.src !== tile.src){ img.dataset.src = tile.src; img.src = tile.src; }
+      btn.style.visibility = 'visible';
+    } else {
+      img.src=''; img.dataset.src=''; btn.style.visibility='hidden';
+    }
+  }
+  scoreEl.textContent = state.score;
+}
+
+function makeTile(src){ return { id: state.nextId++, src: src }; }
+function randomSrc(){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+function findMatches(bd){
+  const runs=[];
+  for(let r=0;r<ROWS;r++){
+    let run=[r*COLS];
+    for(let c=1;c<COLS;c++){
+      const p=r*COLS+c-1,i=r*COLS+c;
+      if(bd[i] && bd[p] && bd[i].src === bd[p].src) run.push(i);
+      else { if(run.length>=3) runs.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) runs.push([...run]);
+  }
+  for(let c=0;c<COLS;c++){
+    let run=[c];
+    for(let r=1;r<ROWS;r++){
+      const p=(r-1)*COLS+c,i=r*COLS+c;
+      if(bd[i] && bd[p] && bd[i].src === bd[p].src) run.push(i);
+      else { if(run.length>=3) runs.push([...run]); run=[i]; }
+    }
+    if(run.length>=3) runs.push([...run]);
+  }
+  return runs;
+}
+
+function applyGravityAndRefill(){
+  const newBoard = new Array(SIZE).fill(null);
+  for(let c=0;c<COLS;c++){
+    const colTiles=[];
+    for(let r=ROWS-1;r>=0;r--){ const idx=r*COLS+c; if(state.board[idx]) colTiles.push(state.board[idx]); }
+    let write = ROWS-1;
+    for(let t of colTiles){ newBoard[write*COLS + c] = t; write--; }
+    for(let r=write; r>=0; r--){ newBoard[r*COLS + c] = makeTile(randomSrc()); }
+  }
+  state.board = newBoard;
+}
+
+function resolveChain(){
+  const matches = findMatches(state.board);
+  if(matches.length===0) return;
+  const removeSet = new Set();
+  matches.forEach(run=>run.forEach(i=>removeSet.add(i)));
+  const removed = Array.from(removeSet).sort((a,b)=>a-b);
+  state.score += removed.length * 10;
+  removed.forEach(i=> state.board[i] = null);
+  render();
+  setTimeout(()=>{ applyGravityAndRefill(); render(); setTimeout(()=> resolveChain(), 180); }, 220);
+}
+
+function swap(i,j){ [state.board[i], state.board[j]] = [state.board[j], state.board[i]]; }
+
+/* pointer drag/ swap */
+let dragging=false, startIdx=null, pId=null;
+function onDown(e){
+  if(e.button !== 0) return;
+  const el=e.currentTarget; el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  dragging=true; pId=e.pointerId; startIdx = Number(el.dataset.index);
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+function onMove(e){
+  if(!dragging || e.pointerId !== pId) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if(!target) return;
+  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
+  if(!cell) return;
+  const idx = Number(cell.dataset.index);
+  if(isNaN(idx)) return;
+  if(idx !== startIdx && isAdjacent(startIdx, idx)){
+    swap(startIdx, idx);
+    render();
+    setTimeout(()=>{
+      const m = findMatches(state.board);
+      if(m.length > 0) resolveChain();
+      else { swap(startIdx, idx); render(); }
+    }, 140);
+    // end drag
+    dragging=false;
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+  }
+}
+function onUp(e){ dragging=false; startIdx=null; pId=null; document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); }
+function isAdjacent(a,b){ if(a==null||b==null) return false; const r1=Math.floor(a/COLS), c1=a%COLS, r2=Math.floor(b/COLS), c2=b%COLS; return Math.abs(r1-r2)+Math.abs(c1-c2)===1; }
+
+/* init & controls */
+document.getElementById('restart').addEventListener('click', ()=> initBoard());
+document.getElementById('shuffle').addEventListener('click', ()=>{
+  const srcs = state.board.map(t=> t ? t.src : randomSrc()).sort(()=>Math.random()-0.5);
+  for(let i=0;i<SIZE;i++){ if(state.board[i]) state.board[i].src = srcs[i]; else state.board[i] = makeTile(srcs[i]); }
+  render();
+});
+
+function initBoard(){
+  state.nextId = 1; state.score = 0;
+  for(let i=0;i<SIZE;i++) state.board[i] = makeTile(randomSrc());
+  let tries=0;
+  while(findMatches(state.board).length > 0 && tries++ < 800){
+    const s = state.board.map(t=>t.src).sort(()=>Math.random()-0.5);
+    for(let i=0;i<SIZE;i++) state.board[i].src = s[i];
+  }
+  render();
+}
+
+/* start */
+(async function start(){
+  await detectPool();
+  pool.forEach(u=>{ const i=new Image(); i.src=u; });
+  fitTiles();
+  createCells();
+  initBoard();
+})();
+</script>
+</body>
+</html>
