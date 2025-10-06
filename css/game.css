@@ -1,1 +1,22 @@
 
+/* game screen + grid styling */
+:root{ --tile:64px; --gap:6px; --cols:8; --accent:#ff6bd6; }
+*{box-sizing:border-box}
+.game-screen{display:none;padding:16px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.brand{display:flex;gap:12px;align-items:center}
+.brand .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:flex;align-items:center;justify-content:center;font-size:26px}
+.game-title{font-weight:900;font-size:18px}
+.hud{display:flex;gap:10px;align-items:center}
+.pill{background:linear-gradient(180deg,#fff,#fff7fb);padding:8px 12px;border-radius:999px;font-weight:800;box-shadow:0 10px 22px rgba(20,20,60,0.04)}
+.main-area{display:flex;flex-direction:column;gap:12px;align-items:center}
+.board-wrap{background:linear-gradient(180deg,#fff7ff,#fff);padding:12px;border-radius:16px;box-shadow:inset 0 10px 30px rgba(250,240,250,0.4);max-width:900px;width:100%}
+.grid{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--cols),var(--tile));grid-auto-rows:var(--tile);justify-content:center}
+.cell{width:var(--tile);height:var(--tile);border-radius:14px;background:linear-gradient(180deg,#fff,#fffefc);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(10,10,30,0.05);border:1px solid rgba(0,0,0,0.04);cursor:grab;padding:0;overflow:hidden}
+.cell img{width:86%;height:86%;object-fit:contain;pointer-events:none}
+.cell.pop{animation:pop .32s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes pop{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4)}100%{transform:scale(0);opacity:0}}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.select{padding:8px;border-radius:10px;border:1px solid #eee}
+.footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+@media(max-width:720px){:root{--tile:52px;--gap:4px}}
