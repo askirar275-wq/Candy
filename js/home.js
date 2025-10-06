@@ -1,22 +1,22 @@
-const startBtn = document.getElementById("startBtn");
-const homeScreen = document.getElementById("home-screen");
-const gameScreen = document.getElementById("game-screen");
-const backBtn = document.getElementById("backBtn");
+// js/home.js — अगर नहीं है तो यह पूरी फाइल बनाओ/append करो
+function startGame(){
+  // hide home, show game
+  const home = document.getElementById('home-screen');
+  const game = document.getElementById('game-screen');
+  if(home) home.style.display = 'none';
+  if(game) game.style.display = 'block';
 
-startBtn.addEventListener("click", () => {
-  homeScreen.classList.remove("active");
-  gameScreen.classList.add("active");
-  startGame();
-});
+  // अगर आपके game init का नाम initGame या createBoard है, उसे call करो
+  if(!window._candyStarted){
+    window._candyStarted = true;
+    if(typeof window.initGame === 'function') window.initGame();
+    else if(typeof window.createBoard === 'function') window.createBoard();
+    else console.warn('Game init function not found. Check js/game.js for initGame/createBoard.');
+  }
+}
 
-backBtn.addEventListener("click", () => {
-  gameScreen.classList.remove("active");
-  homeScreen.classList.add("active");
-});
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  const installBtn = document.getElementById("installBtn");
-  installBtn.style.display = "inline-block";
-  installBtn.addEventListener("click", () => e.prompt());
-});
+// अगर index.html मैं button id 'startBtn' है, तो add listener भी रखें
+const startBtn = document.getElementById('startBtn');
+if(startBtn) {
+  startBtn.addEventListener('click', startGame);
+}
