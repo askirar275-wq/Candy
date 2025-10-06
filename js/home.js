@@ -1,12 +1,22 @@
-document.getElementById('playBtn').onclick = () => {
-  document.getElementById('homeScreen').style.display = 'none';
-  document.getElementById('gameScreen').classList.remove('hidden');
-};
+const startBtn = document.getElementById("startBtn");
+const homeScreen = document.getElementById("home-screen");
+const gameScreen = document.getElementById("game-screen");
+const backBtn = document.getElementById("backBtn");
 
-document.getElementById('shopBtn').onclick = () => {
-  alert('🛒 Candy Shop Coming Soon!');
-};
+startBtn.addEventListener("click", () => {
+  homeScreen.classList.remove("active");
+  gameScreen.classList.add("active");
+  startGame();
+});
 
-document.getElementById('settingsBtn').onclick = () => {
-  alert('⚙ Settings Coming Soon!');
-};
+backBtn.addEventListener("click", () => {
+  gameScreen.classList.remove("active");
+  homeScreen.classList.add("active");
+});
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  const installBtn = document.getElementById("installBtn");
+  installBtn.style.display = "inline-block";
+  installBtn.addEventListener("click", () => e.prompt());
+});
