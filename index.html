@@ -1,49 +1,59 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Candy Match 🍬</title>
-  <!-- तुम्हारे बने CSS फाइलें -->
+
+  <!-- CSS Files -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
-  <!-- HOME SCREEN -->
+  <!-- 🏠 HOME SCREEN -->
   <div id="home-screen" class="screen active">
-    <img src="images/candy1.png" alt="logo" class="logo" width="96">
+    <img src="images/candy1.png" alt="logo" class="logo">
     <h1 class="title">🍭 Candy Match</h1>
     <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
     <div class="buttons">
-      <button id="startBtn" class="big">🎮 Start</button>
-      <button id="shopBtn" class="big">🛒 Shop</button>
-      <button id="settingsBtn" class="big">⚙️ Settings</button>
+      <button id="startBtn">🎮 Start</button>
+      <button id="shopBtn">🛒 Shop</button>
+      <button id="settingsBtn">⚙️ Settings</button>
     </div>
 
     <button id="installBtn" class="install">⬇️ Install</button>
     <p class="footer">Made with ❤️ — Candy Studio</p>
   </div>
 
-  <!-- GAME SCREEN -->
-  <div id="game-screen" class="screen" style="display:none">
+  <!-- 🎮 GAME SCREEN -->
+  <div id="game-screen" class="screen">
     <div class="topbar">
       <button id="backBtn">⬅️ Home</button>
-      <div style="flex:1;text-align:right">Score: <span id="score">0</span></div>
+      <h2>Score: <span id="score">0</span></h2>
     </div>
-
-    <div id="boardWrap" style="display:flex;justify-content:center;padding:12px">
-      <div id="game-board" class="board"></div>
-    </div>
-
-    <div style="display:flex;gap:8px;justify-content:center;padding:12px">
-      <button id="restartBtn">Restart</button>
-      <button id="shuffleBtn">Shuffle</button>
-    </div>
+    <div id="game-board" class="board"></div>
   </div>
 
-  <!-- scripts: home then game -->
+  <!-- JS Files -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
+
+  <!-- 🧩 DEBUG TOGGLE SCRIPT -->
+  <script>
+    const DEBUG_MODE = true; // 🟢 testing के लिए true, release के लिए false करें
+
+    if (DEBUG_MODE) {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/eruda";
+      s.onload = () => {
+        eruda.init();
+        console.log("✅ Debug mode चालू है (Eruda Console)");
+      };
+      document.body.appendChild(s);
+    } else {
+      console.log("🚀 Release mode चालू — Console बंद है");
+    }
+  </script>
 </body>
 </html>
