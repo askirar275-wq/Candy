@@ -1,24 +1,59 @@
-/* home screen styles (cartoon) */
-:root{ --accent:#ff6bd6; --bg1:#ffe6f7; --bg2:#fff4ff; }
-*{box-sizing:border-box}
-body{font-family:'Poppins',system-ui,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2));margin:0;padding:0;-webkit-font-smoothing:antialiased}
-.home-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-.home-card{width:100%;max-width:760px;background:linear-gradient(180deg,#fff,#fffafc);border-radius:18px;padding:28px;box-shadow:0 30px 80px rgba(20,10,40,0.12);text-align:center;position:relative}
-.logo{width:88px;height:88px;border-radius:18px;background:linear-gradient(135deg,#fff0f6,#ffeef8);display:inline-flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:8px}
-.title{font-size:36px;margin:6px 0;color:#5b2b14;font-weight:900;text-shadow:2px 2px 0 #fff7c1}
-.subtitle{margin:6px 0 18px;color:#7a3b1a}
-.home-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn{border:0;padding:12px 22px;border-radius:28px;font-weight:800;cursor:pointer;box-shadow:0 10px 28px rgba(20,20,60,0.06)}
-.btn.primary{background:linear-gradient(90deg,var(--accent),#ff9ac8);color:#fff}
-.btn:not(.primary){background:#fff}
-.bg-art{position:absolute;left:0;right:0;bottom:-20px;height:160px;background:url('/images/choco-bg.png') center/cover no-repeat;opacity:0.9;pointer-events:none}
-.floating-candies img{position:absolute;width:72px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.12))}
-.f1{left:8%;top:18%}
-.f2{right:12%;top:22%}
-.f3{left:18%;bottom:18%}
-.f4{right:24%;bottom:24%}
-@media(max-width:720px){
-  .title{font-size:28px}
-  .logo{width:64px;height:64px;font-size:28px}
-  .home-card{padding:18px}
+body {
+  margin: 0;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  background: linear-gradient(135deg, #ffb6c1, #ffc3a0);
+  text-align: center;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+}
+
+.screen.active {
+  display: block;
+}
+
+.logo {
+  width: 80px;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
+.title {
+  font-size: 2.2em;
+  color: #d63384;
+  margin: 10px 0;
+}
+
+.subtitle {
+  color: #444;
+  margin-bottom: 20px;
+}
+
+.buttons button, .install {
+  font-size: 1.2em;
+  padding: 10px 20px;
+  margin: 10px;
+  border: none;
+  border-radius: 20px;
+  background: #ff66b2;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px #c94f8a;
+  transition: 0.2s;
+}
+
+.buttons button:hover, .install:hover {
+  background: #ff3399;
+}
+
+.footer {
+  margin-top: 40px;
+  color: #333;
 }
