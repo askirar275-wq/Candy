@@ -1,14 +1,159 @@
+ठीक है — खाली (काली) पेज का मतलब अक्सर फ़ाइलें सही लोड नहीं हो रही या service-worker / cache पुराना फाइल serve कर रहा है या index.html में path गलत है। मैं अभी तुम्हें तुरंत एक छोटा diagnostic (टेस्ट) index.html दूँगा — इसे अपने repo के root में index.html नाम से रखो (existing वाला replace कर दो) और फिर खोलकर देखें। यह पेज स्क्रीन पर कुछ visible debug जानकारी दिखाएगा और Console + पेज पर बताएगा कौन-सी फ़ाइल 404/गलत आ रही है — जिससे हम तुरंत पता लगा लेंगे।
+
+1) तुरंत पेस्ट करने के लिए debug index.html
+
+कॉपी करो और GitHub में root पर index.html के रूप में डाल दो। (एक-एक फाइल ठीक करने से पहले यह सबआसान करेगा)
+
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Debug — Candy Repo</title>
+<style>
+  body{font-family:Inter,system-ui,Arial;padding:18px;background:#fff}
+  h1{color:#b33;font-size:22px}
+  .ok{color:green}
+  .err{color:red}
+  pre{background:#f7f7f7;border:1px solid #eee;padding:10px;border-radius:8px;white-space:pre-wrap}
+  .box{padding:12px;border-radius:10px;background:#fff8f8;margin-bottom:12px}
+</style>
+</head>
+<body>
+  <h1>Repo Debug — Candy</h1>
+
+  <div class="box">
+    <strong>📁 Check files (expected):</strong>
+    <ul>
+      <li>css/home.css</li>
+      <li>css/game.css</li>
+      <li>js/home.js</li>
+      <li>js/game.js</li>
+      <li>images/candy1.png ... candy10.png</li>
+    </ul>
+    <p>अगर filenames अलग हैं तो नीचे वाले tests बदलें।</p>
   </div>
 
-  <!-- simple modal for Shop/Settings -->
-  <div id="modal" class="modal" style="display:none">
-    <div class="modal-card">
-      <div id="modalContent"></div>
-      <div style="text-align:right;margin-top:12px"><button id="closeModal" class="btn small">Close</button></div>
-    </div>
+  <div class="box">
+    <strong>📡 Network test results:</strong>
+    <div id="results">Testing… (console भी देखो)</div>
   </div>
 
-  <script src="/js/home.js"></script>
-  <script src="/js/game.js"></script>
+  <div class="box">
+    <strong>🛠 Console log (client):</strong>
+    <pre id="log"></pre>
+  </div>
+
+<script>
+(function(){
+  const logEl = document.getElementById('log');
+  function clog(...s){ console.log(...s); logEl.textContent += s.join(' ') + "\\n"; }
+
+  // resources to test - अगर तुम्हारे filenames अलग हैं तो बदल देना
+  const tests = [
+    'css/home.css',
+    'css/game.css',
+    'js/home.js',
+    'js/game.js',
+    'images/candy1.png',
+    'images/candy2.png',
+    'images/candy3.png',
+    'images/candy4.png',
+    'images/candy5.png'
+  ];
+
+  document.getElementById('results').textContent = 'Starting requests... (also check browser Console)';
+
+  // sequential fetch to avoid CORS issues in some cases
+  (async function run(){
+    for(const url of tests){
+      try{
+        clog('→ fetching', url);
+        const r = await fetch(url, {cache: "no-store"});
+        if(r.ok){
+          clog('  ok:', url, 'status', r.status);
+          const el = document.createElement('div');
+          el.innerHTML = `<span class="ok">✔</span> ${url} — ${r.status}`;
+          document.getElementById('results').appendChild(el);
+        } else {
+          clog('  ERR:', url, 'status', r.status);
+          const el = document.createElement('div');
+          el.innerHTML = `<span class="err">✖</span> ${url} — ${r.status}`;
+          document.getElementById('results').appendChild(el);
+        }
+      }catch(err){
+        clog('  FAIL fetch', url, err.message || err);
+        const el = document.createElement('div');
+        el.innerHTML = `<span class="err">✖</span> ${url} — fetch failed`;
+        document.getElementById('results').appendChild(el);
+      }
+    }
+
+    clog('\\nAll tests finished.');
+    document.getElementById('results').appendChild(document.createElement('hr'));
+    document.getElementById('results').appendChild(document.createTextNode('नोट: यदि कोई fetch failed हो तो वह path गलत है या file missing है, या service-worker/cache पुराना serve कर रहा है.'));
+  })();
+
+  // show service worker registration state (if any)
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      clog('\\nService workers registered:', regs.length);
+      regs.forEach(r => clog(' - scope:', r.scope));
+    }).catch(e=>clog('sw check error', e));
+  } else clog('serviceWorker not supported');
+})();
+</script>
 </body>
 </html>
+
+2) क्या करना है — step by step
+
+1. ऊपर वाला index.html root में डालो (GitHub repo → Add file → Create new file → नाम index.html → paste → commit).
+
+
+2. कुछ सेकंड बाद अपनी GitHub Pages URL खोलो: https://YOURUSERNAME.github.io/REPONAME/
+
+अगर blank आ रहा है, try reload with cache bypass (browser पर Ctrl+Shift+R या मोबाइल पर URL bar → Refresh holding → या ब्राउज़र cache साफ करो)
+
+
+
+3. पेज पर जो दिखाई देगा — उसमे results दिखेंगे (जो resources 200 हैं और कौन 404/failed)। Console log भी page पर दिखेगा।
+
+
+4. जो फ़ाइलें failed आएँ, उसी path को GitHub में चेक करो। Example common fixes:
+
+आपने file css/home.css रखी पर index में <link href="css/home.css"> नहीं है — fix path.
+
+Upper/lower-case mismatch: Candy1.png ≠ candy1.png.
+
+JS फाइल फ़ोल्डर में नहीं है या नाम अलग है → upload करो।
+
+
+
+5. अगर fetch requests सब OK हैं पर पेज फिर भी खाली है → सम्भव है js/game.js में कोई syntax error है जो execution रोक रहा है। Console में error दिखाई देगा (और ऊपर log में भी)। Copy करके मुझे भेजो — मैं सही कर दूँगा।
+
+
+
+3) आम समस्याएँ और फिक्स (तेज़)
+
+Service worker cache: यदि पहले कोई SW register है तो वह पुरानी फाइल cache कर सकता है और नए changes न दिखें। Chrome mobile पर:
+
+Chrome → Settings → Site settings → Storage → अपनी साइट के लिए Clear & Reset.
+
+या Desktop: DevTools → Application → Service Workers → unregister.
+
+
+GitHub Pages settings: Repo → Settings → Pages → branch: main and folder: / (root) — verify करो.
+
+Filenames case-sensitive: GitHub Linux-hosted → case matters.
+
+Index file होना चाहिए root पर और नाम exactly index.html.
+
+
+
+---
+
+अगर तुम चाहो, मैं अभी पूरा working minimal game 파일 सेट (index.html, css/home.css, css/game.css, js/home.js, js/game.js, service-worker.js) देता हूँ — ताकि तुम बस सबको copy-paste कर के एक चालू (working) version पोंच पाओ। बताओ: मुझे अभी सारे files ready दे दूँ? (हाँ/ना)
+
+या पहले index.html debug run करके जो output आ रहा है वो यहाँ paste कर दो — मैं उसी हिसाब से next step दूँगा (कौन-सी file missing, कौन 404, या कौन सी line error दे रही)।
+
