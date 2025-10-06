@@ -1,36 +1,48 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
+  <!-- तुम्हारे बने CSS फाइलें -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
+  <!-- HOME SCREEN -->
   <div id="home-screen" class="screen active">
-    <img src="images/candy1.png" alt="logo" class="logo">
+    <img src="images/candy1.png" alt="logo" class="logo" width="96">
     <h1 class="title">🍭 Candy Match</h1>
     <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
     <div class="buttons">
-      <button id="startBtn">🎮 Start</button>
-      <button id="shopBtn">🛒 Shop</button>
-      <button id="settingsBtn">⚙️ Settings</button>
+      <button id="startBtn" class="big">🎮 Start</button>
+      <button id="shopBtn" class="big">🛒 Shop</button>
+      <button id="settingsBtn" class="big">⚙️ Settings</button>
     </div>
 
     <button id="installBtn" class="install">⬇️ Install</button>
     <p class="footer">Made with ❤️ — Candy Studio</p>
   </div>
 
-  <div id="game-screen" class="screen">
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen" style="display:none">
     <div class="topbar">
       <button id="backBtn">⬅️ Home</button>
-      <h2>Score: <span id="score">0</span></h2>
+      <div style="flex:1;text-align:right">Score: <span id="score">0</span></div>
     </div>
-    <div id="game-board" class="board"></div>
+
+    <div id="boardWrap" style="display:flex;justify-content:center;padding:12px">
+      <div id="game-board" class="board"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:center;padding:12px">
+      <button id="restartBtn">Restart</button>
+      <button id="shuffleBtn">Shuffle</button>
+    </div>
   </div>
 
+  <!-- scripts: home then game -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
 </body>
