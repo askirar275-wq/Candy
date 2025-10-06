@@ -1,32 +1,49 @@
-#game-screen {
+body {
+  background: linear-gradient(to bottom right, #ffd6e8, #ffe3c6);
+  font-family: 'Poppins', sans-serif;
   text-align: center;
-  background: linear-gradient(135deg, #ffecd2, #fcb69f);
-  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   padding: 10px 20px;
+  font-size: 20px;
 }
 
 .board {
+  width: 360px;
+  height: 360px;
   margin: 20px auto;
-  width: 90vw;
-  max-width: 400px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
-}
-
-.board img {
-  width: 100%;
+  grid-gap: 3px;
+  background: #ffd0da;
+  padding: 10px;
   border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.2s;
+  box-shadow: 0 0 10px #ff7fbf;
 }
 
-.board img:hover {
-  transform: scale(1.1);
+.candy {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  cursor: grab;
+  transition: transform 0.2s ease, opacity 0.3s ease;
 }
+
+.candy.moving {
+  transform: scale(1.2);
+  opacity: 0.8;
+}
+
+.candy.falling {
+  animation: fall 0.5s ease forwards;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-50px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+  }
