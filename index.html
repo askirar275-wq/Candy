@@ -1,59 +1,250 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Candy Match 🍬</title>
 
-  <!-- CSS Files -->
+  <!-- CSS Files (अपनी फाइलें रखो) -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
+
+  <style>
+    /* छोटे-छोटे अतिरिक्त स्टाइल (यदि जरूरत हो तो) */
+    .screen { display: none; }
+    .screen.active { display: block; }
+    /* Shop modal light style fallback */
+    .shop-modal {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(10,10,20,0.45); z-index: 9999;
+    }
+    .shop-card {
+      width: 94%; max-width: 420px; background: #fff; border-radius: 14px; padding: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    }
+    .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px; }
+    .shop-item {
+      background: linear-gradient(180deg,#fff7fb,#fff); padding:8px; border-radius:10px; text-align:center;
+      box-shadow: inset 0 4px 12px rgba(255,200,240,0.04);
+    }
+    .shop-item button { margin-top:8px; padding:8px 10px; border-radius:10px; border:0; cursor:pointer; }
+    .shop-top { display:flex; justify-content:space-between; align-items:center; gap:10px }
+    .shop-row {display:flex; gap:10px; align-items:center; margin-top:8px;}
+    .coins-bubble { background:linear-gradient(90deg,#fff4e6,#fff); padding:6px 10px; border-radius:999px; font-weight:800; }
+    .small-note{ font-size:13px; color:#666; margin-top:6px; }
+  </style>
 </head>
 <body>
   <!-- 🏠 HOME SCREEN -->
   <div id="home-screen" class="screen active">
-    <img src="images/candy1.png" alt="logo" class="logo">
+    <img src="images/candy1.png" alt="logo" class="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
     <h1 class="title">🍭 Candy Match</h1>
     <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-    <div class="buttons">
-      <button id="startBtn">🎮 Start</button>
-      <button id="shopBtn">🛒 Shop</button>
-      <button id="settingsBtn">⚙️ Settings</button>
+    <div class="buttons" style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:12px;">
+      <button id="startBtn" style="width:80%;padding:12px;border-radius:12px;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:12px;border-radius:12px;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:12px;border-radius:12px;">⚙️ Settings</button>
     </div>
 
-    <button id="installBtn" class="install">⬇️ Install</button>
-    <p class="footer">Made with ❤️ — Candy Studio</p>
+    <button id="installBtn" class="install" style="margin-top:12px;padding:8px 14px;border-radius:10px;">⬇️ Install</button>
+    <p class="footer" style="margin-top:12px;color:#666">Made with ❤️ — Arun App Studio</p>
   </div>
 
   <!-- 🎮 GAME SCREEN -->
   <div id="game-screen" class="screen">
-    <div class="topbar">
-      <button id="backBtn">⬅️ Home</button>
-      <h2>Score: <span id="score">0</span></h2>
+    <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px;">
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
-    <div id="game-board" class="board"></div>
+    <div id="game-board" class="board" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px;max-width:420px;margin:10px auto;"></div>
+
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;">
+      <button id="restartBtn" style="padding:8px 12px;border-radius:8px;">Restart</button>
+      <button id="shuffleBtn" style="padding:8px 12px;border-radius:8px;">Shuffle</button>
+      <button id="openShopBtn" style="padding:8px 12px;border-radius:8px;">Open Shop</button>
+    </div>
   </div>
 
-  <!-- JS Files -->
+  <!-- 🛒 SHOP MODAL -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true">
+    <div class="shop-card">
+      <div class="shop-top">
+        <div>
+          <h3 style="margin:0">🛒 Shop</h3>
+          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#666">Your Coins</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
+        </div>
+      </div>
+
+      <div class="shop-grid">
+        <div class="shop-item">
+          <div style="font-size:20px">💣 Bomb</div>
+          <div style="font-weight:800;margin-top:8px">₹ 200</div>
+          <button id="buyBomb">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:20px">🔀 Shuffle</div>
+          <div style="font-weight:800;margin-top:8px">₹ 100</div>
+          <button id="buyShuffle">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:20px">➕ Extra Moves</div>
+          <div style="font-weight:800;margin-top:8px">₹ 80</div>
+          <button id="buyMoves">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-weight:800;margin-top:8px">₹ 350</div>
+          <button id="buyRainbow">Buy</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS Files (आपकी मौजूदा फाइलें) -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- 🧩 DEBUG TOGGLE SCRIPT -->
+  <!-- Inline: Shop + Screen logic (Hindi comments) -->
   <script>
-    const DEBUG_MODE = true; // 🟢 testing के लिए true, release के लिए false करें
+    // ---------- लोकल स्टेट (सिंपल demo) ----------
+    let coins = Number(localStorage.getItem('candy_coins') || 250); // डेमो के लिए शुरुआती कॉइन्स
+    let inv = JSON.parse(localStorage.getItem('candy_inv') || JSON.stringify({bomb:0, shuffle:0, moves:0, rainbow:0}));
 
+    // DOM refs
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const shopModal = document.getElementById('shopModal');
+    const shopCoins = document.getElementById('shopCoins');
+    const coinsBubble = document.getElementById('coins');
+    const scoreEl = document.getElementById('score');
+
+    // बटन हुकअप
+    document.getElementById('startBtn').addEventListener('click', () => {
+      showScreen('game');
+      // अगर game.js में initGame है तो वह चला देगा; वरना, सादा बोर्ड बनाओ
+      if (typeof initGame === 'function') initGame();
+      updateHUD();
+    });
+
+    // Home बटन
+    document.getElementById('backBtn').addEventListener('click', () => showScreen('home'));
+
+    // Shop बटन (होम पर)
+    document.getElementById('shopBtn').addEventListener('click', () => openShop());
+
+    // Open Shop (इन-गेम)
+    document.getElementById('openShopBtn').addEventListener('click', () => openShop());
+
+    // Close Shop
+    document.getElementById('closeShop').addEventListener('click', () => closeShop());
+
+    // install/settings simple demo handlers
+    document.getElementById('installBtn').addEventListener('click', () => alert('Install demo — आप इसे PWA में बदल सकते हैं।'));
+    document.getElementById('settingsBtn').addEventListener('click', () => alert('Settings — अभी demo में नहीं है।'));
+
+    // Buy handlers
+    document.getElementById('buyBomb').addEventListener('click', () => buyItem('bomb', 200));
+    document.getElementById('buyShuffle').addEventListener('click', () => buyItem('shuffle', 100));
+    document.getElementById('buyMoves').addEventListener('click', () => buyItem('moves', 80));
+    document.getElementById('buyRainbow').addEventListener('click', () => buyItem('rainbow', 350));
+
+    // Restart / Shuffle quick handlers (game.js may define actual behavior)
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      if (typeof initGame === 'function') initGame();
+      else alert('Restart: गेम फ़ंक्शन उपलब्ध नहीं (initGame नामक function खोजें)।');
+    });
+    document.getElementById('shuffleBtn').addEventListener('click', () => {
+      if (typeof shuffleBoard === 'function') shuffleBoard();
+      else alert('Shuffle: गेम में shuffle function उपलब्ध नहीं।');
+    });
+
+    // Shop open/close
+    function openShop(){
+      shopModal.style.display = 'flex';
+      shopModal.setAttribute('aria-hidden','false');
+      refreshShopUI();
+    }
+    function closeShop(){
+      shopModal.style.display = 'none';
+      shopModal.setAttribute('aria-hidden','true');
+    }
+
+    // स्क्रीन दिखाना
+    function showScreen(which){
+      if(which === 'home'){
+        homeScreen.classList.add('active');
+        gameScreen.classList.remove('active');
+      } else if(which === 'game'){
+        gameScreen.classList.add('active');
+        homeScreen.classList.remove('active');
+      }
+    }
+
+    // खरीदारी लॉजिक
+    function buyItem(id, price){
+      if(coins < price){
+        alert('कॉइन्स कम हैं — गेम खेलकर जमा करें।');
+        return;
+      }
+      coins -= price;
+      inv[id] = (inv[id] || 0) + 1;
+      persistState();
+      refreshShopUI();
+      updateHUD();
+      alert('खरीदारी सफल: ' + id + ' ×1');
+    }
+
+    // स्टेट सेव/लोड
+    function persistState(){
+      localStorage.setItem('candy_coins', String(coins));
+      localStorage.setItem('candy_inv', JSON.stringify(inv));
+    }
+
+    function refreshShopUI(){
+      shopCoins.textContent = coins;
+      coinsBubble.textContent = coins;
+      // display inventory counts (optional): आप इसे UI में दिखा सकते हैं
+      // ex: document.getElementById('invBomb').textContent = inv.bomb || 0;
+    }
+
+    // HUD अपडेट
+    function updateHUD(){
+      scoreEl.textContent = window.__score || scoreEl.textContent || 0;
+      coinsBubble.textContent = coins;
+      shopCoins.textContent = coins;
+    }
+
+    // पेज लोड पर इनिशियल अपडेट
+    (function boot(){
+      refreshShopUI();
+      updateHUD();
+      // debug message
+      if (window.DEBUG_MODE) console.log('Shop module loaded — coins:', coins, 'inv:', inv);
+    })();
+  </script>
+
+  <!-- 🧩 DEBUG TOGGLE SCRIPT (Eruda मोबाइल कंसोल) -->
+  <script>
+    const DEBUG_MODE = true; // testing के लिए true, production में false कर दें
     if (DEBUG_MODE) {
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/eruda";
-      s.onload = () => {
-        eruda.init();
-        console.log("✅ Debug mode चालू है (Eruda Console)");
-      };
+      s.onload = () => { eruda.init(); console.log("✅ Eruda started (mobile console)"); };
       document.body.appendChild(s);
-    } else {
-      console.log("🚀 Release mode चालू — Console बंद है");
     }
   </script>
 </body>
-</html>
+                                                      </html>
