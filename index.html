@@ -10,11 +10,9 @@
   <link rel="stylesheet" href="css/game.css">
 
   <style>
-    /* छोटे-छोटे अतिरिक्त स्टाइल */
     .screen { display: none; }
     .screen.active { display: block; }
 
-    /* Shop modal style */
     .shop-modal {
       position: fixed; inset: 0; display: none;
       align-items: center; justify-content: center;
@@ -45,6 +43,7 @@
     .small-note { font-size:13px; color:#666; margin-top:6px; }
   </style>
 </head>
+
 <body>
   <!-- 🏠 HOME SCREEN -->
   <div id="home-screen" class="screen active">
@@ -67,11 +66,11 @@
     <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px;">
       <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
       <h2 style="margin:0">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">50</span></div>
     </div>
 
     <div id="game-board" class="board"
-         style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;
+         style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
                 padding:8px;max-width:420px;margin:10px auto;">
     </div>
 
@@ -128,18 +127,50 @@
   <!-- JS Files -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
-  <script src="js/shop.js"></script> <!-- ✅ नया जोड़ा गया script -->
+  <script src="js/shop.js"></script>
 
-  <!-- 🧩 DEBUG TOGGLE SCRIPT (Eruda मोबाइल कंसोल) -->
+  <!-- 🍬 Floating Candies Script -->
+  <script>
+  (function createFloatingCandies(){
+    const candyImages = [
+      'https://askirar275-wq.github.io/Candy/images/candy1.png',
+      'https://askirar275-wq.github.io/Candy/images/candy2.png',
+      'https://askirar275-wq.github.io/Candy/images/candy3.png',
+      'https://askirar275-wq.github.io/Candy/images/candy4.png',
+      'https://askirar275-wq.github.io/Candy/images/candy5.png'
+    ];
+    const COUNT = 6;
+    const body = document.body;
+    const boardEl = document.querySelector('.board');
+    if (boardEl) {
+      boardEl.style.position = 'relative';
+      boardEl.style.zIndex = 3;
+    }
+    for (let i = 0; i < COUNT; i++) {
+      const el = document.createElement('img');
+      el.className = 'floating-candy';
+      el.src = candyImages[i % candyImages.length];
+      const size = 40 + Math.floor(Math.random() * 50);
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.left = Math.floor(Math.random() * 90) + '%';
+      el.style.top = 10 + Math.floor(Math.random() * 70) + '%';
+      el.style.animationDuration = (6 + Math.random() * 6) + 's';
+      el.style.opacity = 0.9 - Math.random() * 0.3;
+      el.style.pointerEvents = 'none';
+      el.style.zIndex = 2;
+      body.appendChild(el);
+    }
+  })();
+  </script>
+
+  <!-- 🧩 DEBUG CONSOLE -->
   <script>
     const DEBUG_MODE = true;
     if (DEBUG_MODE) {
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/eruda";
-      s.onload = () => {
-        eruda.init();
-        console.log("✅ Eruda started (mobile console)");
-      };
+      s.onload = () => eruda.init();
       document.body.appendChild(s);
     }
   </script>
