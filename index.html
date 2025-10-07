@@ -1,481 +1,144 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Candy Match 🍬</title>
 
-  <!-- Existing external CSS (kept for other styles) -->
+  <!-- ✅ All CSS Files -->
   <link rel="stylesheet" href="css/home.css">
-  <!-- game.css replaced/extended below via inline style for easy copy-paste -->
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/inventory.css"> <!-- 🧩 Added Inventory Styles -->
+
   <style>
-  /* ====== Candy Match - Combined visuals + shop + coin popup ====== */
-
-  :root {
-    --bg-top: #ffd7e6;
-    --bg-bottom: #ffe7d9;
-    --card: #fff7fb;
-    --card-shadow: rgba(219, 100, 160, 0.14);
-    --tile-size: 48px;
-    --tile-gap: 10px;
-    --accent: #ff6fb3;
-  }
-
-  /* 🌴 Jungle background + gradient (use your repo path) */
-  body {
-    background:
-      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%),
-      url('images/bg-gradient.png');
-    background-size: cover;
-    background-position: center bottom;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-blend-mode: soft-light;
-    font-family: "Poppins", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    color: #3b2a24;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-  }
-
-  /* sprinkle overlay (optional) */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: url('images/candy-sprinkle.png');
-    background-repeat: repeat;
-    background-size: 220px;
-    opacity: 0.05;
-    pointer-events: none;
-  }
-
-  /* central card for board */
-  .board {
-    margin: 14px auto;
-    padding: 18px;
-    max-width: 520px;
-    border-radius: 22px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,248,250,0.9));
-    box-shadow: 0 18px 40px var(--card-shadow), inset 0 2px 0 rgba(255,255,255,0.6);
-    display: grid;
-    gap: var(--tile-gap);
-    transform: translateZ(0);
-  }
-
-  .cell {
-    width: 100%;
-    aspect-ratio: 1/1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background: rgba(255,255,255,0.86);
-    border-radius: 12px;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,0.85) inset;
-    transition: transform 160ms ease, box-shadow 160ms ease;
-    position: relative;
-    overflow: hidden;
-  }
-  .cell::after {
-    content:"";
-    position:absolute; inset:0;
-    border-radius:12px;
-    box-shadow: 0 2px 0 rgba(255,255,255,0.6) inset;
-    pointer-events:none;
-  }
-
-  .tile {
-    width: calc(var(--tile-size, 48px) * 0.9);
-    height: calc(var(--tile-size, 48px) * 0.9);
-    object-fit: contain;
-    transition: transform 180ms cubic-bezier(.2,.9,.2,1), opacity 200ms;
-    z-index: 2;
-    user-select: none;
-    -webkit-user-drag: none;
-    filter: drop-shadow(0 6px 10px rgba(81, 38, 64, 0.12));
-  }
-
-  .cell:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.09); }
-  .selected-cell { outline: 3px solid rgba(255,111,179,0.2); transform: scale(1.05); }
-  .tile.selected { transform: scale(1.1); }
-
-  .tile.pop {
-    transition: transform 300ms ease, opacity 300ms ease;
-    transform: scale(0.2) rotate(-30deg);
-    opacity: 0;
-  }
-
-  .swap-moving { pointer-events:none; border-radius:8px; }
-
-  .topbar, .score-bubble {
-    font-family: 'Playfair Display', serif;
-  }
-  .coins-bubble, .score-bubble {
-    background: #fff; padding: 8px 12px; border-radius: 28px;
-    box-shadow: 0 10px 24px rgba(111,21,63,0.06);
-  }
-
-  button {
-    font-weight:700;
-    border:0;
-    background: linear-gradient(180deg,#ffb3d1,#ff6fb3);
-    color:#fff;
-    padding:10px 14px;
-    border-radius: 12px;
-    box-shadow: 0 10px 18px rgba(255,111,179,0.16);
-    cursor:pointer;
-  }
-  button:active { transform: translateY(2px); }
-
-  /* ===== Shop modal styles (copy of previous shop css) ===== */
-  .shop-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 12000;
-    align-items: center;
-    justify-content: center;
-    background: rgba(5,5,10,0.48);
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-    padding: 18px;
-    overflow: auto;
-  }
-  .shop-modal[aria-hidden="false"] { display:flex; }
-  .shop-card {
-    width: 100%;
-    max-width: 520px;
-    max-height: 84vh;
-    overflow-y: auto;
-    background: linear-gradient(180deg, #ffffff 0%, #fff7fb 100%);
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.6);
-  }
-  .shop-top { display:flex; gap:12px; align-items:center; justify-content:space-between; position: sticky; top:0; background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95)); padding-bottom:8px; }
-  .shop-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin-top:14px; }
-  .shop-item { background: linear-gradient(180deg,#fff7fb,#fff); padding:12px; border-radius:12px; text-align:center; box-shadow: 0 8px 18px rgba(0,0,0,0.06); border:1px solid rgba(0,0,0,0.03); }
-  .shop-item > div:first-child { font-size:22px; }
-  .shop-item .price { margin-top:8px; font-weight:800; font-size:16px; color:#2e1a1f; }
-  .shop-item button { margin-top:10px; padding:8px 12px; border-radius:10px; border:none; background: linear-gradient(180deg,#ffb3d1,#ff6fb3); color:#fff; font-weight:800; cursor:pointer; box-shadow: 0 8px 18px rgba(255,111,179,0.12); }
-  #closeShop { background: linear-gradient(180deg,#f3f3f3,#fff); color:#222; border:1px solid rgba(0,0,0,0.06); }
-  @media (max-width:420px){ .shop-grid { grid-template-columns: 1fr; } .shop-card{ padding:14px; } }
-
-  /* coin popup */
-  .coin-popup {
-    position: fixed;
-    z-index: 14000;
-    font-family: "Poppins", sans-serif;
-    font-size: 22px;
-    font-weight: 900;
-    color: #ff3d8a;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    pointer-events: none;
-    left: 50%;
-    top: 40%;
-    transform: translate(-50%, -50%);
-    animation: coinRise 1.2s ease-out forwards;
-  }
-  @keyframes coinRise {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -70%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
-  }
-
-  /* floating candy */
-  .floating-candy { position:absolute; width:56px; height:56px; opacity:0.9; animation: floaty 5s ease-in-out infinite; pointer-events:none; }
-  @keyframes floaty { 0%{ transform:translateY(0) } 50%{ transform:translateY(-18px) rotate(3deg) } 100%{ transform:translateY(0) } }
-
-  @media (max-width:420px){ :root{ --tile-size: 44px; --tile-gap:8px; } .board{ max-width: 360px; padding:12px; border-radius:18px; } }
-  @media (min-width:420px) and (max-width:760px){ :root{ --tile-size:52px; --tile-gap:10px;} .board{ max-width:460px; } }
-  @media (min-width:760px){ :root{ --tile-size:60px; --tile-gap:12px;} .board{ max-width:640px; } }
-
-  /* prevent page scroll when modal open */
-  body.shop-open { overflow: hidden; padding-right: 8px; }
-
+    .screen { display: none; }
+    .screen.active { display: block; }
   </style>
 </head>
-
 <body>
-  <!-- HOME -->
-  <div id="home-screen" class="screen active" style="padding:28px 20px 80px;">
+  <!-- 🏠 HOME SCREEN -->
+  <div id="home-screen" class="screen active">
     <img src="images/candy1.png" alt="logo" class="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 style="text-align:center;color:#d83a85;font-size:36px;margin:8px 0 6px">🍭 Candy Match</h1>
-    <p style="text-align:center;color:#5a4a4a;margin:0 0 22px">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <h1 class="title">🍭 Candy Match</h1>
+    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-    <div style="display:flex;flex-direction:column;gap:14px;align-items:center;">
-      <button id="startBtn" style="width:86%;padding:14px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,0.08)">🎮 Start</button>
-      <button id="shopBtn" style="width:86%;padding:14px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,0.08)">🛒 Shop</button>
-      <button id="settingsBtn" style="width:86%;padding:14px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,0.08)">⚙️ Settings</button>
+    <div class="buttons" style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:12px;">
+      <button id="startBtn" style="width:80%;padding:12px;border-radius:12px;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:12px;border-radius:12px;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:12px;border-radius:12px;">⚙️ Settings</button>
     </div>
 
-    <div style="text-align:center;margin-top:18px">
-      <button id="installBtn" style="padding:8px 12px;border-radius:10px">⬇️ Install</button>
-    </div>
-    <p style="text-align:center;margin-top:18px;color:#666">Made with ❤️ — Arun App Studio</p>
+    <button id="installBtn" class="install" style="margin-top:12px;padding:8px 14px;border-radius:10px;">⬇️ Install</button>
+    <p class="footer" style="margin-top:12px;color:#666">Made with ❤️ — Arun App Studio</p>
   </div>
 
-  <!-- GAME -->
-  <div id="game-screen" class="screen" style="padding:18px 12px;">
-    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:8px 6px;">
-      <button id="backBtn" style="padding:8px 12px;border-radius:8px">⬅️ Home</button>
-      <h2 style="margin:0; font-size:28px">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">50</span></div>
+  <!-- 🎮 GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px;">
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="game-board" class="board" style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:18px;max-width:520px;margin:12px auto;"></div>
+    <div id="game-board" class="board"
+         style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;
+                padding:8px;max-width:420px;margin:10px auto;">
+    </div>
 
-    <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
-      <button id="restartBtn" style="padding:10px 14px;border-radius:10px;">Restart</button>
-      <button id="shuffleBtn" style="padding:10px 14px;border-radius:10px;">Shuffle</button>
-      <button id="openShopBtn" style="padding:10px 14px;border-radius:10px;">Open Shop</button>
+    <div id="inv-toolbar" style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <!-- Inventory buttons dynamically added by JS -->
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;">
+      <button id="restartBtn" style="padding:8px 12px;border-radius:8px;">Restart</button>
+      <button id="shuffleBtn" style="padding:8px 12px;border-radius:8px;">Shuffle</button>
+      <button id="openShopBtn" style="padding:8px 12px;border-radius:8px;">Open Shop</button>
     </div>
   </div>
 
-  <!-- SHOP MODAL -->
+  <!-- 🛒 SHOP MODAL -->
   <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true">
-    <div class="shop-card" role="document">
-      <div class="shop-top">
+    <div class="shop-card">
+      <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <h3>🛒 Shop</h3>
+          <h3 style="margin:0">🛒 Shop</h3>
           <div class="small-note">Coins से power-ups खरीदें — Demo</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#666">Your Coins</div>
-          <div id="shopCoins" class="coins-bubble">0</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
         </div>
       </div>
 
       <div class="shop-grid">
         <div class="shop-item">
-          <div>💣 Bomb</div>
-          <div class="price">₹ 200</div>
+          <div style="font-size:20px">💣 Bomb</div>
+          <div style="font-weight:800;margin-top:8px">₹ 200</div>
           <button id="buyBomb">Buy</button>
         </div>
-
         <div class="shop-item">
-          <div>🔀 Shuffle</div>
-          <div class="price">₹ 100</div>
+          <div style="font-size:20px">🔀 Shuffle</div>
+          <div style="font-weight:800;margin-top:8px">₹ 100</div>
           <button id="buyShuffle">Buy</button>
         </div>
-
         <div class="shop-item">
-          <div>➕ Extra Moves</div>
-          <div class="price">₹ 80</div>
+          <div style="font-size:20px">➕ Extra Moves</div>
+          <div style="font-weight:800;margin-top:8px">₹ 80</div>
           <button id="buyMoves">Buy</button>
         </div>
-
         <div class="shop-item">
-          <div>✨ Rainbow Candy</div>
-          <div class="price">₹ 350</div>
+          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-weight:800;margin-top:8px">₹ 350</div>
           <button id="buyRainbow">Buy</button>
         </div>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-        <button id="closeShop">Close</button>
+        <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- Floating debug gear (optional) -->
-  <div id="debug-gear" style="position:fixed;right:14px;bottom:14px;z-index:13000;opacity:0.95;">
-    <!-- empty icon usage -->
-  </div>
-
-  <!-- External scripts (your existing logic) -->
+  <!-- ✅ JS Files -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/inventory.js"></script>
 
-  <!-- ===== Inline Shop + UI JS (paste into bottom) ===== -->
-  <script>
-  (function(){
-    // Basic persistent coins & inventory
-    let coins = Number(localStorage.getItem('candy_coins') || 50);
-    let inv = JSON.parse(localStorage.getItem('candy_inv') || JSON.stringify({bomb:0,shuffle:0,moves:0,rainbow:0}));
-
-    const homeScreen = document.getElementById('home-screen');
-    const gameScreen = document.getElementById('game-screen');
-    const shopModal = document.getElementById('shopModal');
-    const shopCoins = document.getElementById('shopCoins');
-    const coinsBubble = document.getElementById('coins');
-    const scoreEl = document.getElementById('score');
-
-    // update UI
-    function persistState(){
-      localStorage.setItem('candy_coins', String(coins));
-      localStorage.setItem('candy_inv', JSON.stringify(inv));
-    }
-    function refreshShopUI(){
-      shopCoins.textContent = coins;
-      if(coinsBubble) coinsBubble.textContent = coins;
-    }
-    function updateHUD(){
-      if(scoreEl) scoreEl.textContent = window.__score || scoreEl.textContent || 0;
-      if(coinsBubble) coinsBubble.textContent = coins;
-      if(shopCoins) shopCoins.textContent = coins;
-    }
-
-    // buttons
-    document.getElementById('startBtn').addEventListener('click', ()=>{
-      showScreen('game');
-      if(typeof initGame === 'function') initGame();
-      updateHUD();
-    });
-    document.getElementById('backBtn').addEventListener('click', ()=> showScreen('home'));
-    document.getElementById('shopBtn').addEventListener('click', ()=> openShop());
-    document.getElementById('openShopBtn').addEventListener('click', ()=> openShop());
-    document.getElementById('closeShop').addEventListener('click', ()=> closeShop());
-    document.getElementById('installBtn').addEventListener('click', ()=> alert('Install demo'));
-    document.getElementById('settingsBtn').addEventListener('click', ()=> alert('Settings demo'));
-
-    document.getElementById('restartBtn').addEventListener('click', ()=> {
-      if(typeof initGame === 'function') initGame();
-      else alert('Restart handler missing (initGame not found).');
-    });
-    document.getElementById('shuffleBtn').addEventListener('click', ()=> {
-      if(typeof shuffleBoard === 'function') shuffleBoard();
-      else alert('Shuffle handler missing (shuffleBoard not found).');
-    });
-
-    document.getElementById('buyBomb').addEventListener('click', ()=> buyItem('bomb',200));
-    document.getElementById('buyShuffle').addEventListener('click', ()=> buyItem('shuffle',100));
-    document.getElementById('buyMoves').addEventListener('click', ()=> buyItem('moves',80));
-    document.getElementById('buyRainbow').addEventListener('click', ()=> buyItem('rainbow',350));
-
-    function showScreen(which){
-      if(which==='home'){ homeScreen.classList.add('active'); gameScreen.classList.remove('active'); }
-      else { gameScreen.classList.add('active'); homeScreen.classList.remove('active'); }
-    }
-
-    function openShop(){
-      shopModal.setAttribute('aria-hidden','false');
-      document.body.classList.add('shop-open');
-      refreshShopUI();
-    }
-    function closeShop(){
-      shopModal.setAttribute('aria-hidden','true');
-      document.body.classList.remove('shop-open');
-    }
-
-    function buyItem(id, price){
-      if(coins < price){ alert('कॉइन्स कम हैं — खेलकर कम कीजिए'); return; }
-      coins -= price;
-      inv[id] = (inv[id]||0)+1;
-      persistState();
-      refreshShopUI();
-      updateHUD();
-      alert('खरीद ली: '+id);
-    }
-
-    // Listen for custom event from game.js when coins earned
-    window.addEventListener('coinsEarned', (ev)=>{
-      const amt = (ev && ev.detail && Number(ev.detail.amount)) || 0;
-      if(amt>0) addCoins(amt, ev.detail && ev.detail.fromIndex);
-    });
-
-    // Also expose global helper
-    window.addCoins = addCoins;
-    function addCoins(amount, fromIndex){
-      if(!amount || amount <=0) return;
-      coins = (coins||0) + Number(amount);
-      persistState();
-      refreshShopUI();
-      updateHUD();
-      // show popup
-      const pop = document.createElement('div');
-      pop.className = 'coin-popup';
-      pop.textContent = '+' + amount + ' ✨';
-      document.body.appendChild(pop);
-      setTimeout(()=> pop.remove(), 1300);
-    }
-
-    // initial boot
-    (function boot(){
-      refreshShopUI();
-      updateHUD();
-      console.log('Shop module loaded — coins:', coins, 'inv:', inv);
-    })();
-
-    // close when clicking outside
-    shopModal.addEventListener('click', (ev)=>{
-      if(ev.target === shopModal) closeShop();
-    });
-    // esc key
-    document.addEventListener('keydown',(ev)=> { if(ev.key==='Escape') closeShop(); });
-
-    // expose open/close for backward compatibility
-    window.openShop = openShop;
-    window.closeShop = closeShop;
-
-  })();
-  </script>
-
-  <!-- ===== Parallax helper (paste where you like) ===== -->
+  <!-- 🌀 Parallax Script -->
   <script>
   (function(){
     const MAX_SHIFT = 18;
     const MAX_SHIFT_X = 10;
-
-    function setParallax(x,y){
-      const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-      const sx = clamp(x,-MAX_SHIFT_X,MAX_SHIFT_X);
-      const sy = clamp(y,-MAX_SHIFT,MAX_SHIFT);
-      document.body.style.setProperty('--parallax-x', sx + 'px');
-      document.body.style.setProperty('--parallax-y', sy + 'px');
-      document.documentElement.style.setProperty('--parallax-tx', sx + 'px');
-      document.documentElement.style.setProperty('--parallax-ty', sy + 'px');
+    function setParallax(x, y){
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      document.documentElement.style.setProperty('--parallax-tx', clamp(x,-MAX_SHIFT_X,MAX_SHIFT_X)+'px');
+      document.documentElement.style.setProperty('--parallax-ty', clamp(y,-MAX_SHIFT,MAX_SHIFT)+'px');
     }
-
-    window.addEventListener('scroll', ()=> {
-      const docH = document.documentElement.scrollHeight - window.innerHeight;
-      if(docH <= 0) return;
-      const pct = window.scrollY / docH;
-      const y = (pct - 0.5) * 2 * MAX_SHIFT * 0.6;
-      const x = (pct - 0.5) * 2 * MAX_SHIFT_X * 0.3;
-      setParallax(x,y);
-    }, {passive:true});
-
-    let lastTouchY = null;
-    document.addEventListener('touchmove', (ev)=> {
-      if(!ev.touches || ev.touches.length===0) return;
-      const t = ev.touches[0];
-      if(lastTouchY === null) lastTouchY = t.clientY;
-      const dy = t.clientY - lastTouchY;
-      lastTouchY = t.clientY;
-      setParallax(dy*0.2, -dy*0.12);
-      clearTimeout(window._pTimer);
-      window._pTimer = setTimeout(()=> setParallax(0,0), 220);
-    }, {passive:true});
-
-    function handleOrientation(ev){
-      if(!ev) return;
-      const gx = ev.gamma || 0;
-      const by = ev.beta || 0;
-      const x = (gx / 45) * MAX_SHIFT_X;
-      const y = (by / 45) * MAX_SHIFT;
-      setParallax(x,y);
-    }
-    if(window.DeviceOrientationEvent){
-      window.addEventListener('deviceorientation', handleOrientation, true);
-    }
+    window.addEventListener('scroll',()=>{
+      const docH=document.documentElement.scrollHeight-window.innerHeight;
+      if(docH<=0)return;
+      const pct=window.scrollY/docH;
+      setParallax((pct-0.5)*6,(pct-0.5)*12);
+    });
+    document.addEventListener('touchmove',(ev)=>{
+      if(!ev.touches||!ev.touches[0])return;
+      const t=ev.touches[0];
+      setParallax((t.clientX/window.innerWidth-0.5)*20,(t.clientY/window.innerHeight-0.5)*20);
+    });
     setParallax(0,0);
   })();
   </script>
 
-  <!-- Optional: Eruda mobile console for debug (remove for production) -->
+  <!-- 🧩 Debug Console -->
   <script>
-  (function(){
     const DEBUG_MODE = true;
-    if(DEBUG_MODE){
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = ()=> { eruda.init(); console.log('Eruda started'); };
+    if (DEBUG_MODE) {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/eruda";
+      s.onload = () => { eruda.init(); console.log("✅ Eruda started (mobile console)"); };
       document.body.appendChild(s);
     }
-  })();
   </script>
-
 </body>
-        </html>
+                                                                                   </html>
