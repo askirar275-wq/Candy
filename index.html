@@ -1,44 +1,37 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS Links -->
+  <!-- CSS files -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/inventory.css">
 </head>
 <body>
-
-  <!-- HOME SCREEN -->
+  <!-- HOME -->
   <div id="home-screen" class="screen active">
-    <img class="logo" src="images/candy1.png" alt="Candy Logo">
+    <img class="logo" src="images/candy1.png" alt="logo">
     <h1 class="title">🍭 Candy Match</h1>
     <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-
     <div class="buttons">
       <button id="startBtn">🎮 Start</button>
       <button id="shopBtn">🛒 Shop</button>
       <button id="settingsBtn">⚙️ Settings</button>
     </div>
-
-    <div class="install-block">
-      <button id="installBtn" class="install">⬇️ Install</button>
-      <p class="credit">Made with ❤️ — Arun App Studio</p>
-    </div>
+    <button id="installBtn" class="install">⬇️ Install</button>
+    <p class="credit">Made with ❤️ — Arun App Studio</p>
   </div>
 
-  <!-- GAME SCREEN -->
+  <!-- GAME -->
   <div id="game-screen" class="screen">
     <div class="topbar">
       <button id="backBtn">⬅️ Home</button>
       <h2>Score: <span id="score">0</span></h2>
       <div class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
-
     <div id="game-board" class="board"></div>
-
     <div class="controls">
       <button id="restartBtn">Restart</button>
       <button id="shuffleBtn">Shuffle</button>
@@ -46,43 +39,45 @@
     </div>
   </div>
 
-  <!-- SHOP MODAL -->
+  <!-- SHOP -->
   <div id="shopModal" class="shop-modal" aria-hidden="true">
     <div class="shop-card">
-      <div class="shop-header">
+      <div class="shop-top">
         <h3>🛒 Shop</h3>
-        <div>Your Coins <span class="coins-bubble" id="shopCoins">0</span></div>
+        <div class="small-note">Coins से power-ups खरीदें — Demo</div>
       </div>
-
       <div class="shop-grid">
         <div class="shop-item">
-          <div>💣 Bomb</div><div>₹200</div>
+          <div>💣 Bomb</div><div class="price">₹ 200</div>
           <button id="buyBomb">Buy</button>
         </div>
         <div class="shop-item">
-          <div>🔀 Shuffle</div><div>₹100</div>
+          <div>🔀 Shuffle</div><div class="price">₹ 100</div>
           <button id="buyShuffle">Buy</button>
         </div>
         <div class="shop-item">
-          <div>➕ Extra Moves</div><div>₹80</div>
+          <div>➕ Extra Moves</div><div class="price">₹ 80</div>
           <button id="buyMoves">Buy</button>
         </div>
         <div class="shop-item">
-          <div>🌈 Rainbow Candy</div><div>₹350</div>
+          <div>✨ Rainbow Candy</div><div class="price">₹ 350</div>
           <button id="buyRainbow">Buy</button>
         </div>
       </div>
-
       <div class="shop-footer">
         <button id="closeShop">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- JS Scripts -->
+  <!-- coin popup -->
+  <div id="coinContainer"></div>
+
+  <!-- JS files: game first, then UI/shop/parallax -->
   <script src="js/game.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/inventory.js"></script>
   <script src="js/parallax.js"></script>
-
 </body>
 </html>
