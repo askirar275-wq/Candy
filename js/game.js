@@ -1,438 +1,270 @@
-/* js/game.js
-   Updated: responsive tiles + touch/swipe support + WIDTH=6 HEIGHT=8
-   Ready to paste (replace your existing js/game.js)
-*/
+/* ===== Candy Match - Final JS (with swipe + sparkle + floating +10) ===== */
 
-const WIDTH = 6;   // columns
-const HEIGHT = 8;  // rows
-const SIZE = WIDTH * HEIGHT;
-const IMAGE_BASE = 'images/';
+const WIDTH = 8;
+const HEIGHT = 8;
 const CANDIES = [
   'candy1.png','candy2.png','candy3.png','candy4.png',
   'candy5.png','candy6.png','candy7.png','candy8.png'
 ];
-
-let pool = [];
+const IMAGE_BASE = 'images/';
 let board = [];
-let score = 0, moves = 40, combo = 1;
-let selected = null;
+let score = 0;
+let combo = 1;
 let isSwapping = false;
+let firstSelected = null;
 
-/* ---------- UTILS: responsive tile sizing ---------- */
-function fitTiles(){
-  const grid = document.getElementById('game-board') || document.getElementById('grid');
-  if(!grid) return;
-  // available width minus padding; keep some margins on small screens
-  const maxWidth = Math.min(grid.parentElement ? grid.parentElement.clientWidth : window.innerWidth, window.innerWidth - 40);
-  const gap = 6; // grid gap in px (should match your CSS if any)
-  const candidate = Math.floor((maxWidth - gap*(WIDTH-1)) / WIDTH);
-  const size = Math.max(36, Math.min(candidate, 84)); // clamp
-  document.documentElement.style.setProperty('--tile', size + 'px');
-  // also set grid max-width so it centers correctly
-  grid.style.maxWidth = (size * WIDTH + gap * (WIDTH - 1)) + 'px';
-}
+/* ========== INIT ========== */
+window.addEventListener('DOMContentLoaded', () => {
+  initBoard();
+  render();
+  updateHUD();
+  enableSwipeSupport();
+});
 
-/* ---------- PRELOAD IMAGES ---------- */
-async function preload() {
-  pool = await Promise.all(CANDIES.map(n => {
-    const url = IMAGE_BASE + n;
-    return new Promise(res => {
-      const img = new Image();
-      img.onload = () => res(url);
-      img.onerror = () => {
-        console.warn('❌ image load failed', url);
-        res('');
-      };
-      img.src = url;
-    });
-  }));
-  pool = pool.filter(Boolean);
-  if(pool.length === 0){
-    // fallback
-    pool = CANDIES.slice(0,6).map(n => IMAGE_BASE + n);
+/* ---------- Board setup ---------- */
+function initBoard(){
+  board = [];
+  for(let i=0;i<WIDTH*HEIGHT;i++){
+    const src = IMAGE_BASE + CANDIES[Math.floor(Math.random()*CANDIES.length)];
+    board.push({src});
   }
 }
 
-/* ---------- RENDER BOARD ---------- */
+/* ---------- Render ---------- */
 function render(){
-  const grid = document.getElementById('game-board') || document.getElementById('grid');
-  if(!grid) return console.warn('⚠️ No grid element found (#game-board or #grid).');
-
-  fitTiles();
-
+  const grid = document.querySelector('.board');
+  if(!grid) return;
   grid.innerHTML = '';
   grid.style.gridTemplateColumns = `repeat(${WIDTH}, 1fr)`;
-  grid.style.gap = '6px';
 
-  board.forEach((tile, i) => {
+  board.forEach((tile,i)=>{
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.index = i;
-    cell.style.width = 'auto';
-    cell.style.height = 'auto';
-    cell.style.display = 'flex';
-    cell.style.alignItems = 'center';
-    cell.style.justifyContent = 'center';
-    cell.style.borderRadius = '10px';
-    cell.style.background = 'rgba(255,255,255,0.9)'; // optional look
-    cell.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
 
     const img = document.createElement('img');
+    img.src = tile.src;
     img.className = 'tile';
-    img.draggable = false;
-    img.alt = '';
-    img.src = tile ? tile.src : pool[Math.floor(Math.random()*pool.length)];
-    img.setAttribute('data-index', i);
-
-    // size from CSS var
-    const varSize = getComputedStyle(document.documentElement).getPropertyValue('--tile') || '56px';
-    img.style.width = varSize.trim();
-    img.style.height = varSize.trim();
-    img.style.objectFit = 'contain';
-    img.style.userSelect = 'none';
-    img.style.touchAction = 'none';
-
-    // click handler (tap)
-    cell.onclick = () => handleSelect(i);
-
-    // attach touch/pointer handlers for swipe (see below)
-    attachPointerHandlers(cell, i);
-
     cell.appendChild(img);
+
+    cell.addEventListener('click', ()=> selectTile(i));
     grid.appendChild(cell);
   });
 }
 
-/* ---------- INIT GAME ---------- */
-function initGame(){
-  score = 0; moves = 40; combo = 1;
-  selected = null; isSwapping = false;
-  board = new Array(SIZE).fill(null).map(()=>({ src: pool[Math.floor(Math.random()*pool.length)] }));
-  render();
-  updateHUD();
-}
-
-/* ---------- SELECTION & SWAP ---------- */
-function handleSelect(i){
+/* ---------- Click select ---------- */
+function selectTile(i){
   if(isSwapping) return;
-  if(selected === null){
-    selected = i;
-    highlight(i);
+  const el = document.querySelector(`.cell[data-index="${i}"]`);
+  if(!firstSelected){
+    firstSelected = i;
+    el.classList.add('selected-cell');
     return;
   }
-  if(selected === i){
-    unhighlight(i);
-    selected = null;
+  if(firstSelected === i){
+    el.classList.remove('selected-cell');
+    firstSelected = null;
     return;
   }
-  if(isAdjacent(selected, i)){
-    isSwapping = true;
-    unhighlight(selected);
-    const a = selected, b = i;
-    selected = null;
 
-    swapWithAnimation(a,b).then(()=> {
-      const matches = findMatches();
-      if(matches.length > 0){
-        handleMatches(matches);
-      } else {
-        swapWithAnimation(a,b).then(()=> {
-          isSwapping = false;
-          updateHUD();
-        });
-      }
-      moves = Math.max(0, moves - 1);
-      updateHUD();
-    });
+  const j = firstSelected;
+  const [r1,c1] = [Math.floor(j/WIDTH), j%WIDTH];
+  const [r2,c2] = [Math.floor(i/WIDTH), i%WIDTH];
+  const adj = Math.abs(r1-r2)+Math.abs(c1-c2)===1;
+
+  if(adj){
+    swapTiles(i,j);
   } else {
-    unhighlight(selected);
-    selected = i;
-    highlight(i);
+    document.querySelector(`.cell[data-index="${j}"]`).classList.remove('selected-cell');
+    firstSelected = null;
   }
 }
 
-function highlight(i){
-  const cell = document.querySelector(`.cell[data-index="${i}"]`);
-  if(cell) cell.style.outline = '3px solid rgba(255,255,255,0.6)';
-}
-function unhighlight(i){
-  const cell = document.querySelector(`.cell[data-index="${i}"]`);
-  if(cell) cell.style.outline = '';
-}
-function isAdjacent(a,b){
-  const r1 = Math.floor(a / WIDTH), c1 = a % WIDTH;
-  const r2 = Math.floor(b / WIDTH), c2 = b % WIDTH;
-  return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
-}
-function tileEl(index){
-  return document.querySelector(`.cell[data-index="${index}"] .tile`);
-}
+/* ---------- Swipe support (mobile) ---------- */
+function enableSwipeSupport(){
+  let startX,startY,startIdx;
+  const grid = document.querySelector('.board');
+  grid.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    const cell = e.target.closest('.cell');
+    if(!cell) return;
+    startX = t.clientX;
+    startY = t.clientY;
+    startIdx = parseInt(cell.dataset.index);
+  });
 
-/* ---------- SWAP ANIMATION ---------- */
-function swapWithAnimation(aIndex, bIndex){
-  return new Promise(resolve => {
-    const aTile = tileEl(aIndex);
-    const bTile = tileEl(bIndex);
-    if(!aTile || !bTile){
-      [board[aIndex], board[bIndex]] = [board[bIndex], board[aIndex]];
-      render();
-      return resolve(true);
+  grid.addEventListener('touchend', e=>{
+    if(startIdx==null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    if(Math.max(absX,absY)<25) return;
+    let targetIdx = null;
+    if(absX>absY) targetIdx = startIdx + (dx>0?1:-1);
+    else targetIdx = startIdx + (dy>0?WIDTH:-WIDTH);
+    if(targetIdx>=0 && targetIdx<WIDTH*HEIGHT){
+      swapTiles(startIdx,targetIdx);
     }
-
-    const aRect = aTile.getBoundingClientRect();
-    const bRect = bTile.getBoundingClientRect();
-    const dx = bRect.left - aRect.left;
-    const dy = bRect.top - aRect.top;
-
-    const aClone = aTile.cloneNode(true);
-    const bClone = bTile.cloneNode(true);
-    [aClone, bClone].forEach((cl, idx) => {
-      cl.style.position = 'absolute';
-      cl.style.left = (idx===0 ? aRect.left : bRect.left) + 'px';
-      cl.style.top = (idx===0 ? aRect.top : bRect.top) + 'px';
-      cl.style.width = aRect.width + 'px';
-      cl.style.height = aRect.height + 'px';
-      cl.style.transition = 'transform 220ms cubic-bezier(.2,.9,.2,1)';
-      cl.style.zIndex = 9999;
-      cl.style.pointerEvents = 'none';
-      document.body.appendChild(cl);
-    });
-
-    aTile.style.visibility = 'hidden';
-    bTile.style.visibility = 'hidden';
-
-    requestAnimationFrame(()=>{
-      aClone.style.transform = `translate(${dx}px, ${dy}px)`;
-      bClone.style.transform = `translate(${-dx}px, ${-dy}px)`;
-    });
-
-    setTimeout(()=>{
-      aClone.remove();
-      bClone.remove();
-      aTile.style.visibility = '';
-      bTile.style.visibility = '';
-      [board[aIndex], board[bIndex]] = [board[bIndex], board[aIndex]];
-      render();
-      resolve(true);
-    }, 300);
+    startIdx=null;
   });
 }
 
-/* ---------- MATCH DETECTION ---------- */
-function findMatches(){
-  const matches = new Set();
+/* ---------- Swap ---------- */
+function swapTiles(i,j){
+  isSwapping=true;
+  [board[i], board[j]] = [board[j], board[i]];
+  render();
 
+  const matches = findMatches();
+  if(matches.length>0){
+    handleMatches(matches);
+  } else {
+    setTimeout(()=>{
+      [board[i], board[j]] = [board[j], board[i]];
+      render();
+      isSwapping=false;
+    },300);
+  }
+}
+
+/* ---------- Match detection ---------- */
+function findMatches(){
+  const matches=[];
   // horizontal
-  for(let r=0; r<HEIGHT; r++){
-    for(let c=0; c<WIDTH-2; c++){
-      const i = r*WIDTH + c;
-      if(board[i] && board[i+1] && board[i+2] &&
-         board[i].src === board[i+1].src && board[i].src === board[i+2].src){
-        matches.add(i); matches.add(i+1); matches.add(i+2);
-        let k = c+3;
-        while(k<WIDTH && board[r*WIDTH + k] && board[r*WIDTH + k].src === board[i].src){
-          matches.add(r*WIDTH + k); k++;
-        }
+  for(let r=0;r<HEIGHT;r++){
+    let streak=1;
+    for(let c=1;c<WIDTH;c++){
+      const curr=board[r*WIDTH+c].src;
+      const prev=board[r*WIDTH+c-1].src;
+      if(curr===prev) streak++;
+      else{
+        if(streak>=3)
+          for(let k=0;k<streak;k++) matches.push(r*WIDTH+c-1-k);
+        streak=1;
       }
     }
+    if(streak>=3) for(let k=0;k<streak;k++) matches.push(r*WIDTH+WIDTH-1-k);
   }
 
   // vertical
-  for(let c=0; c<WIDTH; c++){
-    for(let r=0; r<HEIGHT-2; r++){
-      const i = r*WIDTH + c;
-      if(board[i] && board[i+WIDTH] && board[i+2*WIDTH] &&
-         board[i].src === board[i+WIDTH].src && board[i].src === board[i+2*WIDTH].src){
-        matches.add(i); matches.add(i+WIDTH); matches.add(i+2*WIDTH);
-        let k = r+3;
-        while(k<HEIGHT && board[k*WIDTH + c] && board[k*WIDTH + c].src === board[i].src){
-          matches.add(k*WIDTH + c); k++;
-        }
+  for(let c=0;c<WIDTH;c++){
+    let streak=1;
+    for(let r=1;r<HEIGHT;r++){
+      const curr=board[r*WIDTH+c].src;
+      const prev=board[(r-1)*WIDTH+c].src;
+      if(curr===prev) streak++;
+      else{
+        if(streak>=3)
+          for(let k=0;k<streak;k++) matches.push((r-1-k)*WIDTH+c);
+        streak=1;
       }
     }
+    if(streak>=3) for(let k=0;k<streak;k++) matches.push((HEIGHT-1-k)*WIDTH+c);
   }
-
-  return Array.from(matches).sort((a,b)=>a-b);
+  return matches;
 }
 
-/* ---------- HANDLE MATCHES ---------- */
+/* ---------- Handle matches ---------- */
 function handleMatches(matches){
-  if(matches.length === 0) return;
-  score += matches.length * 10 * combo;
+  const uniq=[...new Set(matches)];
+  score += uniq.length * 10 * combo;
   combo++;
 
-  matches.forEach(i => {
-    const el = document.querySelector(`.cell[data-index="${i}"] .tile`);
+  uniq.forEach(i=>{
+    const el=document.querySelector(`.cell[data-index="${i}"] .tile`);
     if(el){
-      el.style.transition = 'transform 300ms, opacity 300ms';
-      el.style.transform = 'scale(0.2)';
-      el.style.opacity = '0';
+      el.classList.add('pop');
+      spawnFloatingScore(i, '+10');
+      spawnSparkles(i);
     }
-    board[i] = null;
+    board[i]=null;
   });
 
-  setTimeout(()=> applyGravity(), 350);
   updateHUD();
+  setTimeout(()=>applyGravity(),400);
 }
 
-/* ---------- GRAVITY ---------- */
+/* ---------- Floating score + sparkles ---------- */
+function spawnFloatingScore(i,text){
+  const cell=document.querySelector(`.cell[data-index="${i}"]`);
+  if(!cell) return;
+  const el=document.createElement('div');
+  el.textContent=text;
+  el.style.position='absolute';
+  el.style.color='#ff55aa';
+  el.style.fontWeight='800';
+  el.style.fontSize='18px';
+  el.style.textShadow='0 0 6px white';
+  el.style.left='50%';
+  el.style.top='50%';
+  el.style.transform='translate(-50%,-50%)';
+  el.style.animation='floatUp 0.8s ease-out forwards';
+  cell.appendChild(el);
+  setTimeout(()=>el.remove(),800);
+}
+
+/* sparkles */
+function spawnSparkles(i){
+  const cell=document.querySelector(`.cell[data-index="${i}"]`);
+  if(!cell) return;
+  for(let j=0;j<5;j++){
+    const sp=document.createElement('div');
+    sp.className='sparkle';
+    sp.style.left=Math.random()*100+'%';
+    sp.style.top=Math.random()*100+'%';
+    sp.style.background='radial-gradient(circle,#fff,#ff6fb3)';
+    sp.style.position='absolute';
+    sp.style.width='6px';sp.style.height='6px';
+    sp.style.borderRadius='50%';
+    sp.style.opacity='0.9';
+    sp.style.animation=`sparkleFly ${300+Math.random()*200}ms ease-out forwards`;
+    cell.appendChild(sp);
+    setTimeout(()=>sp.remove(),600);
+  }
+}
+
+/* ---------- Gravity ---------- */
 function applyGravity(){
-  for(let c=0; c<WIDTH; c++){
-    const col = [];
-    for(let r=HEIGHT-1; r>=0; r--){
-      const i = r*WIDTH + c;
-      if(board[i]) col.push(board[i]);
+  for(let c=0;c<WIDTH;c++){
+    const stack=[];
+    for(let r=HEIGHT-1;r>=0;r--){
+      const i=r*WIDTH+c;
+      if(board[i]) stack.push(board[i]);
     }
-    while(col.length < HEIGHT){
-      col.push({ src: pool[Math.floor(Math.random() * pool.length)] });
+    while(stack.length<HEIGHT){
+      const src=IMAGE_BASE+CANDIES[Math.floor(Math.random()*CANDIES.length)];
+      stack.push({src});
     }
-    for(let r=HEIGHT-1; r>=0; r--){
-      board[r*WIDTH + c] = col[HEIGHT-1 - r];
+    for(let r=HEIGHT-1;r>=0;r--){
+      board[r*WIDTH+c]=stack[HEIGHT-1-r];
     }
   }
-
   render();
-  const newMatches = findMatches();
-  if(newMatches.length > 0){
-    setTimeout(()=> handleMatches(newMatches), 200);
-  } else {
-    combo = 1;
-    isSwapping = false;
-    updateHUD();
+  const next=findMatches();
+  if(next.length>0) setTimeout(()=>handleMatches(next),250);
+  else{
+    combo=1;
+    isSwapping=false;
   }
-}
-
-/* ---------- HUD (safe) ---------- */
-function updateHUD(){
-  const scoreEl = document.getElementById('score');
-  if(scoreEl) scoreEl.textContent = score;
-
-  const movesEl = document.getElementById('moves');
-  if(movesEl) movesEl.textContent = moves || 0;
-
-  const comboEl = document.getElementById('combo');
-  if(comboEl) comboEl.textContent = combo + 'x';
-
-  const coinsEl = document.getElementById('coins');
-  if(coinsEl) coinsEl.textContent = window.coins || coinsEl.textContent || 0;
-
-  if(typeof moves !== 'undefined' && moves <= 0){
-    setTimeout(()=> alert('🏁 Game Over! Score: ' + score), 200);
-  }
-}
-
-/* ---------- SHUFFLE ---------- */
-function shuffleBoard(){
-  const srcs = board.map(b => b ? b.src : pool[Math.floor(Math.random()*pool.length)]);
-  for(let i=srcs.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [srcs[i], srcs[j]] = [srcs[j], srcs[i]];
-  }
-  board = srcs.map(s => ({src:s}));
-  render();
   updateHUD();
 }
 
-/* ---------- HINT ---------- */
-function showHint(){
-  const m = findMatches();
-  if(m.length>0){
-    const el = document.querySelector(`.cell[data-index="${m[0]}"] .tile`);
-    if(el){
-      el.style.transform = 'scale(1.2)';
-      setTimeout(()=>{ if(el) el.style.transform=''; }, 900);
-    }
-  }
+/* ---------- HUD ---------- */
+function updateHUD(){
+  const el=document.getElementById('score');
+  if(el) el.textContent=score;
 }
 
-/* ---------- TOUCH / SWIPE HANDLERS ---------- */
-function attachPointerHandlers(cell, index){
-  // We'll support pointer events (pointerdown/pointerup) where available,
-  // and fallback to touchstart/touchend for older browsers if needed.
-  let startX=0, startY=0, startIndex=null, moved=false;
-
-  function onStart(e){
-    e.preventDefault();
-    moved = false;
-    startIndex = index;
-    const point = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-    startX = point.clientX;
-    startY = point.clientY;
-    // visual selection
-    highlight(index);
-  }
-  function onMove(e){
-    moved = true;
-  }
-  function onEnd(e){
-    const point = (e.changedTouches && e.changedTouches[0]) || e;
-    const dx = point.clientX - startX;
-    const dy = point.clientY - startY;
-    unhighlight(startIndex);
-    // minimum swipe threshold
-    const TH = 18;
-    if(Math.abs(dx) < TH && Math.abs(dy) < TH){
-      // treat as tap
-      handleSelect(index);
-      return;
-    }
-    // determine direction
-    let target = null;
-    if(Math.abs(dx) > Math.abs(dy)){
-      // horizontal
-      if(dx > 0) target = startIndex + 1; // right
-      else target = startIndex - 1; // left
-    } else {
-      // vertical
-      if(dy > 0) target = startIndex + WIDTH; // down
-      else target = startIndex - WIDTH; // up
-    }
-    // validate target index and adjacency
-    if(target >= 0 && target < SIZE && isAdjacent(startIndex, target)){
-      // trigger selection pair to perform swap
-      handleSelect(startIndex);   // selects first
-      handleSelect(target);       // attempts swap
-    } else {
-      // not valid, just unselect
-      selected = null;
-      unhighlight(startIndex);
-    }
-  }
-
-  // pointer support
-  cell.addEventListener('pointerdown', onStart, {passive:false});
-  cell.addEventListener('pointermove', onMove, {passive:true});
-  cell.addEventListener('pointerup', onEnd, {passive:true});
-  // touch fallback
-  cell.addEventListener('touchstart', onStart, {passive:true});
-  cell.addEventListener('touchmove', onMove, {passive:true});
-  cell.addEventListener('touchend', onEnd, {passive:true});
-  // mouse fallback
-  cell.addEventListener('mousedown', onStart);
-  cell.addEventListener('mouseup', onEnd);
+/* ---------- Key animations ---------- */
+const style=document.createElement('style');
+style.textContent=`
+@keyframes floatUp{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  100%{opacity:0;transform:translate(-50%,-150%) scale(1.3);}
 }
-
-/* ---------- EXPORTS ---------- */
-window.initGame = initGame;
-window.shuffleBoard = shuffleBoard;
-window.showHint = showHint;
-
-/* ---------- AUTO START ---------- */
-window.addEventListener('load', async ()=>{
-  await preload();
-  fitTiles();
-  // do not auto-init to let UI control Start — if you want auto init, uncomment:
-  // initGame();
-  console.log('✅ Images preloaded:', pool.length);
-});
-
-// resize handler to recompute tile sizes
-window.addEventListener('resize', () => {
-  fitTiles();
-  // recompute tile pixel sizes on existing img elements
-  const varSize = getComputedStyle(document.documentElement).getPropertyValue('--tile') || '56px';
-  document.querySelectorAll('.tile').forEach(img=>{
-    img.style.width = varSize.trim();
-    img.style.height = varSize.trim();
-  });
-});
+@keyframes sparkleFly{
+  0%{opacity:1;transform:translate(0,0) scale(1);}
+  100%{opacity:0;transform:translate(${Math.random()*40-20}px,${-40-Math.random()*40}px) scale(0.3);}
+}`;
+document.head.appendChild(style);
