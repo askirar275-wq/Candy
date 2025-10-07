@@ -1,41 +1,46 @@
-const WIDTH = 6;
-const HEIGHT = 8;
-const IMAGE_BASE = "images/";
-const CANDIES = [
-  "candy1.png", "candy2.png", "candy3.png",
-  "candy4.png", "candy5.png", "candy6.png"
-];
+/* --------- Resolve chain: pop -> gravity -> refill (coins awarded here) --------- */
+function resolveChain(){
+  if(isLocked) return;
+  isLocked = true;
+  combo = 1;
 
-let board = [];
-let score = 0, coins = Number(localStorage.getItem("candy_coins") || 50);
+  (function step(){
+    const matches = findMatches();
+    if(matches.length === 0){
+      isLocked = false;
+      updateHUD();
+      return;
+    }
 
-function initGame() {
-  board = Array(WIDTH * HEIGHT)
-    .fill(null)
-    .map(() => ({ src: IMAGE_BASE + CANDIES[Math.floor(Math.random() * CANDIES.length)] }));
+    // 🏆 Score & Coins logic
+    const gained = matches.length * 5 * combo; // हर candy के 5 points
+    score += gained;
 
-  renderBoard();
-  updateHUD();
-}
+    const coinGained = Math.floor(matches.length / 3); // हर 3 match पर 1 coin
+    coins += coinGained;
+    persistCoins();
 
-function renderBoard() {
-  const grid = document.getElementById("game-board");
-  grid.innerHTML = "";
-  grid.style.gridTemplateColumns = `repeat(${WIDTH}, 1fr)`;
+    // 💥 Pop animation (with null safety)
+    matches.forEach(i => {
+      const t = document.querySelector(`.cell[data-index="${i}"] .tile`);
+      if (t && t.classList) {  // ✅ FIX: null check added
+        t.classList.add('pop');
+        t.style.transform = 'scale(0.2) rotate(-30deg)';
+        t.style.opacity = '0';
+      }
+      board[i] = null;
+    });
 
-  board.forEach((tile, i) => {
-    const cell = document.createElement("div");
-    cell.className = "cell";
-    const img = document.createElement("img");
-    img.className = "tile";
-    img.src = tile.src;
-    cell.appendChild(img);
-    grid.appendChild(cell);
-  });
-}
+    // 💰 Coin popup animation
+    if (coinGained > 0) showCoinPopup('+' + coinGained + ' 💰');
 
-function updateHUD() {
-  document.getElementById("score").textContent = score;
-  document.getElementById("coins").textContent = coins;
-  localStorage.setItem("candy_coins", coins);
+    combo++;
+
+    // ⏱️ After pop animation → gravity + refill → next chain
+    setTimeout(() => {
+      applyGravityAndRefill();
+      renderBoard();
+      setTimeout(() => step(), 250);
+    }, 400);
+  })();
 }
