@@ -1,6 +1,6 @@
 /* js/game.js
-   Candy Match main logic — fixed for width=6, height=8 and safe HUD updates.
-   Includes animated swapping, matches, gravity, combo system, and score HUD.
+   Updated: responsive tiles + touch/swipe support + WIDTH=6 HEIGHT=8
+   Ready to paste (replace your existing js/game.js)
 */
 
 const WIDTH = 6;   // columns
@@ -18,6 +18,20 @@ let score = 0, moves = 40, combo = 1;
 let selected = null;
 let isSwapping = false;
 
+/* ---------- UTILS: responsive tile sizing ---------- */
+function fitTiles(){
+  const grid = document.getElementById('game-board') || document.getElementById('grid');
+  if(!grid) return;
+  // available width minus padding; keep some margins on small screens
+  const maxWidth = Math.min(grid.parentElement ? grid.parentElement.clientWidth : window.innerWidth, window.innerWidth - 40);
+  const gap = 6; // grid gap in px (should match your CSS if any)
+  const candidate = Math.floor((maxWidth - gap*(WIDTH-1)) / WIDTH);
+  const size = Math.max(36, Math.min(candidate, 84)); // clamp
+  document.documentElement.style.setProperty('--tile', size + 'px');
+  // also set grid max-width so it centers correctly
+  grid.style.maxWidth = (size * WIDTH + gap * (WIDTH - 1)) + 'px';
+}
+
 /* ---------- PRELOAD IMAGES ---------- */
 async function preload() {
   pool = await Promise.all(CANDIES.map(n => {
@@ -34,6 +48,7 @@ async function preload() {
   }));
   pool = pool.filter(Boolean);
   if(pool.length === 0){
+    // fallback
     pool = CANDIES.slice(0,6).map(n => IMAGE_BASE + n);
   }
 }
@@ -43,13 +58,24 @@ function render(){
   const grid = document.getElementById('game-board') || document.getElementById('grid');
   if(!grid) return console.warn('⚠️ No grid element found (#game-board or #grid).');
 
+  fitTiles();
+
   grid.innerHTML = '';
   grid.style.gridTemplateColumns = `repeat(${WIDTH}, 1fr)`;
+  grid.style.gap = '6px';
 
   board.forEach((tile, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.index = i;
+    cell.style.width = 'auto';
+    cell.style.height = 'auto';
+    cell.style.display = 'flex';
+    cell.style.alignItems = 'center';
+    cell.style.justifyContent = 'center';
+    cell.style.borderRadius = '10px';
+    cell.style.background = 'rgba(255,255,255,0.9)'; // optional look
+    cell.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
 
     const img = document.createElement('img');
     img.className = 'tile';
@@ -58,7 +84,20 @@ function render(){
     img.src = tile ? tile.src : pool[Math.floor(Math.random()*pool.length)];
     img.setAttribute('data-index', i);
 
+    // size from CSS var
+    const varSize = getComputedStyle(document.documentElement).getPropertyValue('--tile') || '56px';
+    img.style.width = varSize.trim();
+    img.style.height = varSize.trim();
+    img.style.objectFit = 'contain';
+    img.style.userSelect = 'none';
+    img.style.touchAction = 'none';
+
+    // click handler (tap)
     cell.onclick = () => handleSelect(i);
+
+    // attach touch/pointer handlers for swipe (see below)
+    attachPointerHandlers(cell, i);
+
     cell.appendChild(img);
     grid.appendChild(cell);
   });
@@ -113,12 +152,12 @@ function handleSelect(i){
 }
 
 function highlight(i){
-  const tile = tileEl(i);
-  if(tile) tile.classList.add('selected');
+  const cell = document.querySelector(`.cell[data-index="${i}"]`);
+  if(cell) cell.style.outline = '3px solid rgba(255,255,255,0.6)';
 }
 function unhighlight(i){
-  const tile = tileEl(i);
-  if(tile) tile.classList.remove('selected');
+  const cell = document.querySelector(`.cell[data-index="${i}"]`);
+  if(cell) cell.style.outline = '';
 }
 function isAdjacent(a,b){
   const r1 = Math.floor(a / WIDTH), c1 = a % WIDTH;
@@ -155,6 +194,7 @@ function swapWithAnimation(aIndex, bIndex){
       cl.style.height = aRect.height + 'px';
       cl.style.transition = 'transform 220ms cubic-bezier(.2,.9,.2,1)';
       cl.style.zIndex = 9999;
+      cl.style.pointerEvents = 'none';
       document.body.appendChild(cl);
     });
 
@@ -182,22 +222,32 @@ function swapWithAnimation(aIndex, bIndex){
 function findMatches(){
   const matches = new Set();
 
+  // horizontal
   for(let r=0; r<HEIGHT; r++){
     for(let c=0; c<WIDTH-2; c++){
       const i = r*WIDTH + c;
       if(board[i] && board[i+1] && board[i+2] &&
          board[i].src === board[i+1].src && board[i].src === board[i+2].src){
         matches.add(i); matches.add(i+1); matches.add(i+2);
+        let k = c+3;
+        while(k<WIDTH && board[r*WIDTH + k] && board[r*WIDTH + k].src === board[i].src){
+          matches.add(r*WIDTH + k); k++;
+        }
       }
     }
   }
 
+  // vertical
   for(let c=0; c<WIDTH; c++){
     for(let r=0; r<HEIGHT-2; r++){
       const i = r*WIDTH + c;
       if(board[i] && board[i+WIDTH] && board[i+2*WIDTH] &&
          board[i].src === board[i+WIDTH].src && board[i].src === board[i+2*WIDTH].src){
         matches.add(i); matches.add(i+WIDTH); matches.add(i+2*WIDTH);
+        let k = r+3;
+        while(k<HEIGHT && board[k*WIDTH + c] && board[k*WIDTH + c].src === board[i].src){
+          matches.add(k*WIDTH + c); k++;
+        }
       }
     }
   }
@@ -252,7 +302,7 @@ function applyGravity(){
   }
 }
 
-/* ---------- HUD SAFE UPDATE ---------- */
+/* ---------- HUD (safe) ---------- */
 function updateHUD(){
   const scoreEl = document.getElementById('score');
   if(scoreEl) scoreEl.textContent = score;
@@ -295,6 +345,73 @@ function showHint(){
   }
 }
 
+/* ---------- TOUCH / SWIPE HANDLERS ---------- */
+function attachPointerHandlers(cell, index){
+  // We'll support pointer events (pointerdown/pointerup) where available,
+  // and fallback to touchstart/touchend for older browsers if needed.
+  let startX=0, startY=0, startIndex=null, moved=false;
+
+  function onStart(e){
+    e.preventDefault();
+    moved = false;
+    startIndex = index;
+    const point = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    startX = point.clientX;
+    startY = point.clientY;
+    // visual selection
+    highlight(index);
+  }
+  function onMove(e){
+    moved = true;
+  }
+  function onEnd(e){
+    const point = (e.changedTouches && e.changedTouches[0]) || e;
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    unhighlight(startIndex);
+    // minimum swipe threshold
+    const TH = 18;
+    if(Math.abs(dx) < TH && Math.abs(dy) < TH){
+      // treat as tap
+      handleSelect(index);
+      return;
+    }
+    // determine direction
+    let target = null;
+    if(Math.abs(dx) > Math.abs(dy)){
+      // horizontal
+      if(dx > 0) target = startIndex + 1; // right
+      else target = startIndex - 1; // left
+    } else {
+      // vertical
+      if(dy > 0) target = startIndex + WIDTH; // down
+      else target = startIndex - WIDTH; // up
+    }
+    // validate target index and adjacency
+    if(target >= 0 && target < SIZE && isAdjacent(startIndex, target)){
+      // trigger selection pair to perform swap
+      handleSelect(startIndex);   // selects first
+      handleSelect(target);       // attempts swap
+    } else {
+      // not valid, just unselect
+      selected = null;
+      unhighlight(startIndex);
+    }
+  }
+
+  // pointer support
+  cell.addEventListener('pointerdown', onStart, {passive:false});
+  cell.addEventListener('pointermove', onMove, {passive:true});
+  cell.addEventListener('pointerup', onEnd, {passive:true});
+  // touch fallback
+  cell.addEventListener('touchstart', onStart, {passive:true});
+  cell.addEventListener('touchmove', onMove, {passive:true});
+  cell.addEventListener('touchend', onEnd, {passive:true});
+  // mouse fallback
+  cell.addEventListener('mousedown', onStart);
+  cell.addEventListener('mouseup', onEnd);
+}
+
 /* ---------- EXPORTS ---------- */
 window.initGame = initGame;
 window.shuffleBoard = shuffleBoard;
@@ -303,5 +420,19 @@ window.showHint = showHint;
 /* ---------- AUTO START ---------- */
 window.addEventListener('load', async ()=>{
   await preload();
+  fitTiles();
+  // do not auto-init to let UI control Start — if you want auto init, uncomment:
+  // initGame();
   console.log('✅ Images preloaded:', pool.length);
+});
+
+// resize handler to recompute tile sizes
+window.addEventListener('resize', () => {
+  fitTiles();
+  // recompute tile pixel sizes on existing img elements
+  const varSize = getComputedStyle(document.documentElement).getPropertyValue('--tile') || '56px';
+  document.querySelectorAll('.tile').forEach(img=>{
+    img.style.width = varSize.trim();
+    img.style.height = varSize.trim();
+  });
 });
