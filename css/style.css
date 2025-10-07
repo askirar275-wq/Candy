@@ -1,0 +1,122 @@
+:root {
+  --bg-top: #ffd7e6;
+  --bg-bottom: #ffe7d9;
+  --card-shadow: rgba(219, 100, 160, 0.14);
+  --tile-size: 48px;
+  --tile-gap: 10px;
+}
+
+body {
+  background:
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%),
+    url('../images/bg-gradient.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  font-family: "Poppins", system-ui, sans-serif;
+  color: #3b2a24;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('../images/candy-sprinkle.png') repeat;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+/* Screens */
+.screen { display: none; padding: 18px; }
+.screen.active { display: block; }
+
+.logo {
+  width: 100px;
+  margin: 10px auto;
+  display: block;
+}
+
+.title {
+  text-align: center;
+  font-size: 36px;
+  color: #d83b7b;
+  margin: 0;
+}
+
+.subtitle { text-align: center; color: #444; margin-bottom: 15px; }
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+button {
+  font-weight: 700;
+  border: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffb3d1, #ff6fb3);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(255, 111, 179, 0.16);
+}
+button:active { transform: translateY(2px); }
+
+.board {
+  display: grid;
+  gap: var(--tile-gap);
+  margin: 10px auto;
+  max-width: 520px;
+  background: rgba(255,255,255,0.96);
+  border-radius: 20px;
+  padding: 15px;
+  box-shadow: 0 18px 40px var(--card-shadow);
+}
+
+.cell {
+  aspect-ratio: 1/1;
+  background: rgba(255,255,255,0.9);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tile {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  transition: transform 0.2s;
+}
+.cell:hover .tile { transform: scale(1.1); }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coins-bubble {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 20px;
+}
+
+.coin-popup {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  color: #ff3d8a;
+  animation: coinRise 1s ease-out forwards;
+}
+
+@keyframes coinRise {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -130%) scale(0.9); }
+}
