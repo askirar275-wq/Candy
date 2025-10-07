@@ -1,6 +1,6 @@
-/* ====== Candy Match - Final Game CSS (Jungle + Floating Candies) ====== */
+/* ====== Candy Match - Final Game CSS (Jungle + Floating Candies + Fix) ====== */
 
-:root{
+:root {
   --bg-top: #ffd7e6;
   --bg-bottom: #ffe7d9;
   --card: #fff7fb;
@@ -23,7 +23,7 @@ body {
   filter: brightness(1.05);
   font-family: "Poppins", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color: #3b2a24;
-  -webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
 }
@@ -38,6 +38,7 @@ body::after {
   background-size: 220px;
   opacity: 0.06;
   pointer-events: none;
+  z-index: 0;
 }
 
 /* 🎮 Game board */
@@ -59,9 +60,9 @@ body::after {
 .cell {
   width: 100%;
   aspect-ratio: 1/1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,0.86);
   border-radius: 12px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,0.85) inset;
@@ -69,12 +70,12 @@ body::after {
   position: relative;
   overflow: hidden;
 }
-.cell::after{
-  content:"";
-  position:absolute; inset:0;
-  border-radius:12px;
+.cell::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 12px;
   box-shadow: 0 2px 0 rgba(255,255,255,0.6) inset;
-  pointer-events:none;
+  pointer-events: none;
 }
 
 /* 🍬 Candy tile image */
@@ -106,55 +107,75 @@ body::after {
   font-family: 'Playfair Display', serif;
 }
 .coins-bubble, .score-bubble {
-  background: #fff; padding: 8px 12px; border-radius: 28px;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 28px;
   box-shadow: 0 10px 24px rgba(111,21,63,0.06);
 }
 
 /* 🎮 Buttons */
 button {
-  font-weight:700;
-  border:0;
-  background: linear-gradient(180deg,#ffb3d1,#ff6fb3);
-  color:#fff;
-  padding:10px 14px;
+  font-weight: 700;
+  border: 0;
+  background: linear-gradient(180deg, #ffb3d1, #ff6fb3);
+  color: #fff;
+  padding: 10px 14px;
   border-radius: 12px;
   box-shadow: 0 10px 18px rgba(255,111,179,0.16);
-  cursor:pointer;
+  cursor: pointer;
 }
 button[aria-pressed="true"], button:active { transform: translateY(2px) }
 
 /* 📱 Responsive layout */
-@media (max-width:420px){
-  :root{ --tile-size: 44px; --tile-gap:8px; }
-  .board{ max-width: 360px; padding:12px; border-radius:18px; }
+@media (max-width: 420px) {
+  :root { --tile-size: 44px; --tile-gap: 8px; }
+  .board { max-width: 360px; padding: 12px; border-radius: 18px; }
 }
-@media (min-width:420px) and (max-width:760px){
-  :root{ --tile-size: 52px; --tile-gap:10px; }
-  .board{ max-width:460px; }
+@media (min-width: 420px) and (max-width: 760px) {
+  :root { --tile-size: 52px; --tile-gap: 10px; }
+  .board { max-width: 460px; }
 }
-@media (min-width:760px){
-  :root{ --tile-size: 60px; --tile-gap:12px; }
-  .board{ max-width:640px; }
+@media (min-width: 760px) {
+  :root { --tile-size: 60px; --tile-gap: 12px; }
+  .board { max-width: 640px; }
 }
 
 /* 🌈 Floating Candy Animation */
 .floating-candy {
-  position: fixed;
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  opacity: 0.85;
   animation: floaty var(--float-duration, 8s) ease-in-out infinite;
-  transform-origin: 50% 50%;
-  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.12));
   pointer-events: none;
+  z-index: 1; /* behind the UI */
+  mix-blend-mode: screen;
+  transform-origin: center;
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.12));
   will-change: transform, opacity;
-  z-index: 2;
 }
 
-/* 🍭 Smooth floating motion */
 @keyframes floaty {
   0%   { transform: translateY(0) rotate(0deg); }
   25%  { transform: translateY(-22px) rotate(6deg); }
   50%  { transform: translateY(-6px) rotate(-4deg); }
   75%  { transform: translateY(-18px) rotate(3deg); }
   100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* Ensure UI & Board stay on top */
+.screen, .board, .topbar, .shop-card {
+  position: relative;
+  z-index: 3;
+}
+
+/* Smaller candies on mobile */
+@media (max-width: 420px) {
+  .floating-candy {
+    width: 36px;
+    height: 36px;
+    opacity: 0.9;
+  }
 }
 
 /* ===== END ===== */
