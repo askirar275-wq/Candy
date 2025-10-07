@@ -1,7 +1,7 @@
-/* ====== Visual upgrade for Candy Match - Updated Background ====== */
+/* ====== Candy Match Game Visuals — Candy Jungle Edition ====== */
 
-/* CSS variables */
-:root{
+/* 🌈 Variables */
+:root {
   --bg-top: #ffd7e6;
   --bg-bottom: #ffe7d9;
   --card: #fff7fb;
@@ -11,9 +11,9 @@
   --accent: #ff6fb3;
 }
 
-/* 🎨 Page background with your new bg-gradient.png */
+/* 🎨 Background (Candy Jungle) */
 body {
-  background: 
+  background:
     linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%),
     url('https://askirar275-wq.github.io/Candy/images/bg-gradient.png');
   background-size: cover;
@@ -24,7 +24,7 @@ body {
   filter: brightness(1.05);
   font-family: "Poppins", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color: #3b2a24;
-  -webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
 }
@@ -34,14 +34,14 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url('../images/candy-sprinkle.png');
+  background-image: url('https://askirar275-wq.github.io/Candy/images/candy-sprinkle.png');
   background-repeat: repeat;
   background-size: 220px;
   opacity: 0.06;
   pointer-events: none;
 }
 
-/* 🍭 Central card that holds the board */
+/* 🍭 Game board card */
 .board {
   margin: 14px auto;
   padding: 18px;
@@ -52,15 +52,16 @@ body::after {
   display: grid;
   gap: var(--tile-gap);
   transform: translateZ(0);
+  z-index: 5;
 }
 
 /* 🧩 Candy cells */
 .cell {
   width: 100%;
   aspect-ratio: 1/1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,0.86);
   border-radius: 12px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,0.85) inset;
@@ -68,12 +69,13 @@ body::after {
   position: relative;
   overflow: hidden;
 }
-.cell::after{
-  content:"";
-  position:absolute; inset:0;
-  border-radius:12px;
+.cell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
   box-shadow: 0 2px 0 rgba(255,255,255,0.6) inset;
-  pointer-events:none;
+  pointer-events: none;
 }
 
 /* 🍬 Candy tile image */
@@ -88,10 +90,18 @@ body::after {
   filter: drop-shadow(0 6px 10px rgba(81, 38, 64, 0.12));
 }
 
-/* ✨ Selection effects */
-.cell:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.09); }
-.selected-cell { outline: 3px solid rgba(255,111,179,0.12); transform: scale(1.03); }
-.tile.selected { transform: scale(1.08); }
+/* ✨ Selection effect */
+.cell:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.09);
+}
+.selected-cell {
+  outline: 3px solid rgba(255,111,179,0.12);
+  transform: scale(1.03);
+}
+.tile.selected {
+  transform: scale(1.08);
+}
 
 /* 💥 Match pop animation */
 .tile.pop {
@@ -101,56 +111,83 @@ body::after {
 }
 
 /* 🎞️ Swap animation clones */
-.swap-moving { pointer-events:none; border-radius:8px; }
+.swap-moving {
+  pointer-events: none;
+  border-radius: 8px;
+}
 
-/* 🧮 HUD styling */
+/* 🧮 HUD (Score / Coins / Topbar) */
 .topbar, .score-bubble {
   font-family: 'Playfair Display', serif;
 }
 .coins-bubble, .score-bubble {
-  background: #fff; padding: 8px 12px; border-radius: 28px;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 28px;
   box-shadow: 0 10px 24px rgba(111,21,63,0.06);
 }
 
 /* 🎮 Buttons */
 button {
-  font-weight:700;
-  border:0;
+  font-weight: 700;
+  border: 0;
   background: linear-gradient(180deg,#ffb3d1,#ff6fb3);
-  color:#fff;
-  padding:10px 14px;
+  color: #fff;
+  padding: 10px 14px;
   border-radius: 12px;
   box-shadow: 0 10px 18px rgba(255,111,179,0.16);
-  cursor:pointer;
+  cursor: pointer;
+  transition: transform 120ms ease;
 }
-button[aria-pressed="true"], button:active { transform: translateY(2px) }
-
-/* 📱 Responsive layout */
-@media (max-width:420px){
-  :root{ --tile-size: 44px; --tile-gap:8px; }
-  .board{ max-width: 360px; padding:12px; border-radius:18px; }
-}
-@media (min-width:420px) and (max-width:760px){
-  :root{ --tile-size: 52px; --tile-gap:10px; }
-  .board{ max-width:460px; }
-}
-@media (min-width:760px){
-  :root{ --tile-size: 60px; --tile-gap:12px; }
-  .board{ max-width:640px; }
+button[aria-pressed="true"], button:active {
+  transform: translateY(2px);
 }
 
-/* 🪶 Floating candies (optional) */
+/* 📱 Responsive */
+@media (max-width:420px) {
+  :root { --tile-size: 44px; --tile-gap:8px; }
+  .board { max-width: 360px; padding:12px; border-radius:18px; }
+}
+@media (min-width:420px) and (max-width:760px) {
+  :root { --tile-size: 52px; --tile-gap:10px; }
+  .board { max-width:460px; }
+}
+@media (min-width:760px) {
+  :root { --tile-size: 60px; --tile-gap:12px; }
+  .board { max-width:640px; }
+}
+
+/* 🌟 Floating Candies Animation */
 .floating-candy {
-  position: absolute;
-  width: 56px; height: 56px;
-  opacity: 0.9;
-  animation: floaty 5s ease-in-out infinite;
-  pointer-events:none;
+  position: fixed;
+  width: 72px;
+  height: 72px;
+  opacity: 0.95;
+  pointer-events: none;
+  transform-origin: center;
+  z-index: 1;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 12px 20px rgba(0,0,0,0.12));
 }
-@keyframes floaty {
-  0%{ transform: translateY(0) }
-  50%{ transform: translateY(-18px) rotate(3deg) }
-  100%{ transform: translateY(0) }
+
+/* subtle float path */
+@keyframes float-path {
+  0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(1); opacity: 0.95; }
+  25%  { transform: translateY(-18px) translateX(-8px) rotate(-6deg) scale(1.02); opacity: 0.98; }
+  50%  { transform: translateY(-36px) translateX(6px) rotate(4deg) scale(1.04); opacity: 0.98; }
+  75%  { transform: translateY(-18px) translateX(10px) rotate(-3deg) scale(1.02); opacity: 0.98; }
+  100% { transform: translateY(0) translateX(0) rotate(0deg) scale(1); opacity: 0.95; }
+}
+
+.floating-candy.slow { animation: float-path 9s ease-in-out infinite; }
+.floating-candy.medium { animation: float-path 7s ease-in-out infinite; }
+.floating-candy.fast { animation: float-path 5.5s ease-in-out infinite; }
+
+.floating-candy.small  { width: 56px; height: 56px; opacity: 0.9; }
+.floating-candy.large  { width: 92px; height: 92px; opacity: 1; }
+
+@media (max-width:420px) {
+  .floating-candy { width: 56px; height:56px; }
 }
 
 /* ====== END OF STYLES ====== */
