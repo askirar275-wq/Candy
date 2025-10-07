@@ -1,4 +1,4 @@
-/* ====== Candy Match - Jungle Theme + Coin Popup ====== */
+/* ====== Candy Match - Jungle Theme + Coin Popup (Final) ====== */
 
 :root {
   --bg-top: #ffd7e6;
@@ -26,15 +26,15 @@ body {
   overflow-x: hidden;
 }
 
-/* 🍬 Sprinkle layer */
+/* 🍬 Sprinkle overlay */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url('../images/candy-sprinkle.png');
+  background-image: url('https://askirar275-wq.github.io/Candy/images/candy-sprinkle.png');
   background-repeat: repeat;
   background-size: 220px;
-  opacity: 0.05;
+  opacity: 0.06;
   pointer-events: none;
 }
 
@@ -144,7 +144,7 @@ button:active { transform: translateY(2px); }
   100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
 }
 
-/* 🪶 Floating candies (optional decoration) */
+/* 🪶 Floating candies */
 .floating-candy {
   position: absolute;
   width: 56px; height: 56px;
