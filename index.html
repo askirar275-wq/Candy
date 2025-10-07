@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Candy Match 🍬</title>
 
-  <!-- ✅ All CSS Files -->
+  <!-- CSS Files -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/inventory.css"> <!-- 🧩 Added Inventory Styles -->
+  <link rel="stylesheet" href="css/inventory.css">
 
   <style>
     .screen { display: none; }
@@ -41,23 +41,19 @@
     </div>
 
     <div id="game-board" class="board"
-         style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;
+         style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
                 padding:8px;max-width:420px;margin:10px auto;">
     </div>
 
-    <div id="inv-toolbar" style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
-      <!-- Inventory buttons dynamically added by JS -->
-    </div>
-
     <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;">
-      <button id="restartBtn" style="padding:8px 12px;border-radius:8px;">Restart</button>
-      <button id="shuffleBtn" style="padding:8px 12px;border-radius:8px;">Shuffle</button>
+      <button id="restartBtn" style="padding:8px 12px;border-radius:8px;" onclick="initGame()">Restart</button>
+      <button id="shuffleBtn" style="padding:8px 12px;border-radius:8px;" onclick="shuffleBoard()">Shuffle</button>
       <button id="openShopBtn" style="padding:8px 12px;border-radius:8px;">Open Shop</button>
     </div>
   </div>
 
   <!-- 🛒 SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true">
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none;">
     <div class="shop-card">
       <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -87,7 +83,7 @@
           <button id="buyMoves">Buy</button>
         </div>
         <div class="shop-item">
-          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-size:20px">🌈 Rainbow Candy</div>
           <div style="font-weight:800;margin-top:8px">₹ 350</div>
           <button id="buyRainbow">Buy</button>
         </div>
@@ -99,46 +95,55 @@
     </div>
   </div>
 
-  <!-- ✅ JS Files -->
+  <!-- 📜 SCRIPT FILES -->
   <script src="js/home.js"></script>
   <script src="js/game.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/inventory.js"></script>
 
-  <!-- 🌀 Parallax Script -->
+  <!-- 🌿 Parallax effect (background moves slightly on tilt/scroll) -->
   <script>
   (function(){
-    const MAX_SHIFT = 18;
-    const MAX_SHIFT_X = 10;
+    const MAX_SHIFT = 18, MAX_SHIFT_X = 10;
     function setParallax(x, y){
-      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-      document.documentElement.style.setProperty('--parallax-tx', clamp(x,-MAX_SHIFT_X,MAX_SHIFT_X)+'px');
-      document.documentElement.style.setProperty('--parallax-ty', clamp(y,-MAX_SHIFT,MAX_SHIFT)+'px');
+      document.documentElement.style.setProperty('--parallax-tx', x + 'px');
+      document.documentElement.style.setProperty('--parallax-ty', y + 'px');
     }
-    window.addEventListener('scroll',()=>{
-      const docH=document.documentElement.scrollHeight-window.innerHeight;
-      if(docH<=0)return;
-      const pct=window.scrollY/docH;
-      setParallax((pct-0.5)*6,(pct-0.5)*12);
-    });
-    document.addEventListener('touchmove',(ev)=>{
-      if(!ev.touches||!ev.touches[0])return;
-      const t=ev.touches[0];
-      setParallax((t.clientX/window.innerWidth-0.5)*20,(t.clientY/window.innerHeight-0.5)*20);
-    });
-    setParallax(0,0);
+    window.addEventListener('scroll', () => {
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
+      if(docH <= 0) return;
+      const pct = window.scrollY / docH;
+      const y = (pct - 0.5) * 2 * MAX_SHIFT * 0.6;
+      const x = (pct - 0.5) * 2 * MAX_SHIFT_X * 0.3;
+      setParallax(x, y);
+    }, {passive:true});
+    document.addEventListener('touchmove', (ev) => {
+      if(!ev.touches || ev.touches.length === 0) return;
+      const t = ev.touches[0];
+      setParallax(t.clientX / 40 - 10, t.clientY / 40 - 10);
+    }, {passive:true});
+    window.addEventListener('deviceorientation', (ev) => {
+      if(!ev) return;
+      const gx = ev.gamma || 0, by = ev.beta || 0;
+      const x = (gx / 45) * MAX_SHIFT_X;
+      const y = (by / 45) * MAX_SHIFT;
+      setParallax(x, y);
+    }, true);
   })();
   </script>
 
-  <!-- 🧩 Debug Console -->
+  <!-- 🧩 Debug console for mobile (Eruda) -->
   <script>
     const DEBUG_MODE = true;
     if (DEBUG_MODE) {
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/eruda";
-      s.onload = () => { eruda.init(); console.log("✅ Eruda started (mobile console)"); };
+      s.onload = () => {
+        eruda.init();
+        console.log("✅ Eruda started (mobile console)");
+      };
       document.body.appendChild(s);
     }
   </script>
 </body>
-                                                                                   </html>
+  </html>
