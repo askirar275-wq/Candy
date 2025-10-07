@@ -1,4 +1,4 @@
-/* ====== Candy Match - Final Game CSS (floating candies + sparkle effect) ====== */
+/* ====== Candy Match - Jungle Theme + Coin Popup ====== */
 
 :root {
   --bg-top: #ffd7e6;
@@ -10,64 +10,54 @@
   --accent: #ff6fb3;
 }
 
-/* 🍭 Background (Candy Jungle) */
+/* 🌴 Background (Jungle + Gradient) */
 body {
   background:
     linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%),
-    url('https://askirar275-wq.github.io/Candy/images/bg-gradient.png?v=2');
+    url('https://askirar275-wq.github.io/Candy/images/bg-gradient.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
-  background-blend-mode: soft-light;
-  filter: brightness(1.03);
   font-family: "Poppins", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color: #3b2a24;
   margin: 0;
   padding: 0;
-  position: relative;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* 🍬 Sprinkle overlay (soft texture) */
+/* 🍬 Sprinkle layer */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url('https://askirar275-wq.github.io/Candy/images/candy-sprinkle.png?v=2');
+  background-image: url('../images/candy-sprinkle.png');
   background-repeat: repeat;
   background-size: 220px;
   opacity: 0.05;
   pointer-events: none;
-  z-index: 0;
 }
 
-/* 🎮 Game layout layers */
-.screen, .board, .topbar, .buttons, .footer {
-  position: relative;
-  z-index: 10;
-}
-
-/* 🍬 Board */
+/* 🍭 Game board */
 .board {
   margin: 14px auto;
   padding: 18px;
   max-width: 520px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,248,250,0.94));
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,248,250,0.9));
   box-shadow: 0 18px 40px var(--card-shadow), inset 0 2px 0 rgba(255,255,255,0.6);
   display: grid;
   gap: var(--tile-gap);
+  transform: translateZ(0);
 }
 
-/* 🧩 Cells */
+/* 🍬 Cell */
 .cell {
   width: 100%;
   aspect-ratio: 1/1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   background: rgba(255,255,255,0.86);
   border-radius: 12px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,0.85) inset;
@@ -76,77 +66,48 @@ body::after {
   overflow: hidden;
 }
 .cell::after {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: 12px;
+  content:"";
+  position:absolute; inset:0;
+  border-radius:12px;
   box-shadow: 0 2px 0 rgba(255,255,255,0.6) inset;
-  pointer-events: none;
+  pointer-events:none;
 }
 
-/* 🍬 Candy tile image */
+/* 🍭 Candy tile */
 .tile {
   width: calc(var(--tile-size, 48px) * 0.9);
   height: calc(var(--tile-size, 48px) * 0.9);
   object-fit: contain;
   transition: transform 180ms cubic-bezier(.2,.9,.2,1), opacity 200ms;
-  z-index: 11;
+  z-index: 2;
   user-select: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 6px 10px rgba(81, 38, 64, 0.12));
 }
 
-/* ✨ Selection and Match Effects */
+/* ✨ Hover & selection */
 .cell:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.09); }
-.selected-cell { outline: 3px solid rgba(255,111,179,0.12); transform: scale(1.03); }
-.tile.selected { transform: scale(1.08); }
+.selected-cell { outline: 3px solid rgba(255,111,179,0.2); transform: scale(1.05); }
+.tile.selected { transform: scale(1.1); }
 
-/* Matched tiles glow */
-.tile.match {
-  transform: scale(1.08);
-  box-shadow: 0 10px 30px rgba(255,140,200,0.32), 0 0 40px rgba(255,200,240,0.12) inset;
-  transition: transform 180ms ease, box-shadow 180ms ease;
-  z-index: 3;
-  filter: drop-shadow(0 8px 18px rgba(255,140,200,0.16));
-}
-@keyframes glow-pulse {
-  0% { box-shadow: 0 6px 18px rgba(255,140,200,0.15) }
-  50% { box-shadow: 0 12px 32px rgba(255,120,180,0.28) }
-  100% { box-shadow: 0 6px 18px rgba(255,140,200,0.15) }
-}
-.tile.match.pulse {
-  animation: glow-pulse 500ms ease-in-out 2;
-}
-
-/* Sparkle particles */
-.sparkle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  pointer-events: none;
-  transform-origin: center;
-  opacity: 0.95;
-  mix-blend-mode: screen;
-  filter: blur(0.2px);
-  animation: sparkle-anim 600ms cubic-bezier(.2,.8,.2,1) forwards;
-}
-.sparkle.c1 { background: radial-gradient(circle, #fff7ff 0%, #ff9bd4 45%, #ff6fb3 100%); }
-.sparkle.c2 { background: radial-gradient(circle, #fffef8 0%, #ffd66a 40%, #ffb347 100%); }
-.sparkle.c3 { background: radial-gradient(circle, #eaffff 0%, #8be6ff 45%, #3fc7ff 100%); }
-.sparkle.c4 { background: radial-gradient(circle, #f6ffed 0%, #b6ff8f 45%, #7be05f 100%); }
-
-@keyframes sparkle-anim {
-  0% { transform: translate(0,0) scale(1); opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; filter: blur(1.2px); }
-}
-
-/* 🎞️ Swap and Pop animations */
+/* 💥 Pop animation */
 .tile.pop {
+  transition: transform 300ms ease, opacity 300ms ease;
   transform: scale(0.2) rotate(-30deg);
   opacity: 0;
-  transition: transform 300ms ease, opacity 300ms ease;
 }
-.swap-moving { pointer-events:none; border-radius:8px; z-index:9999; }
+
+/* 🎞 Swap animation clones */
+.swap-moving { pointer-events:none; border-radius:8px; }
+
+/* 🧮 HUD bubbles */
+.topbar, .score-bubble {
+  font-family: 'Playfair Display', serif;
+}
+.coins-bubble, .score-bubble {
+  background: #fff; padding: 8px 12px; border-radius: 28px;
+  box-shadow: 0 10px 24px rgba(111,21,63,0.06);
+}
 
 /* 🎮 Buttons */
 button {
@@ -158,21 +119,38 @@ button {
   border-radius: 12px;
   box-shadow: 0 10px 18px rgba(255,111,179,0.16);
   cursor:pointer;
-  z-index:12;
 }
-button:active { transform: translateY(2px) }
+button:active { transform: translateY(2px); }
 
-/* 🌈 Floating Candies */
+/* 💰 Coin popup animation */
+.coin-popup {
+  position: fixed;
+  z-index: 9999;
+  font-family: "Poppins", sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #ff3d8a;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  animation: coinRise 1.2s ease-out forwards;
+}
+
+@keyframes coinRise {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -70%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
+}
+
+/* 🪶 Floating candies (optional decoration) */
 .floating-candy {
   position: absolute;
-  width: 48px; height: 48px;
-  opacity: 0.85;
-  animation: floaty 8s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 1;
-  mix-blend-mode: screen;
-  transform-origin: center;
-  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.12));
+  width: 56px; height: 56px;
+  opacity: 0.9;
+  animation: floaty 5s ease-in-out infinite;
+  pointer-events:none;
 }
 @keyframes floaty {
   0%{ transform: translateY(0) }
