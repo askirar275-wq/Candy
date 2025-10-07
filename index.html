@@ -1,149 +1,459 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Candy Match 🍬</title>
 
-  <!-- CSS Files -->
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="stylesheet" href="css/game.css">
+  <!-- Inventory CSS (you previously created) -->
   <link rel="stylesheet" href="css/inventory.css">
 
+  <!-- Main game CSS (enhanced visuals + jungle bg) -->
   <style>
-    .screen { display: none; }
-    .screen.active { display: block; }
+    :root{
+      --bg-top:#ffd7e6; --bg-bottom:#ffe7d9;
+      --card-shadow: rgba(219,100,160,0.14);
+      --tile-size:48px; --tile-gap:10px; --accent:#ff6fb3;
+    }
+    /* Page background (jungle image from your repo) */
+    body{
+      margin:0; padding:0;
+      background:
+        linear-gradient(180deg,var(--bg-top),var(--bg-bottom)),
+        url('https://askirar275-wq.github.io/Candy/images/bg-gradient.png');
+      background-size: cover;
+      background-position: center bottom;
+      background-repeat: no-repeat;
+      font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      color:#3b2a24; -webkit-font-smoothing:antialiased;
+      overflow-y:auto;
+    }
+    body::after{
+      content:""; position:fixed; inset:0;
+      background-image: url('https://askirar275-wq.github.io/Candy/images/candy-sprinkle.png');
+      background-repeat: repeat; background-size:220px; opacity:0.06; pointer-events:none;
+    }
+
+    /* screens */
+    .screen{ display:none; padding:18px; }
+    .screen.active{ display:block; }
+
+    .logo{ display:block; margin:8px auto 6px; width:110px; height:110px; }
+
+    .title{ text-align:center; font-size:36px; color:#d83b7b; margin:6px 0; font-weight:800; }
+    .subtitle{ text-align:center; color:#555; margin-bottom:12px; }
+
+    .buttons{ display:flex; flex-direction:column; gap:14px; align-items:center; max-width:520px; margin:0 auto; }
+    .buttons button{ width:84%; padding:14px; border-radius:14px; border:0; background:linear-gradient(180deg,#ff7fb7,#ffb3d1); color:#fff; font-weight:800; box-shadow:0 12px 24px rgba(255,111,179,0.14); }
+
+    .install{ margin-top:12px; padding:8px 12px; border-radius:10px; }
+
+    /* Game screen layout */
+    .topbar{ display:flex; align-items:center; gap:12px; max-width:920px; margin:0 auto 12px; padding:4px 8px; }
+    #backBtn{ padding:8px 12px; border-radius:10px; }
+    h2{ font-family:'Playfair Display', serif; font-size:32px; margin:0; flex:1; text-align:center; }
+    .coins-bubble{ background:#fff; padding:10px 16px; border-radius:28px; box-shadow:0 10px 24px rgba(111,21,63,0.06); }
+
+    /* board card */
+    .board{
+      margin:6px auto;
+      padding:18px;
+      max-width:520px;
+      border-radius:22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,248,250,0.9));
+      box-shadow:0 18px 40px var(--card-shadow), inset 0 2px 0 rgba(255,255,255,0.6);
+      display:grid;
+      gap:var(--tile-gap);
+    }
+
+    /* cells */
+    .cell{ width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+      background: rgba(255,255,255,0.86); border-radius:12px;
+      box-shadow:0 6px 14px rgba(0,0,0,0.06), inset 0 2px 0 rgba(255,255,255,0.85);
+      transition:transform 160ms, box-shadow 160ms; position:relative; overflow:hidden;
+    }
+    .cell::after{ content:""; position:absolute; inset:0; border-radius:12px; box-shadow:0 2px 0 rgba(255,255,255,0.6) inset; pointer-events:none; }
+
+    .tile{ width:calc(var(--tile-size,48px)*0.9); height:calc(var(--tile-size,48px)*0.9); object-fit:contain; transition:transform 180ms, opacity 200ms; user-select:none; -webkit-user-drag:none; filter:drop-shadow(0 6px 10px rgba(81,38,64,0.12)); }
+
+    .cell:hover{ transform:translateY(-6px); box-shadow:0 20px 40px rgba(0,0,0,0.09); }
+    .selected-cell{ outline:3px solid rgba(255,111,179,0.12); transform:scale(1.03); }
+    .tile.selected{ transform:scale(1.08); }
+
+    .tile.pop{ transition:transform 300ms ease, opacity 300ms; transform:scale(0.2) rotate(-30deg); opacity:0; }
+    .swap-moving{ pointer-events:none; border-radius:8px; }
+
+    /* bottom controls */
+    .controls{ display:flex; justify-content:center; gap:18px; margin:14px 0; }
+    .controls button{ padding:12px 18px; border-radius:12px; background:linear-gradient(180deg,#ffb3d1,#ff6fb3); color:#fff; border:0; box-shadow:0 10px 18px rgba(255,111,179,0.16); font-weight:800; }
+
+    /* shop modal */
+    .shop-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(10,10,20,0.45); z-index:9999; }
+    .shop-card{ width:94%; max-width:420px; background:#fff; border-radius:14px; padding:14px; box-shadow:0 20px 60px rgba(0,0,0,0.12); }
+    .shop-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    .shop-item{ background:linear-gradient(180deg,#fff7fb,#fff); padding:8px; border-radius:10px; text-align:center; }
+    .shop-item button{ margin-top:8px; padding:8px 10px; border-radius:10px; border:0; cursor:pointer; }
+
+    /* coin popup */
+    .coin-popup{ position:fixed; z-index:10000; left:50%; top:50%; transform:translate(-50%,-50%); font-weight:900; color:#ff3d8a; text-shadow:0 2px 6px rgba(0,0,0,0.3); animation:coinRise 1.2s ease-out forwards; pointer-events:none; }
+    @keyframes coinRise{ 0%{opacity:1; transform:translate(-50%,-50%) scale(1);} 50%{transform:translate(-50%,-70%) scale(1.2);} 100%{opacity:0; transform:translate(-50%,-120%) scale(0.9);} }
+
+    /* responsive */
+    @media (max-width:420px){ :root{ --tile-size:44px; --tile-gap:8px; } .board{ max-width:360px; padding:12px; border-radius:18px; } }
+    @media (min-width:420px) and (max-width:760px){ :root{ --tile-size:52px; --tile-gap:10px;} .board{ max-width:460px;} }
+    @media (min-width:760px){ :root{ --tile-size:60px; --tile-gap:12px;} .board{ max-width:640px; } }
   </style>
 </head>
 <body>
-  <!-- 🏠 HOME SCREEN -->
+  <!-- HOME SCREEN -->
   <div id="home-screen" class="screen active">
-    <img src="images/candy1.png" alt="logo" class="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
+    <img class="logo" src="https://askirar275-wq.github.io/Candy/images/candy1.png" alt="logo">
     <h1 class="title">🍭 Candy Match</h1>
     <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-    <div class="buttons" style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:12px;">
-      <button id="startBtn" style="width:80%;padding:12px;border-radius:12px;">🎮 Start</button>
-      <button id="shopBtn" style="width:80%;padding:12px;border-radius:12px;">🛒 Shop</button>
-      <button id="settingsBtn" style="width:80%;padding:12px;border-radius:12px;">⚙️ Settings</button>
+    <div class="buttons">
+      <button id="startBtn">🎮 Start</button>
+      <button id="shopBtn">🛒 Shop</button>
+      <button id="settingsBtn">⚙️ Settings</button>
     </div>
 
-    <button id="installBtn" class="install" style="margin-top:12px;padding:8px 14px;border-radius:10px;">⬇️ Install</button>
-    <p class="footer" style="margin-top:12px;color:#666">Made with ❤️ — Arun App Studio</p>
+    <div style="text-align:center;">
+      <button id="installBtn" class="install">⬇️ Install</button>
+      <p style="color:#666; margin-top:12px;">Made with ❤️ — Arun App Studio</p>
+    </div>
   </div>
 
-  <!-- 🎮 GAME SCREEN -->
+  <!-- GAME SCREEN -->
   <div id="game-screen" class="screen">
-    <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px;">
-      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
-      <h2 style="margin:0">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+    <div class="topbar">
+      <button id="backBtn">⬅️ Home</button>
+      <h2>Score: <span id="score">0</span></h2>
+      <div class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="game-board" class="board"
-         style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
-                padding:8px;max-width:420px;margin:10px auto;">
-    </div>
+    <div id="game-board" class="board" style="display:grid; grid-template-columns:repeat(6,1fr);"></div>
 
-    <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;">
-      <button id="restartBtn" style="padding:8px 12px;border-radius:8px;" onclick="initGame()">Restart</button>
-      <button id="shuffleBtn" style="padding:8px 12px;border-radius:8px;" onclick="shuffleBoard()">Shuffle</button>
-      <button id="openShopBtn" style="padding:8px 12px;border-radius:8px;">Open Shop</button>
+    <div class="controls">
+      <button id="restartBtn">Restart</button>
+      <button id="shuffleBtn">Shuffle</button>
+      <button id="openShopBtn">Open Shop</button>
     </div>
   </div>
 
-  <!-- 🛒 SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none;">
+  <!-- SHOP MODAL -->
+  <div id="shopModal" class="shop-modal" aria-hidden="true">
     <div class="shop-card">
-      <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <h3 style="margin:0">🛒 Shop</h3>
-          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:12px;color:#666">Your Coins</div>
-          <div class="coins-bubble" id="shopCoins">0</div>
-        </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0">🛒 Shop</h3>
+        <div>Your Coins <span class="coins-bubble" id="shopCoins">0</span></div>
       </div>
-
       <div class="shop-grid">
         <div class="shop-item">
           <div style="font-size:20px">💣 Bomb</div>
-          <div style="font-weight:800;margin-top:8px">₹ 200</div>
+          <div style="font-weight:800">₹ 200</div>
           <button id="buyBomb">Buy</button>
         </div>
         <div class="shop-item">
           <div style="font-size:20px">🔀 Shuffle</div>
-          <div style="font-weight:800;margin-top:8px">₹ 100</div>
+          <div style="font-weight:800">₹ 100</div>
           <button id="buyShuffle">Buy</button>
         </div>
         <div class="shop-item">
           <div style="font-size:20px">➕ Extra Moves</div>
-          <div style="font-weight:800;margin-top:8px">₹ 80</div>
+          <div style="font-weight:800">₹ 80</div>
           <button id="buyMoves">Buy</button>
         </div>
         <div class="shop-item">
-          <div style="font-size:20px">🌈 Rainbow Candy</div>
-          <div style="font-weight:800;margin-top:8px">₹ 350</div>
+          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-weight:800">₹ 350</div>
           <button id="buyRainbow">Buy</button>
         </div>
       </div>
-
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-        <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        <button id="closeShop">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- 📜 SCRIPT FILES -->
-  <script src="js/home.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/shop.js"></script>
-  <script src="js/inventory.js"></script>
-
-  <!-- 🌿 Parallax effect (background moves slightly on tilt/scroll) -->
+  <!-- Inline scripts: game + shop + UI handlers -->
   <script>
-  (function(){
-    const MAX_SHIFT = 18, MAX_SHIFT_X = 10;
-    function setParallax(x, y){
-      document.documentElement.style.setProperty('--parallax-tx', x + 'px');
-      document.documentElement.style.setProperty('--parallax-ty', y + 'px');
+  /* ===== CONFIG ===== */
+  const WIDTH = 6;
+  const HEIGHT = 8;
+  const SIZE = WIDTH * HEIGHT;
+  const IMAGE_BASE = 'https://askirar275-wq.github.io/Candy/images/';
+  const CANDIES = [
+    'candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png','candy7.png','candy8.png'
+  ];
+
+  /* ===== STATE ===== */
+  let pool = [];
+  let board = [];
+  let score = 0, moves = 40, combo = 1;
+  let selected = null;
+  let isSwapping = false;
+  let coins = Number(localStorage.getItem('candy_coins') || 50);
+  let inv = JSON.parse(localStorage.getItem('candy_inv') || JSON.stringify({bomb:0,shuffle:0,moves:0,rainbow:0}));
+
+  /* ===== PRELOAD IMAGES ===== */
+  async function preload(){
+    pool = CANDIES.map(n => IMAGE_BASE + n);
+    // no network check here; assume images exist in GitHub folder
+    console.log('Images pool ready:', pool.length);
+  }
+
+  /* ===== RENDER ===== */
+  function render(){
+    const grid = document.getElementById('game-board');
+    if(!grid) return;
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `repeat(${WIDTH}, 1fr)`;
+    board.forEach((tile, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      const img = document.createElement('img');
+      img.className = 'tile';
+      img.draggable = false;
+      img.src = tile ? tile.src : pool[Math.floor(Math.random()*pool.length)];
+      img.setAttribute('data-index', i);
+      cell.onclick = () => handleSelect(i);
+      cell.appendChild(img);
+      grid.appendChild(cell);
+    });
+  }
+
+  /* ===== INIT ===== */
+  function initGame(){
+    score = 0; moves = 40; combo = 1; selected = null; isSwapping = false;
+    board = new Array(SIZE).fill(null).map(()=>({ src: pool[Math.floor(Math.random()*pool.length)] }));
+    render(); updateHUD();
+  }
+  window.initGame = initGame;
+
+  /* ===== SELECTION & SWAP ===== */
+  function handleSelect(i){
+    if(isSwapping) return;
+    if(selected === null){ selected = i; highlight(i); return; }
+    if(selected === i){ unhighlight(i); selected = null; return; }
+    if(isAdjacent(selected,i)){
+      isSwapping = true;
+      unhighlight(selected);
+      const a = selected, b = i; selected = null;
+      swapWithAnimation(a,b).then(()=> {
+        const matches = findMatches();
+        if(matches.length > 0){
+          handleMatches(matches);
+        } else {
+          swapWithAnimation(a,b).then(()=> { isSwapping=false; updateHUD(); });
+        }
+        moves = Math.max(0, moves - 1); updateHUD();
+      });
+    } else {
+      unhighlight(selected);
+      selected = i;
+      highlight(i);
     }
-    window.addEventListener('scroll', () => {
-      const docH = document.documentElement.scrollHeight - window.innerHeight;
-      if(docH <= 0) return;
-      const pct = window.scrollY / docH;
-      const y = (pct - 0.5) * 2 * MAX_SHIFT * 0.6;
-      const x = (pct - 0.5) * 2 * MAX_SHIFT_X * 0.3;
-      setParallax(x, y);
-    }, {passive:true});
-    document.addEventListener('touchmove', (ev) => {
-      if(!ev.touches || ev.touches.length === 0) return;
-      const t = ev.touches[0];
-      setParallax(t.clientX / 40 - 10, t.clientY / 40 - 10);
-    }, {passive:true});
-    window.addEventListener('deviceorientation', (ev) => {
-      if(!ev) return;
-      const gx = ev.gamma || 0, by = ev.beta || 0;
-      const x = (gx / 45) * MAX_SHIFT_X;
-      const y = (by / 45) * MAX_SHIFT;
-      setParallax(x, y);
-    }, true);
+  }
+  function highlight(i){ const cell=document.querySelector(`[data-index="${i}"]`); if(cell) cell.classList.add('selected-cell'); const t=tileEl(i); if(t) t.classList.add('selected'); }
+  function unhighlight(i){ const cell=document.querySelector(`[data-index="${i}"]`); if(cell) cell.classList.remove('selected-cell'); const t=tileEl(i); if(t) t.classList.remove('selected'); }
+  function isAdjacent(a,b){ const r1=Math.floor(a/WIDTH), c1=a%WIDTH, r2=Math.floor(b/WIDTH), c2=b%WIDTH; return Math.abs(r1-r2)+Math.abs(c1-c2)===1; }
+  function tileEl(index){ return document.querySelector(`.cell[data-index="${index}"] .tile`) || document.querySelector(`.tile[data-index="${index}"]`); }
+
+  /* ===== animated swap (clones) ===== */
+  function swapWithAnimation(aIndex,bIndex){
+    return new Promise(resolve=>{
+      const aTile = tileEl(aIndex), bTile = tileEl(bIndex);
+      if(!aTile || !bTile){
+        [board[aIndex], board[bIndex]] = [board[bIndex], board[aIndex]];
+        render(); return resolve(true);
+      }
+      const aRect = aTile.getBoundingClientRect(), bRect = bTile.getBoundingClientRect();
+      const dx = bRect.left - aRect.left, dy = bRect.top - aRect.top;
+      const aClone = aTile.cloneNode(true), bClone = bTile.cloneNode(true);
+      [aClone,bClone].forEach((cl,idx)=>{
+        cl.style.position='absolute';
+        cl.style.left=(idx===0?aRect.left:bRect.left)+'px';
+        cl.style.top=(idx===0?aRect.top:bRect.top)+'px';
+        cl.style.width=aRect.width+'px';
+        cl.style.height=aRect.height+'px';
+        cl.style.margin=0; cl.style.transition='transform 220ms cubic-bezier(.2,.9,.2,1)'; cl.style.zIndex=9999;
+        document.body.appendChild(cl);
+      });
+      aTile.style.visibility='hidden'; bTile.style.visibility='hidden';
+      requestAnimationFrame(()=>{ aClone.style.transform = `translate(${dx}px, ${dy}px)`; bClone.style.transform = `translate(${-dx}px, ${-dy}px)`; });
+      const cleanup = ()=> {
+        aClone.remove(); bClone.remove(); aTile.style.visibility=''; bTile.style.visibility='';
+        [board[aIndex], board[bIndex]] = [board[bIndex], board[aIndex]];
+        render(); resolve(true);
+      };
+      setTimeout(cleanup, 300);
+    });
+  }
+
+  /* ===== match detection ===== */
+  function findMatches(){
+    const matches = new Set();
+    // horizontal
+    for(let r=0;r<HEIGHT;r++){
+      for(let c=0;c<WIDTH-2;c++){
+        const i=r*WIDTH+c;
+        if(board[i] && board[i+1] && board[i+2] && board[i].src === board[i+1].src && board[i].src === board[i+2].src){
+          matches.add(i); matches.add(i+1); matches.add(i+2);
+          let k=c+3;
+          while(k<WIDTH && board[r*WIDTH+k] && board[r*WIDTH+k].src===board[i].src){ matches.add(r*WIDTH+k); k++; }
+        }
+      }
+    }
+    // vertical
+    for(let c=0;c<WIDTH;c++){
+      for(let r=0;r<HEIGHT-2;r++){
+        const i=r*WIDTH+c;
+        if(board[i] && board[i+WIDTH] && board[i+2*WIDTH] && board[i].src===board[i+WIDTH].src && board[i].src===board[i+2*WIDTH].src){
+          matches.add(i); matches.add(i+WIDTH); matches.add(i+2*WIDTH);
+          let k=r+3;
+          while(k<HEIGHT && board[k*WIDTH+c] && board[k*WIDTH+c].src===board[i].src){ matches.add(k*WIDTH+c); k++; }
+        }
+      }
+    }
+    return Array.from(matches).sort((a,b)=>a-b);
+  }
+
+  /* ===== handle matches + gravity + coins ===== */
+  function handleMatches(matches){
+    if(matches.length===0) return;
+    // scoring + coins
+    score += matches.length * 10 * combo;
+    const earned = matches.length * 2; // coins per candy
+    coins += earned;
+    showCoinPopup('+'+earned+' 💰');
+
+    combo++;
+    matches.forEach(i=>{
+      const el = document.querySelector(`.cell[data-index="${i}"] .tile`);
+      if(el){ el.classList.add('pop'); el.style.transition='transform 300ms, opacity 300ms'; el.style.transform='scale(0.2)'; el.style.opacity='0'; }
+      board[i] = null;
+    });
+    persistState();
+    updateHUD();
+    setTimeout(()=> applyGravity(), 350);
+  }
+
+  function applyGravity(){
+    for(let c=0;c<WIDTH;c++){
+      const col = [];
+      for(let r=HEIGHT-1;r>=0;r--){
+        const i=r*WIDTH+c;
+        if(board[i]) col.push(board[i]);
+      }
+      while(col.length < HEIGHT) col.push({ src: pool[Math.floor(Math.random()*pool.length)] });
+      for(let r=HEIGHT-1;r>=0;r--){
+        board[r*WIDTH + c] = col[HEIGHT-1 - r];
+      }
+    }
+    render();
+    const newMatches = findMatches();
+    if(newMatches.length>0) setTimeout(()=> handleMatches(newMatches), 200);
+    else { combo=1; isSwapping=false; updateHUD(); }
+  }
+
+  /* ===== HUD + utils ===== */
+  function updateHUD(){
+    const scoreEl = document.getElementById('score');
+    if(scoreEl) scoreEl.textContent = score;
+    const coinsEl = document.querySelector('#coins');
+    if(coinsEl) coinsEl.textContent = coins;
+    const shopCoins = document.getElementById('shopCoins'); if(shopCoins) shopCoins.textContent = coins;
+    if(moves <= 0){ setTimeout(()=> alert('🏁 Game Over! Score: '+score), 200); }
+  }
+
+  function shuffleBoard(){
+    const srcs = board.map(b => b ? b.src : pool[Math.floor(Math.random()*pool.length)]);
+    for(let i=srcs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [srcs[i], srcs[j]] = [srcs[j], srcs[i]]; }
+    board = srcs.map(s => ({src:s}));
+    render(); updateHUD();
+  }
+
+  function showCoinPopup(text){
+    const el = document.createElement('div'); el.className='coin-popup'; el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1200);
+  }
+
+  function persistState(){ localStorage.setItem('candy_coins', String(coins)); localStorage.setItem('candy_inv', JSON.stringify(inv)); }
+
+  function showHint(){
+    const m = findMatches();
+    if(m.length>0){ const el=document.querySelector(`.cell[data-index="${m[0]}"] .tile`); if(el){ el.style.transform='scale(1.2)'; setTimeout(()=>{ if(el) el.style.transform=''; },900); } }
+  }
+
+  /* ===== SHOP + UI handlers ===== */
+  function openShop(){ const m=document.getElementById('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); refreshShopUI(); } }
+  function closeShop(){ const m=document.getElementById('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } }
+  function buyItem(id, price){
+    if(coins < price){ alert('कॉइन्स कम हैं — गेम खेलकर जमा करें।'); return; }
+    coins -= price; inv[id] = (inv[id]||0)+1; persistState(); refreshShopUI(); updateHUD();
+    alert('खरीदारी सफल: '+id+' ×1');
+  }
+  function refreshShopUI(){ const sc=document.getElementById('shopCoins'); if(sc) sc.textContent = coins; const cb=document.querySelector('.coins-bubble'); if(cb) cb.textContent = coins; }
+
+  /* ===== attach handlers on DOM ready ===== */
+  (function attach(){
+    document.getElementById('startBtn').addEventListener('click', ()=>{
+      document.getElementById('home-screen').classList.remove('active');
+      document.getElementById('game-screen').classList.add('active');
+      if(typeof initGame === 'function') initGame(); else console.warn('initGame missing');
+    });
+    document.getElementById('backBtn').addEventListener('click', ()=>{ document.getElementById('game-screen').classList.remove('active'); document.getElementById('home-screen').classList.add('active'); });
+    document.getElementById('shopBtn').addEventListener('click', openShop);
+    document.getElementById('openShopBtn').addEventListener('click', openShop);
+    document.getElementById('closeShop').addEventListener('click', closeShop);
+
+    document.getElementById('buyBomb').addEventListener('click', ()=>buyItem('bomb',200));
+    document.getElementById('buyShuffle').addEventListener('click', ()=>buyItem('shuffle',100));
+    document.getElementById('buyMoves').addEventListener('click', ()=>buyItem('moves',80));
+    document.getElementById('buyRainbow').addEventListener('click', ()=>buyItem('rainbow',350));
+
+    document.getElementById('restartBtn').addEventListener('click', ()=> initGame());
+    document.getElementById('shuffleBtn').addEventListener('click', ()=> shuffleBoard());
+
+    // boot
+    (async ()=>{
+      await preload();
+      refreshShopUI(); updateHUD();
+      // initGame(); // keep manual start
+    })();
   })();
   </script>
 
-  <!-- 🧩 Debug console for mobile (Eruda) -->
+  <!-- small parallax script (optional) -->
   <script>
-    const DEBUG_MODE = true;
-    if (DEBUG_MODE) {
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/eruda";
-      s.onload = () => {
-        eruda.init();
-        console.log("✅ Eruda started (mobile console)");
-      };
-      document.body.appendChild(s);
+  (function(){
+    const MAX_SHIFT=18, MAX_SHIFT_X=10;
+    function setParallax(x,y){
+      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+      const sx=clamp(x,-MAX_SHIFT_X,MAX_SHIFT_X), sy=clamp(y,-MAX_SHIFT,MAX_SHIFT);
+      document.documentElement.style.setProperty('--parallax-tx', sx+'px');
+      document.documentElement.style.setProperty('--parallax-ty', sy+'px');
     }
+    window.addEventListener('scroll', ()=> {
+      const docH=document.documentElement.scrollHeight - window.innerHeight;
+      if(docH<=0) return;
+      const pct = window.scrollY / docH;
+      const y = (pct-0.5)*2*MAX_SHIFT*0.6;
+      const x = (pct-0.5)*2*MAX_SHIFT_X*0.3;
+      setParallax(x,y);
+    }, {passive:true});
+    document.addEventListener('touchmove', (ev)=> {
+      if(!ev.touches||ev.touches.length===0) return;
+      const t=ev.touches[0]; setParallax((t.clientX-window.innerWidth/2)*0.03, (t.clientY-window.innerHeight/2)*0.03);
+      clearTimeout(window._pTimer); window._pTimer=setTimeout(()=>setParallax(0,0),220);
+    }, {passive:true});
+    if(window.DeviceOrientationEvent) window.addEventListener('deviceorientation', (ev)=> {
+      const gx=ev.gamma||0, by=ev.beta||0;
+      setParallax((gx/45)*MAX_SHIFT_X, (by/45)*MAX_SHIFT);
+    }, true);
+  })();
   </script>
 </body>
-  </html>
+</html>
