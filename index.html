@@ -1,37 +1,36 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match 🍬</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candy Match — Jungle Adventure</title>
 
-  <!-- CSS files -->
+  <!-- 🌴 Styles -->
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="images/candy1.png">
 </head>
+
 <body>
-  <!-- HOME -->
-  <div id="home-screen" class="screen active">
-    <img class="logo" src="images/candy1.png" alt="logo">
-    <h1 class="title">🍭 Candy Match</h1>
-    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-    <div class="buttons">
-      <button id="startBtn">🎮 Start</button>
-      <button id="shopBtn">🛒 Shop</button>
-      <button id="settingsBtn">⚙️ Settings</button>
-    </div>
-    <button id="installBtn" class="install">⬇️ Install</button>
-    <p class="credit">Made with ❤️ — Arun App Studio</p>
+  <div class="home-screen">
+    <h1>🍭 Candy Match</h1>
+    <p>स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <button id="startBtn">🎮 Start</button>
+    <button id="shopBtn">🛍 Shop</button>
+    <button id="settingsBtn">⚙️ Settings</button>
+    <button id="installBtn">⬇️ Install</button>
+    <p class="footer">Made with ❤️ — Arun App Studio</p>
   </div>
 
-  <!-- GAME -->
-  <div id="game-screen" class="screen">
-    <div class="topbar">
-      <button id="backBtn">⬅️ Home</button>
-      <h2>Score: <span id="score">0</span></h2>
-      <div class="coins-bubble">Coins: <span id="coins">0</span></div>
-    </div>
-    <div id="game-board" class="board"></div>
+  <!-- 🕹 Game Screen -->
+  <div id="game-screen" style="display:none;">
+    <button id="homeBtn">🏠 Home</button>
+    <h2>Score: <span id="score">0</span></h2>
+    <div id="coin-display">Coins: <span id="coins">0</span></div>
+    <div id="board" class="board"></div>
     <div class="controls">
       <button id="restartBtn">Restart</button>
       <button id="shuffleBtn">Shuffle</button>
@@ -39,45 +38,60 @@
     </div>
   </div>
 
-  <!-- SHOP -->
-  <div id="shopModal" class="shop-modal" aria-hidden="true">
-    <div class="shop-card">
-      <div class="shop-top">
-        <h3>🛒 Shop</h3>
-        <div class="small-note">Coins से power-ups खरीदें — Demo</div>
-      </div>
-      <div class="shop-grid">
-        <div class="shop-item">
-          <div>💣 Bomb</div><div class="price">₹ 200</div>
-          <button id="buyBomb">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div>🔀 Shuffle</div><div class="price">₹ 100</div>
-          <button id="buyShuffle">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div>➕ Extra Moves</div><div class="price">₹ 80</div>
-          <button id="buyMoves">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div>✨ Rainbow Candy</div><div class="price">₹ 350</div>
-          <button id="buyRainbow">Buy</button>
-        </div>
-      </div>
-      <div class="shop-footer">
-        <button id="closeShop">Close</button>
-      </div>
+  <!-- 🛒 Shop (hidden initially) -->
+  <div id="shop" style="display:none;">
+    <h2>🛍 Shop</h2>
+    <p>Coins से power-ups खरीदें — Demo</p>
+
+    <div class="shop-item">
+      <span>💣 Bomb</span> <span>₹200</span>
+      <button class="buy" data-item="bomb">Buy</button>
     </div>
+
+    <div class="shop-item">
+      <span>🔀 Shuffle</span> <span>₹100</span>
+      <button class="buy" data-item="shuffle">Buy</button>
+    </div>
+
+    <div class="shop-item">
+      <span>➕ Extra Moves</span> <span>₹80</span>
+      <button class="buy" data-item="moves">Buy</button>
+    </div>
+
+    <div class="shop-item">
+      <span>🌈 Rainbow Candy</span> <span>₹350</span>
+      <button class="buy" data-item="rainbow">Buy</button>
+    </div>
+
+    <button id="closeShopBtn">Close</button>
   </div>
 
-  <!-- coin popup -->
-  <div id="coinContainer"></div>
+  <!-- 🍬 Inventory Toolbar -->
+  <div id="inv-toolbar">
+    <button class="inv-btn" id="inv-bomb">💣<span class="inv-count">0</span></button>
+    <button class="inv-btn" id="inv-shuffle">🔀<span class="inv-count">0</span></button>
+    <button class="inv-btn" id="inv-moves">➕<span class="inv-count">0</span></button>
+    <button class="inv-btn" id="inv-rainbow">🌈<span class="inv-count">0</span></button>
+  </div>
 
-  <!-- JS files: game first, then UI/shop/parallax -->
+  <!-- ====== Scripts ====== -->
   <script src="js/game.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/parallax.js"></script>
+
+  <!-- ✅ Mobile Console Debugger (Eruda) -->
+  <script>
+    (function () {
+      var script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/eruda";
+      document.body.appendChild(script);
+      script.onload = function () {
+        eruda.init();
+        console.log("%cEruda Console Started!", "color:#ff66a5;font-weight:bold;");
+      };
+    })();
+  </script>
 </body>
-</html>
+    </html>
