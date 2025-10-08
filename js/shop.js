@@ -1,61 +1,56 @@
-/* js/shop.js - Updated for coin + inventory sync */
+/* ================= SHOP SYSTEM (Safe Version) ================= */
 
-(function() {
-  const shopModal = document.getElementById("shopModal");
-  const openShopBtn = document.getElementById("shopBtn") || document.getElementById("openShopBtn");
-  const closeShop = document.getElementById("closeShop");
-  const shopCoinsEl = document.getElementById("shopCoins");
-
-  // Items और उनकी कीमतें
-  const ITEMS = {
-    bomb: 200,
-    shuffle: 100,
-    moves: 80,
-    rainbow: 350
-  };
-
-  function buy(item) {
-    if (!window.coins) window.coins = 0;
-    const cost = ITEMS[item];
-    if (coins < cost) {
-      alert("💸 Not enough coins!");
-      return;
-    }
-
-    coins -= cost;
-    if (!window.inv) window.inv = { bomb: 0, shuffle: 0, moves: 0, rainbow: 0 };
-    inv[item] = (inv[item] || 0) + 1;
-
-    localStorage.setItem("candy_coins", coins);
-    localStorage.setItem("candy_inv", JSON.stringify(inv));
-
-    alert(`✅ Purchased ${item}!`);
-    refreshShopUI();
-    if (typeof window.refreshInventoryUI === "function") {
-      window.refreshInventoryUI();
-    }
+window.addEventListener('load', () => {
+  const shopBtn = document.getElementById('openShopBtn');
+  const shopModal = document.getElementById('shopModal');
+  const closeBtn = document.getElementById('closeShopBtn');
+  const coinDisplay = document.getElementById('coins');
+  
+  // अगर कोई भी element missing है तो gracefully skip
+  if (!shopBtn || !coinDisplay) {
+    console.warn("Shop elements not found, skipping shop init");
+    return;
   }
 
-  // UI Refresh
-  window.refreshShopUI = function() {
-    if (shopCoinsEl) shopCoinsEl.textContent = coins;
+  // ✅ Shop Open
+  shopBtn.onclick = () => {
+    if (!shopModal) return;  // null protection
+    shopModal.style.display = 'flex';
   };
 
-  // Event bindings
-  if (openShopBtn) openShopBtn.onclick = () => shopModal.style.display = "flex";
-  if (closeShop) closeShop.onclick = () => shopModal.style.display = "none";
+  // ✅ Shop Close
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      if (!shopModal) return;
+      shopModal.style.display = 'none';
+    };
+  }
 
-  // Buy buttons
-  const map = {
-    buyBomb: "bomb",
-    buyShuffle: "shuffle",
-    buyMoves: "moves",
-    buyRainbow: "rainbow"
-  };
-  Object.keys(map).forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => buy(map[id]);
+  // ✅ Buy Buttons
+  const buyBtns = document.querySelectorAll('.buy-btn');
+  buyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const price = parseInt(btn.dataset.price);
+      const item = btn.dataset.item;
+      let coins = parseInt(localStorage.getItem('coins') || 0);
+
+      if (coins >= price) {
+        coins -= price;
+        localStorage.setItem('coins', coins);
+        if (coinDisplay) coinDisplay.textContent = coins;
+        showShopPopup(`✅ खरीदा गया ${item}!`);
+      } else {
+        showShopPopup('⚠️ Coins कम हैं!');
+      }
+    });
   });
+});
 
-  refreshShopUI();
-})();
+/* ✅ Safe Popup */
+function showShopPopup(text) {
+  const el = document.createElement('div');
+  el.className = 'coin-popup';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+    }
