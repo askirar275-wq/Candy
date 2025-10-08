@@ -5,38 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS -->
+  <!-- CSS (अपने paths चेक कर लेना) -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
+  <!-- छोटा fallback style -->
   <style>
-    body {
-      background: linear-gradient(135deg, #ffe0ed, #ffeef9);
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
-    }
     .screen { display: none; }
     .screen.active { display: block; }
-    #game-board { 
-      display: grid; 
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-      max-width: 520px;
-      margin: 12px auto;
-    }
-    button {
-      cursor: pointer;
-    }
+    /* safety if CSS not loaded */
+    #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
   </style>
 </head>
-
 <body>
   <!-- HOME SCREEN -->
   <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 style="margin:10px 0; font-size:36px; color:#d44a8c;">🍭 Candy Match</h1>
-    <p style="color:#6b5b5b; margin:0;">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <h1 class="title" style="margin:10px 0; font-size:36px; color:#d44a8c;">🍭 Candy Match</h1>
+    <p class="subtitle" style="color:#6b5b5b; margin:0;">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
     <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px;">
       <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🎮 Start</button>
@@ -47,13 +34,13 @@
 
   <!-- GAME SCREEN -->
   <div id="game-screen" class="screen" style="padding:10px 12px;">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px;">
+    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
       <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
       <h2 style="margin:0;font-family: 'Playfair Display', serif; font-size:34px;">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" id="coinsBubble">Coins: <span id="coins">0</span></div>
+      <div style="margin-left:auto" id="coinsBubble" class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="game-board"></div>
+    <div id="game-board" class="board" aria-live="polite"></div>
 
     <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
       <button id="restartBtn" style="padding:10px 16px;border-radius:10px;">Restart</button>
@@ -63,35 +50,43 @@
   </div>
 
   <!-- SHOP MODAL -->
-  <div id="shopModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35);">
-    <div style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35);">
+    <div class="shop-card" style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
+      <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h3 style="margin:0">🛒 Shop</h3>
-          <div style="color:#666;">Coins से power-ups खरीदें — Demo</div>
+          <div class="small-note" style="color:#666;">Coins से power-ups खरीदें — Demo</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#666">Your Coins</div>
-          <div id="shopCoins">0</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
         </div>
       </div>
 
-      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">💣 Bomb</div><div>₹200</div><button id="buyBomb">Buy</button>
+      <div class="shop-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">💣 Bomb</div>
+          <div style="font-weight:800">₹ 200</div>
+          <button id="buyBomb">Buy</button>
         </div>
-        <div style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">🔀 Shuffle</div><div>₹100</div><button id="buyShuffle">Buy</button>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">🔀 Shuffle</div>
+          <div style="font-weight:800">₹ 100</div>
+          <button id="buyShuffle">Buy</button>
         </div>
-        <div style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">➕ Moves</div><div>₹80</div><button id="buyMoves">Buy</button>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">➕ Extra Moves</div>
+          <div style="font-weight:800">₹ 80</div>
+          <button id="buyMoves">Buy</button>
         </div>
-        <div style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">✨ Rainbow</div><div>₹350</div><button id="buyRainbow">Buy</button>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-weight:800">₹ 350</div>
+          <button id="buyRainbow">Buy</button>
         </div>
       </div>
 
-      <div style="text-align:right;margin-top:12px;">
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
         <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
       </div>
     </div>
@@ -102,82 +97,88 @@
     Made with ❤️ — Arun App Studio
   </div>
 
-  <!-- JS (preloaded small files) -->
-  <script src="js/boot.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/shop.js"></script>
-  <script src="js/parallax.js"></script>
-
-  <!-- ===== Eruda Console ===== -->
+  <!-- ===== Eruda (mobile console) - optional but helpful ===== -->
   <script>
     (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/eruda';
       s.onload = function () {
-        try { eruda.init(); console.log('🐞 Eruda console loaded'); } 
-        catch(e){ console.warn('Eruda load failed', e); }
+        try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
       };
       document.body.appendChild(s);
     })();
   </script>
 
-  <!-- ===== Safe UI + Dynamic Loader ===== -->
+  <!-- ===== Safe UI & Coin helpers (important) ===== -->
   <script>
     (function(){
       function $id(id){ return document.getElementById(id); }
-      function safeAdd(id, evt, h){
-        var el=$id(id);
-        if(!el){ console.warn('safe-ui: missing #' + id); return; }
-        el.addEventListener(evt,h);
+      function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
+
+      // coin helpers (if not provided by storage.js)
+      if(typeof window.getCoins !== 'function'){
+        window.getCoins = function(){ return Number(localStorage.getItem('coins') || 0); };
       }
-      function loadScript(src){
-        return new Promise(res=>{
-          var s=document.createElement('script');
-          s.src=src;
-          s.onload=()=>{ console.log('Loaded:',src); res(); };
-          s.onerror=()=>{ console.error('Failed:',src); res(); };
-          document.body.appendChild(s);
-        });
+      if(typeof window.updateCoinDisplay !== 'function'){
+        window.updateCoinDisplay = function(value){
+          try {
+            var coins = (typeof value === 'number') ? value : getCoins();
+            var el = $id('coins'); if(el) el.textContent = coins;
+            var shopEl = $id('shopCoins'); if(shopEl) shopEl.textContent = coins;
+            var bubble = $id('coinsBubble'); if(bubble) bubble.textContent = 'Coins: ' + coins;
+            localStorage.setItem('coins', coins);
+          } catch(e){ console.warn('updateCoinDisplay error', e); }
+        };
+      }
+      if(typeof window.addCoins !== 'function'){
+        window.addCoins = function(amount){
+          try {
+            amount = Number(amount) || 0;
+            var cur = getCoins();
+            var next = cur + amount;
+            localStorage.setItem('coins', next);
+            updateCoinDisplay(next);
+            console.log('addCoins ->', amount, 'new total', next);
+            return next;
+          } catch(e){ console.warn('addCoins error', e); return getCoins(); }
+        };
       }
 
-      document.addEventListener('DOMContentLoaded', async ()=>{
+      // Safe UI bindings (DOMContentLoaded)
+      document.addEventListener('DOMContentLoaded', function(){
         console.log('✅ Safe UI loaded');
+        // show persistent coins
+        try { updateCoinDisplay(getCoins()); } catch(e){ console.warn('coin init failed', e); }
 
-        safeAdd('startBtn','click',()=>{
-          var hs=$id('home-screen'),gs=$id('game-screen');
-          if(hs)hs.classList.remove('active');
-          if(gs)gs.classList.add('active');
-          if(typeof initGame==='function'){ try{initGame();}catch(e){console.error('initGame error',e);} }
-          else console.warn('initGame not found');
+        // start/back/shop buttons
+        safeAdd('startBtn','click', function(){
+          var hs=$id('home-screen'), gs=$id('game-screen'); if(hs) hs.classList.remove('active'); if(gs) gs.classList.add('active');
+          if(typeof initGame === 'function'){
+            try { initGame(); } catch(err){ console.error('Error: initGame error', err); }
+          } else console.warn('initGame not found');
         });
+        safeAdd('backBtn','click', function(){ var hs=$id('home-screen'), gs=$id('game-screen'); if(gs) gs.classList.remove('active'); if(hs) hs.classList.add('active'); });
 
-        safeAdd('backBtn','click',()=>{
-          var hs=$id('home-screen'),gs=$id('game-screen');
-          if(gs)gs.classList.remove('active');
-          if(hs)hs.classList.add('active');
-        });
+        function openShop(){ var m=$id('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } else console.warn('shopModal not found'); }
+        safeAdd('shopBtn','click', openShop);
+        safeAdd('openShopBtn','click', openShop);
+        safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
 
-        function openShop(){
-          var m=$id('shopModal');
-          if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
-          else console.warn('shopModal not found');
-        }
-        safeAdd('shopBtn','click',openShop);
-        safeAdd('openShopBtn','click',openShop);
-        safeAdd('closeShop','click',()=>{var m=$id('shopModal');if(m){m.style.display='none';m.setAttribute('aria-hidden','true');}});
+        // restart/shuffle placeholders
+        safeAdd('restartBtn','click', function(){ if(typeof restartGame==='function') restartGame(); else console.warn('restartGame missing'); });
+        safeAdd('shuffleBtn','click', function(){ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
 
-        safeAdd('restartBtn','click',()=>{if(typeof restartGame==='function')restartGame();else console.warn('restartGame missing');});
-        safeAdd('shuffleBtn','click',()=>{if(typeof shuffleBoard==='function')shuffleBoard();else console.warn('shuffleBoard missing');});
-        safeAdd('buyBomb','click',()=>{if(typeof buyFromShop==='function')buyFromShop('bomb');});
-        safeAdd('buyShuffle','click',()=>{if(typeof buyFromShop==='function')buyFromShop('shuffle');});
-        safeAdd('buyMoves','click',()=>{if(typeof buyFromShop==='function')buyFromShop('moves');});
-        safeAdd('buyRainbow','click',()=>{if(typeof buyFromShop==='function')buyFromShop('rainbow');});
-
-        await loadScript('js/storage.js');
-        await loadScript('js/game.js');
-        console.log('✅ Game scripts loaded safely');
+        // shop buy placeholders
+        safeAdd('buyBomb','click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); else console.warn('buyFromShop missing'); });
+        safeAdd('buyShuffle','click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); else console.warn('buyFromShop missing'); });
+        safeAdd('buyMoves','click', function(){ if(typeof buyFromShop==='function') buyFromShop('moves'); else console.warn('buyFromShop missing'); });
+        safeAdd('buyRainbow','click', function(){ if(typeof buyFromShop==='function') buyFromShop('rainbow'); else console.warn('buyFromShop missing'); });
       });
     })();
   </script>
+
+  <!-- ===== Storage then game (एक बार ही लोड करो) ===== -->
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
 </body>
-  </html>
+        </html>
