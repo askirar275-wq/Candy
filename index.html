@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS -->
+  <!-- CSS (अपनी फ़ोल्डर संरचना के अनुसार paths रखें) -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
+  <!-- छोटा safeguard style -->
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    /* safety grid if CSS not loaded */
+    /* अगर किसी वजह से game.css न लोड हो तो बोर्ड दिखने का बेसिक grid */
     #game-board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -25,42 +26,42 @@
 </head>
 <body>
   <!-- HOME SCREEN -->
-  <div id="home-screen" class="screen active">
+  <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 class="title">🍭 Candy Match</h1>
-    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <h1 class="title" style="margin:10px 0; font-size:36px; color:#d44a8c;">🍭 Candy Match</h1>
+    <p class="subtitle" style="color:#6b5b5b; margin:0;">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:14px;">
-      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;">🎮 Start</button>
-      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;">🛒 Shop</button>
-      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:14px;">⚙️ Settings</button>
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px;">
+      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">⚙️ Settings</button>
     </div>
   </div>
 
   <!-- GAME SCREEN -->
-  <div id="game-screen" class="screen">
+  <div id="game-screen" class="screen" style="padding:10px 12px;">
     <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
-      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
-      <h2 style="margin:0">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
+      <h2 style="margin:0;font-family: 'Playfair Display', serif; font-size:34px;">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble" id="coinsBubble" style="display:inline-block;">Coins: <span id="coins">0</span></div>
     </div>
 
     <div id="game-board" class="board" aria-live="polite"></div>
 
     <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
-      <button id="restartBtn">Restart</button>
-      <button id="shuffleBtn">Shuffle</button>
-      <button id="openShopBtn">Open Shop</button>
+      <button id="restartBtn" style="padding:10px 16px;border-radius:10px;">Restart</button>
+      <button id="shuffleBtn" style="padding:10px 16px;border-radius:10px;">Shuffle</button>
+      <button id="openShopBtn" style="padding:10px 16px;border-radius:10px;">Open Shop</button>
     </div>
   </div>
 
   <!-- SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none">
-    <div class="shop-card">
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35);">
+    <div class="shop-card" style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
       <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h3 style="margin:0">🛒 Shop</h3>
-          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
+          <div class="small-note" style="color:#666;">Coins से power-ups खरीदें — Demo</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#666">Your Coins</div>
@@ -68,26 +69,47 @@
         </div>
       </div>
 
-      <div class="shop-grid" style="margin-top:10px;">
-        <div class="shop-item"><div style="font-size:20px">💣 Bomb</div><div style="font-weight:800">₹ 200</div><button id="buyBomb">Buy</button></div>
-        <div class="shop-item"><div style="font-size:20px">🔀 Shuffle</div><div style="font-weight:800">₹ 100</div><button id="buyShuffle">Buy</button></div>
-        <div class="shop-item"><div style="font-size:20px">➕ Extra Moves</div><div style="font-weight:800">₹ 80</div><button id="buyMoves">Buy</button></div>
-        <div class="shop-item"><div style="font-size:20px">✨ Rainbow Candy</div><div style="font-weight:800">₹ 350</div><button id="buyRainbow">Buy</button></div>
+      <div class="shop-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">💣 Bomb</div>
+          <div style="font-weight:800">₹ 200</div>
+          <button id="buyBomb">Buy</button>
+        </div>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">🔀 Shuffle</div>
+          <div style="font-weight:800">₹ 100</div>
+          <button id="buyShuffle">Buy</button>
+        </div>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">➕ Extra Moves</div>
+          <div style="font-weight:800">₹ 80</div>
+          <button id="buyMoves">Buy</button>
+        </div>
+        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
+          <div style="font-size:20px">✨ Rainbow Candy</div>
+          <div style="font-weight:800">₹ 350</div>
+          <button id="buyRainbow">Buy</button>
+        </div>
       </div>
 
       <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-        <button id="closeShop">Close</button>
+        <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- JS FILES (order important) -->
+  <!-- FOOTER (Arun App Studio) -->
+  <div style="text-align:center;margin-top:22px;color:#666;font-size:18px;">
+    Made with ❤️ — Arun App Studio
+  </div>
+
+  <!-- JS includes (order important) -->
   <script src="js/boot.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- inline UI glue -->
+  <!-- small UI glue script -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const startBtn = document.getElementById('startBtn');
@@ -95,7 +117,7 @@
         document.getElementById('home-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
         if(typeof initGame === 'function') initGame();
-        else console.warn('initGame not found');
+        else console.warn('initGame not found in game.js');
       });
 
       const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
@@ -119,9 +141,9 @@
     });
   </script>
 
-  <!-- नीचे वाली दो लाइनें (आपने माँगा था: body से ठीक ऊपर) -->
+  <!-- ये दो लाइनें body के ठीक ऊपर रहें — जैसा आपने कहा था -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 
 </body>
-</html>
+                                              </html>
