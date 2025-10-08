@@ -149,5 +149,20 @@
     s.onload = function () { eruda.init(); console.log('🐞 Eruda console loaded'); };
   })();
   </script>
+  <!-- ✅ Load Safe UI Script -->
+<script src="js/safe-ui.js"></script>
+
+<!-- 🐞 Eruda Console for live debugging -->
+<script>
+(function () {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+  document.body.appendChild(s);
+  s.onload = function () { 
+    eruda.init(); 
+    console.log('🐞 Eruda console loaded'); 
+  };
+})();
+</script>
 </body>
   </html>
