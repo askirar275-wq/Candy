@@ -107,47 +107,55 @@
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- UI Events -->
+  <!-- ✅ SAFE UI SCRIPT -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const startBtn = document.getElementById('startBtn');
-      if (startBtn) startBtn.addEventListener('click', () => {
-        document.getElementById('home-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        if (typeof initGame === 'function') initGame();
-        else console.warn('initGame not found in game.js');
-      });
+      const $ = id => document.getElementById(id);
 
-      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
-      if (openShopBtn) openShopBtn.addEventListener('click', () => {
-        const modal = document.getElementById('shopModal');
-        if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
-        else console.warn('shopModal not found');
-      });
+      const required = [
+        'startBtn','shopBtn','backBtn','game-board',
+        'openShopBtn','shopModal','coins','score',
+        'closeShop','restartBtn','shuffleBtn'
+      ];
+      required.forEach(id => { if(!$(id)) console.warn('Missing element:', id); });
 
-      const closeShop = document.getElementById('closeShop');
-      if (closeShop) closeShop.addEventListener('click', () => {
-        const modal = document.getElementById('shopModal');
-        if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
-      });
+      const show = id => { const el = $(id); if(el) el.classList.add('active'); };
+      const hide = id => { const el = $(id); if(el) el.classList.remove('active'); };
 
-      const backBtn = document.getElementById('backBtn');
-      if (backBtn) backBtn.addEventListener('click', () => {
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('home-screen').classList.add('active');
-      });
+      if($('startBtn')) $('startBtn').onclick = () => {
+        hide('home-screen'); show('game-screen');
+        if(typeof initGame === 'function') initGame();
+        else console.warn('initGame not found');
+      };
+
+      const openShopBtn = $('openShopBtn') || $('shopBtn');
+      if(openShopBtn) openShopBtn.onclick = () => {
+        const modal = $('shopModal');
+        if(modal) { modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
+      };
+
+      if($('closeShop')) $('closeShop').onclick = () => {
+        const modal = $('shopModal');
+        if(modal) { modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
+      };
+
+      if($('backBtn')) $('backBtn').onclick = () => {
+        hide('game-screen'); show('home-screen');
+      };
+
+      console.log('✅ Safe UI Script Loaded.');
     });
   </script>
 
-  <!-- Game & Storage (keep at bottom) -->
+  <!-- STORAGE & GAME -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- ✅ Eruda Console (for debugging) -->
+  <!-- ✅ ERUDA CONSOLE -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>
     eruda.init();
-    console.log("✅ Eruda console enabled — open by tapping the gear icon at bottom right.");
+    console.log("Eruda console enabled — tap ⚙️ to open");
   </script>
 </body>
 </html>
