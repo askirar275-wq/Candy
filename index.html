@@ -5,27 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS (अपनी फ़ोल्डर संरचना के अनुसार paths रखें) -->
+  <!-- CSS -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
-  <!-- छोटा safeguard style -->
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    /* अगर किसी वजह से game.css न लोड हो तो बोर्ड दिखने का बेसिक grid */
     #game-board {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-      max-width: 520px;
-      margin: 12px auto;
+      display:grid;
+      grid-template-columns: repeat(6,1fr);
+      gap:10px;
+      max-width:520px;
+      margin:12px auto;
     }
   </style>
 </head>
 <body>
-  <!-- HOME SCREEN -->
+  <!-- HOME -->
   <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
     <h1 class="title" style="margin:10px 0; font-size:36px; color:#d44a8c;">🍭 Candy Match</h1>
@@ -42,8 +40,8 @@
   <div id="game-screen" class="screen" style="padding:10px 12px;">
     <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
       <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
-      <h2 style="margin:0;font-family: 'Playfair Display', serif; font-size:34px;">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble" id="coinsBubble" style="display:inline-block;">Coins: <span id="coins">0</span></div>
+      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:34px;">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble" id="coinsBubble">Coins: <span id="coins">0</span></div>
     </div>
 
     <div id="game-board" class="board" aria-live="polite"></div>
@@ -98,52 +96,58 @@
     </div>
   </div>
 
-  <!-- FOOTER (Arun App Studio) -->
+  <!-- FOOTER -->
   <div style="text-align:center;margin-top:22px;color:#666;font-size:18px;">
     Made with 🥰 — Arun App Studio
   </div>
 
-  <!-- JS includes (order important) -->
+  <!-- JS Files -->
   <script src="js/boot.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- small UI glue script -->
+  <!-- UI Events -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const startBtn = document.getElementById('startBtn');
-      if(startBtn) startBtn.addEventListener('click', () => {
+      if (startBtn) startBtn.addEventListener('click', () => {
         document.getElementById('home-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
-        if(typeof initGame === 'function') initGame();
+        if (typeof initGame === 'function') initGame();
         else console.warn('initGame not found in game.js');
       });
 
       const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
-      if(openShopBtn) openShopBtn.addEventListener('click', () => {
+      if (openShopBtn) openShopBtn.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
-        if(modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
+        if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
         else console.warn('shopModal not found');
       });
 
       const closeShop = document.getElementById('closeShop');
-      if(closeShop) closeShop.addEventListener('click', () => {
+      if (closeShop) closeShop.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
-        if(modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
+        if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
       });
 
       const backBtn = document.getElementById('backBtn');
-      if(backBtn) backBtn.addEventListener('click', () => {
+      if (backBtn) backBtn.addEventListener('click', () => {
         document.getElementById('game-screen').classList.remove('active');
         document.getElementById('home-screen').classList.add('active');
       });
     });
   </script>
 
-  <!-- ये दो लाइनें body के ठीक ऊपर रहें — जैसा आपने कहा था -->
+  <!-- Game & Storage (keep at bottom) -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 
+  <!-- ✅ Eruda Console (for debugging) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>
+    eruda.init();
+    console.log("✅ Eruda console enabled — open by tapping the gear icon at bottom right.");
+  </script>
 </body>
-                                              </html>
+</html>
