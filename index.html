@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS -->
+  <!-- 🧁 CSS Files -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
@@ -13,17 +13,11 @@
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    #game-board {
-      display:grid;
-      grid-template-columns: repeat(6,1fr);
-      gap:10px;
-      max-width:520px;
-      margin:12px auto;
-    }
+    #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
   </style>
 </head>
 <body>
-  <!-- HOME -->
+  <!-- 🏠 HOME SCREEN -->
   <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
     <h1 class="title" style="margin:10px 0; font-size:36px; color:#d44a8c;">🍭 Candy Match</h1>
@@ -36,12 +30,12 @@
     </div>
   </div>
 
-  <!-- GAME SCREEN -->
+  <!-- 🎮 GAME SCREEN -->
   <div id="game-screen" class="screen" style="padding:10px 12px;">
     <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
       <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
-      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:34px;">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble" id="coinsBubble">Coins: <span id="coins">0</span></div>
+      <h2 style="margin:0;font-family: 'Playfair Display', serif; font-size:30px;">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
 
     <div id="game-board" class="board" aria-live="polite"></div>
@@ -53,13 +47,14 @@
     </div>
   </div>
 
-  <!-- SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35);">
-    <div class="shop-card" style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
+  <!-- 🛒 SHOP MODAL -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true"
+       style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:9999;">
+    <div class="shop-card" style="background:#fff;border-radius:14px;padding:14px;width:92%;max-width:520px;">
       <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h3 style="margin:0">🛒 Shop</h3>
-          <div class="small-note" style="color:#666;">Coins से power-ups खरीदें — Demo</div>
+          <div class="small-note" style="color:#666;">Coins से power-ups खरीदें</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#666">Your Coins</div>
@@ -67,26 +62,18 @@
         </div>
       </div>
 
-      <div class="shop-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">💣 Bomb</div>
-          <div style="font-weight:800">₹ 200</div>
-          <button id="buyBomb">Buy</button>
+      <div class="shop-grid" style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="shop-item" style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div style="font-size:20px">💣 Bomb</div><div style="font-weight:800">₹ 200</div><button id="buyBomb">Buy</button>
         </div>
-        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">🔀 Shuffle</div>
-          <div style="font-weight:800">₹ 100</div>
-          <button id="buyShuffle">Buy</button>
+        <div class="shop-item" style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div style="font-size:20px">🔀 Shuffle</div><div style="font-weight:800">₹ 100</div><button id="buyShuffle">Buy</button>
         </div>
-        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">➕ Extra Moves</div>
-          <div style="font-weight:800">₹ 80</div>
-          <button id="buyMoves">Buy</button>
+        <div class="shop-item" style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div style="font-size:20px">➕ Extra Moves</div><div style="font-weight:800">₹ 80</div><button id="buyMoves">Buy</button>
         </div>
-        <div class="shop-item" style="padding:10px; border-radius:10px; background:#fff7fb; text-align:center;">
-          <div style="font-size:20px">✨ Rainbow Candy</div>
-          <div style="font-weight:800">₹ 350</div>
-          <button id="buyRainbow">Buy</button>
+        <div class="shop-item" style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div style="font-size:20px">✨ Rainbow Candy</div><div style="font-weight:800">₹ 350</div><button id="buyRainbow">Buy</button>
         </div>
       </div>
 
@@ -96,62 +83,53 @@
     </div>
   </div>
 
-  <!-- FOOTER -->
+  <!-- ❤️ Footer -->
   <div style="text-align:center;margin-top:22px;color:#666;font-size:18px;">
     Made with 🥰 — Arun App Studio
   </div>
 
-  <!-- JS Files -->
+  <!-- 🧠 JS Files -->
   <script src="js/boot.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- ✅ SAFE UI SCRIPT -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const $ = id => document.getElementById(id);
-
-      const show = id => { const el = $(id); if(el) el.classList.add('active'); };
-      const hide = id => { const el = $(id); if(el) el.classList.remove('active'); };
-
-      if($('startBtn')) $('startBtn').onclick = () => {
-        hide('home-screen'); show('game-screen');
-        if(typeof initGame === 'function') initGame();
-        else console.warn('initGame not found');
-      };
-
-      const openShopBtn = $('openShopBtn') || $('shopBtn');
-      if(openShopBtn) openShopBtn.onclick = () => {
-        const modal = $('shopModal');
-        if(modal) { modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
-      };
-
-      if($('closeShop')) $('closeShop').onclick = () => {
-        const modal = $('shopModal');
-        if(modal) { modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
-      };
-
-      if($('backBtn')) $('backBtn').onclick = () => {
-        hide('game-screen'); show('home-screen');
-      };
-
-      console.log('✅ Safe UI Script Loaded.');
-    });
-  </script>
-
-  <!-- STORAGE & GAME -->
+  <!-- 🎮 Game Logic -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- ✅ ERUDA (debug only) -->
+  <!-- 🧩 UI Controls -->
   <script>
-    if (window.location.search.includes('debug=1')) {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = () => { eruda.init(); console.log('🛠️ Eruda Debug Console Enabled'); };
-      document.body.appendChild(s);
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const startBtn = document.getElementById('startBtn');
+      if (startBtn) startBtn.addEventListener('click', () => {
+        document.getElementById('home-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        if (typeof initGame === 'function') initGame();
+        else console.warn('initGame not found in game.js');
+      });
+
+      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
+      if (openShopBtn) openShopBtn.addEventListener('click', () => {
+        const modal = document.getElementById('shopModal');
+        if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden', 'false'); }
+      });
+
+      const closeShop = document.getElementById('closeShop');
+      if (closeShop) closeShop.addEventListener('click', () => {
+        const modal = document.getElementById('shopModal');
+        if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }
+      });
+
+      const backBtn = document.getElementById('backBtn');
+      if (backBtn) backBtn.addEventListener('click', () => {
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('home-screen').classList.add('active');
+      });
+    });
   </script>
+
+  <!-- 🐞 Eruda Debug Console Loader -->
+  <script src="js/eruda-loader.js"></script>
 </body>
-                                                                                         </html>
+  </html>
