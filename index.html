@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS: जरूरी फाइलें (अपने repo के paths सही रखो) -->
+  <!-- CSS: सुनिश्चित करें ये paths आपके repo में मौजूद हैं -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
@@ -14,7 +14,7 @@
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    /* small safety for board if CSS not loaded */
+    /* safety: अगर CSS कोई वजह से न लोड हो तो board कम से कम दिखे */
     #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
   </style>
 </head>
@@ -68,17 +68,16 @@
     </div>
   </div>
 
-  <!-- scripts: order important -> core UI first, then game -->
-  <script src="js/home.js"></script>
-  <script src="js/boot.js"></script>       <!-- optional bootstrap helper -->
-  <script src="js/game.js"></script>       <!-- आपका main game logic -->
-  <script src="js/inventory.js"></script>  <!-- inventory handler -->
+  <!-- scripts: order important -> UI helper first, फिर game logic, फिर inventory/shop -->
+  <script src="js/boot.js"></script>       <!-- optional bootstrap helper, अगर है -->
+  <script src="js/storage.js"></script>    <!-- localStorage helper -->
+  <script src="js/game.js"></script>       <!-- main game logic (एक ही बार) -->
+  <script src="js/inventory.js"></script>  <!-- inventory -->
   <script src="js/shop.js"></script>       <!-- shop logic -->
   <script src="js/parallax.js"></script>   <!-- optional parallax -->
 
-  <!-- Inline safety: अगर कोई element न मिले तो console में साफ़ message दे -->
+  <!-- Inline safety + UI bindings (DOMContentLoaded में) -->
   <script>
-    // छोटे-मोटे sanity checks (console errors कम करने को)
     document.addEventListener('DOMContentLoaded', () => {
       const required = ['startBtn','shopBtn','backBtn','game-board','openShopBtn','shopModal','coins','score'];
       required.forEach(id => {
@@ -86,17 +85,19 @@
           console.warn('Missing element with id:', id);
         }
       });
-      // यदि game.js में initGame मौजूद है — फिर start बटन पर call करें
-      const startBtn = document.getElementById('startBtn');
-      if(startBtn) startBtn.addEventListener('click', () => {
-        // show game screen
-        document.getElementById('home-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        if(typeof initGame === 'function') initGame();
-        else console.warn('initGame function not found in game.js');
-      });
 
-      // Shop open/close safety
+      // Start button -> show game screen and initGame if available
+      const startBtn = document.getElementById('startBtn');
+      if(startBtn){
+        startBtn.addEventListener('click', () => {
+          document.getElementById('home-screen').classList.remove('active');
+          document.getElementById('game-screen').classList.add('active');
+          if(typeof initGame === 'function') initGame();
+          else console.warn('initGame function not found in game.js');
+        });
+      }
+
+      // Open shop (support both ids)
       const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
       if(openShopBtn){
         openShopBtn.addEventListener('click', () => {
@@ -105,14 +106,21 @@
           else console.warn('shopModal not found');
         });
       }
+
+      // Close shop
       const closeShop = document.getElementById('closeShop');
       if(closeShop) closeShop.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
         if(modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
       });
+
+      // Back to home from game
+      const backBtn = document.getElementById('backBtn');
+      if(backBtn) backBtn.addEventListener('click', () => {
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('home-screen').classList.add('active');
+      });
     });
   </script>
-<script src="js/storage.js"></script>
-<script src="js/game.js"></script>
 </body>
   </html>
