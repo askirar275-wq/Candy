@@ -1,31 +1,99 @@
-/* ====== Background fix (replace body / body::after in your game.css) ====== */
+/* 🎨 game.css — final jungle background + console check integrated */
 
-body {
-  /* gradient fallback + absolute image URL (use your GitHub Pages path) */
-  background:
-    linear-gradient(180deg, #ffd7e6 0%, #ffe7d9 100%),
-    url('https://askirar275-wq.github.io/Candy/images/bg-gradient.png') no-repeat center bottom / cover;
-  background-attachment: fixed;
-  background-blend-mode: soft-light;
-  font-family: "Poppins", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  color: #3b2a24;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  /* ensure background can't be overwritten easily */
-  -webkit-background-size: cover !important;
-  background-size: cover !important;
+:root {
+  --bg-top: #ffd7e6;
+  --bg-bottom: #ffe7d9;
 }
 
-/* sprinkle overlay (absolute path again) */
+/* 🌈 Background setup */
+body {
+  background-image:
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%),
+    url('images/bg-gradient.png'); /* ✅ relative path, works on GitHub Pages too */
+
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
+  background-blend-mode: overlay;
+
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: "Poppins", system-ui, Arial, sans-serif;
+  color: #3b2a24;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ✨ Optional sprinkle overlay */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url('https://askirar275-wq.github.io/Candy/images/candy-sprinkle.png');
+  background-image: url('images/candy-sprinkle.png');
   background-repeat: repeat;
   background-size: 220px;
   opacity: 0.06;
   pointer-events: none;
-  z-index: 0;
+}
+
+/* Game Board styling */
+#game-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  max-width: 520px;
+  margin: 10px auto;
+  background: rgba(255,255,255,0.4);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+#game-board img {
+  width: 100%;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+#game-board img:hover {
+  transform: scale(1.08);
+}
+
+/* HUD buttons */
+button {
+  border: none;
+  background: linear-gradient(180deg, #ffb6d5, #ff7fb7);
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 3px 10px rgba(255,111,179,0.3);
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.inv-btn {
+  background: linear-gradient(180deg, #ffd6ec, #ff7fb7);
+  border: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(255,111,179,0.15);
+}
+
+.inv-btn span {
+  font-weight: 800;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  #game-board {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
