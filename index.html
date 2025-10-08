@@ -3,23 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match 🍬</title>
+  <title>Candy Match 🍫</title>
 
-  <!-- CSS: सुनिश्चित करें ये paths आपके repo में मौजूद हैं -->
+  <!-- CSS -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
-  <!-- Optional small style fallback -->
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    /* safety: अगर CSS कोई वजह से न लोड हो तो board कम से कम दिखे */
-    #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
+    #game-board { 
+      display: grid; 
+      grid-template-columns: repeat(6, 1fr); 
+      gap: 10px; 
+      max-width: 520px; 
+      margin: 12px auto; 
+    }
   </style>
 </head>
 <body>
-  <!-- HOME -->
+  <!-- HOME SCREEN -->
   <div id="home-screen" class="screen active">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
     <h1 class="title">🍭 Candy Match</h1>
@@ -32,7 +36,7 @@
     </div>
   </div>
 
-  <!-- GAME -->
+  <!-- GAME SCREEN -->
   <div id="game-screen" class="screen">
     <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
       <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
@@ -49,12 +53,18 @@
     </div>
   </div>
 
-  <!-- SHOP modal (id same as used in JS) -->
+  <!-- SHOP MODAL -->
   <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none">
     <div class="shop-card">
       <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center">
-        <div><h3 style="margin:0">🛒 Shop</h3><div class="small-note">Coins से power-ups खरीदें — Demo</div></div>
-        <div style="text-align:right"><div style="font-size:12px;color:#666">Your Coins</div><div class="coins-bubble" id="shopCoins">0</div></div>
+        <div>
+          <h3 style="margin:0">🛒 Shop</h3>
+          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#666">Your Coins</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
+        </div>
       </div>
 
       <div class="shop-grid" style="margin-top:10px;">
@@ -64,57 +74,48 @@
         <div class="shop-item"><div style="font-size:20px">✨ Rainbow Candy</div><div style="font-weight:800">₹ 350</div><button id="buyRainbow">Buy</button></div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="closeShop">Close</button></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        <button id="closeShop">Close</button>
+      </div>
     </div>
   </div>
 
-  <!-- scripts: order important -> UI helper first, फिर game logic, फिर inventory/shop -->
-  <script src="js/boot.js"></script>       <!-- optional bootstrap helper, अगर है -->
-  <script src="js/storage.js"></script>    <!-- localStorage helper -->
-  <script src="js/game.js"></script>       <!-- main game logic (एक ही बार) -->
-  <script src="js/inventory.js"></script>  <!-- inventory -->
-  <script src="js/shop.js"></script>       <!-- shop logic -->
-  <script src="js/parallax.js"></script>   <!-- optional parallax -->
+  <!-- JS FILES -->
+  <script src="js/boot.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/parallax.js"></script>
 
-  <!-- Inline safety + UI bindings (DOMContentLoaded में) -->
+  <!-- INLINE SCRIPT -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const required = ['startBtn','shopBtn','backBtn','game-board','openShopBtn','shopModal','coins','score'];
-      required.forEach(id => {
-        if(!document.getElementById(id)){
-          console.warn('Missing element with id:', id);
+      const startBtn = document.getElementById('startBtn');
+      if(startBtn) startBtn.addEventListener('click', () => {
+        document.getElementById('home-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        if(typeof initGame === 'function') initGame();
+      });
+
+      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
+      if(openShopBtn) openShopBtn.addEventListener('click', () => {
+        const modal = document.getElementById('shopModal');
+        if(modal) {
+          modal.style.display = 'flex';
+          modal.setAttribute('aria-hidden', 'false');
         }
       });
 
-      // Start button -> show game screen and initGame if available
-      const startBtn = document.getElementById('startBtn');
-      if(startBtn){
-        startBtn.addEventListener('click', () => {
-          document.getElementById('home-screen').classList.remove('active');
-          document.getElementById('game-screen').classList.add('active');
-          if(typeof initGame === 'function') initGame();
-          else console.warn('initGame function not found in game.js');
-        });
-      }
-
-      // Open shop (support both ids)
-      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
-      if(openShopBtn){
-        openShopBtn.addEventListener('click', () => {
-          const modal = document.getElementById('shopModal');
-          if(modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
-          else console.warn('shopModal not found');
-        });
-      }
-
-      // Close shop
       const closeShop = document.getElementById('closeShop');
       if(closeShop) closeShop.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
-        if(modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
+        if(modal) {
+          modal.style.display = 'none';
+          modal.setAttribute('aria-hidden', 'true');
+        }
       });
 
-      // Back to home from game
       const backBtn = document.getElementById('backBtn');
       if(backBtn) backBtn.addEventListener('click', () => {
         document.getElementById('game-screen').classList.remove('active');
@@ -123,4 +124,4 @@
     });
   </script>
 </body>
-  </html>
+                             </html>
