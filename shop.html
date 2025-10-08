@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop - Candy Match</title>
+
+  <link rel="stylesheet" href="css/shop.css">
+</head>
+<body>
+  <header class="shop-header">
+    <h2>🛒 Power-up Shop</h2>
+    <a href="index.html" class="back-btn">⬅️ Back to Game</a>
+  </header>
+
+  <div class="coins-display">💰 आपके Coins: <span id="coins-count">0</span></div>
+
+  <main class="shop-container">
+    <div class="shop-item">
+      <div>💣 Bomb</div>
+      <div class="price">₹200</div>
+      <button onclick="buyItem('bomb',200)">Buy</button>
+    </div>
+
+    <div class="shop-item">
+      <div>🔀 Shuffle</div>
+      <div class="price">₹100</div>
+      <button onclick="buyItem('shuffle',100)">Buy</button>
+    </div>
+
+    <div class="shop-item">
+      <div>➕ Extra Moves</div>
+      <div class="price">₹80</div>
+      <button onclick="buyItem('moves',80)">Buy</button>
+    </div>
+
+    <div class="shop-item">
+      <div>🌈 Rainbow Candy</div>
+      <div class="price">₹350</div>
+      <button onclick="buyItem('rainbow',350)">Buy</button>
+    </div>
+  </main>
+
+  <script src="js/storage.js"></script>
+  <script src="js/shop.js"></script>
+</body>
+</html>
