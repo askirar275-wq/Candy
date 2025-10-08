@@ -5,145 +5,113 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match 🍬</title>
 
-  <!-- CSS (अपनी फाइलों का path चेक कर लें) -->
+  <!-- CSS: जरूरी फाइलें (अपने repo के paths सही रखो) -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
-  <!-- Eruda loader (debug console) - optional but handy -->
-  <script>
-    (function(){
-      // अगर debug चाहिए तो true करें
-      const ENABLE_ERUDA = true;
-      if(!ENABLE_ERUDA) return;
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.async = true;
-      s.onload = function(){ try{ eruda.init(); console.log('✅ Eruda Console ready'); }catch(e){console.warn(e);} }
-      document.head.appendChild(s);
-    })();
-  </script>
-
+  <!-- Optional small style fallback -->
   <style>
-    /* छोटा fallback style ताकि screen visible रहे अगर external css load न हो */
-    body { margin:0; font-family: system-ui, Arial; background:#ffdede; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    /* small safety for board if CSS not loaded */
+    #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
   </style>
 </head>
 <body>
-  <!-- HOME SCREEN -->
-  <div id="home-screen" class="screen active" style="padding:18px;">
+  <!-- HOME -->
+  <div id="home-screen" class="screen active">
     <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 style="text-align:center;margin:6px 0;color:#d23a73">🍭 Candy Match</h1>
-    <p style="text-align:center;color:#6b5b5b">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <h1 class="title">🍭 Candy Match</h1>
+    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
     <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:14px;">
-      <button id="startBtn" style="width:84%;padding:14px;border-radius:12px;">🎮 Start</button>
-      <button id="shopBtn" style="width:84%;padding:14px;border-radius:12px;">🛒 Shop</button>
-      <button id="settingsBtn" style="width:84%;padding:14px;border-radius:12px;">⚙️ Settings</button>
+      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:14px;">⚙️ Settings</button>
     </div>
-
-    <div style="text-align:center;margin-top:14px;">
-      <button id="installBtn" style="padding:8px 12px;border-radius:10px;">⬇️ Install</button>
-    </div>
-    <p style="text-align:center;color:#777;margin-top:18px;">Made with ❤️ — Arun App Studio</p>
   </div>
 
-  <!-- GAME SCREEN -->
-  <div id="game-screen" class="screen" style="display:none; padding:12px;">
-    <div class="topbar" style="display:flex;align-items:center;gap:12px;">
-      <button id="backBtn" style="padding:8px 12px;border-radius:8px;">⬅️ Home</button>
-      <h2 style="margin:0;flex:1;text-align:center">Score: <span id="score">0</span></h2>
+  <!-- GAME -->
+  <div id="game-screen" class="screen">
+    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0">Score: <span id="score">0</span></h2>
       <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="game-board" class="board" style="margin:12px auto; display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; max-width:520px;"></div>
+    <div id="game-board" class="board" aria-live="polite"></div>
 
-    <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
+    <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
       <button id="restartBtn">Restart</button>
       <button id="shuffleBtn">Shuffle</button>
       <button id="openShopBtn">Open Shop</button>
     </div>
   </div>
 
-  <!-- SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none;">
+  <!-- SHOP modal (id same as used in JS) -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none">
     <div class="shop-card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3>🛒 Shop</h3>
-        <div class="coins-bubble" id="shopCoins">0</div>
+      <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center">
+        <div><h3 style="margin:0">🛒 Shop</h3><div class="small-note">Coins से power-ups खरीदें — Demo</div></div>
+        <div style="text-align:right"><div style="font-size:12px;color:#666">Your Coins</div><div class="coins-bubble" id="shopCoins">0</div></div>
       </div>
 
-      <div class="shop-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
-        <div class="shop-item">
-          <div style="font-size:18px">💣 Bomb</div>
-          <div style="font-weight:800">₹ 200</div>
-          <button id="buyBomb">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div style="font-size:18px">🔀 Shuffle</div>
-          <div style="font-weight:800">₹ 100</div>
-          <button id="buyShuffle">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div style="font-size:18px">➕ Extra Moves</div>
-          <div style="font-weight:800">₹ 80</div>
-          <button id="buyMoves">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div style="font-size:18px">✨ Rainbow Candy</div>
-          <div style="font-weight:800">₹ 350</div>
-          <button id="buyRainbow">Buy</button>
-        </div>
+      <div class="shop-grid" style="margin-top:10px;">
+        <div class="shop-item"><div style="font-size:20px">💣 Bomb</div><div style="font-weight:800">₹ 200</div><button id="buyBomb">Buy</button></div>
+        <div class="shop-item"><div style="font-size:20px">🔀 Shuffle</div><div style="font-weight:800">₹ 100</div><button id="buyShuffle">Buy</button></div>
+        <div class="shop-item"><div style="font-size:20px">➕ Extra Moves</div><div style="font-weight:800">₹ 80</div><button id="buyMoves">Buy</button></div>
+        <div class="shop-item"><div style="font-size:20px">✨ Rainbow Candy</div><div style="font-weight:800">₹ 350</div><button id="buyRainbow">Buy</button></div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-        <button id="closeShop">Close</button>
-      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="closeShop">Close</button></div>
     </div>
   </div>
 
-  <!-- inventory toolbar (example) -->
-  <div id="inv-toolbar" style="position:fixed;left:12px;bottom:14px;z-index:20;display:flex;gap:8px;">
-    <button class="inv-btn" id="useBombBtn">💣 <span class="inv-count" id="invBomb">0</span></button>
-    <button class="inv-btn" id="useShuffleBtn">🔀 <span class="inv-count" id="invShuffle">0</span></button>
-    <button class="inv-btn" id="useMovesBtn">➕ <span class="inv-count" id="invMoves">0</span></button>
-    <button class="inv-btn" id="useRainbowBtn">🌈 <span class="inv-count" id="invRainbow">0</span></button>
-  </div>
-
-  <!-- External JS (आपकी फाइलें) -->
-  <!-- Important: Scripts are loaded at the end so DOM elements exist -->
+  <!-- scripts: order important -> core UI first, then game -->
   <script src="js/home.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/shop.js"></script>
-  <script src="js/inventory.js"></script>
+  <script src="js/boot.js"></script>       <!-- optional bootstrap helper -->
+  <script src="js/game.js"></script>       <!-- आपका main game logic -->
+  <script src="js/inventory.js"></script>  <!-- inventory handler -->
+  <script src="js/shop.js"></script>       <!-- shop logic -->
+  <script src="js/parallax.js"></script>   <!-- optional parallax -->
 
-  <!-- Small inline helper to ensure screens toggle safely if any element missing -->
+  <!-- Inline safety: अगर कोई element न मिले तो console में साफ़ message दे -->
   <script>
-    // safety: only run when DOM loaded
-    (function(){
-      function $(id){ return document.getElementById(id); }
+    // छोटे-मोटे sanity checks (console errors कम करने को)
+    document.addEventListener('DOMContentLoaded', () => {
+      const required = ['startBtn','shopBtn','backBtn','game-board','openShopBtn','shopModal','coins','score'];
+      required.forEach(id => {
+        if(!document.getElementById(id)){
+          console.warn('Missing element with id:', id);
+        }
+      });
+      // यदि game.js में initGame मौजूद है — फिर start बटन पर call करें
+      const startBtn = document.getElementById('startBtn');
+      if(startBtn) startBtn.addEventListener('click', () => {
+        // show game screen
+        document.getElementById('home-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        if(typeof initGame === 'function') initGame();
+        else console.warn('initGame function not found in game.js');
+      });
 
-      // Simple screen show/hide utility (keep in sync with your external scripts)
-      function showScreen(name){
-        const home = $('home-screen'), game = $('game-screen');
-        if(!home || !game) return;
-        if(name === 'home'){ home.style.display='block'; game.style.display='none'; }
-        else { home.style.display='none'; game.style.display='block'; }
+      // Shop open/close safety
+      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
+      if(openShopBtn){
+        openShopBtn.addEventListener('click', () => {
+          const modal = document.getElementById('shopModal');
+          if(modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
+          else console.warn('shopModal not found');
+        });
       }
-
-      // Hook basic buttons if present (these will also be hooked by your existing js files if they attach)
-      const sBtn = $('startBtn'); if(sBtn) sBtn.addEventListener('click', ()=> { showScreen('game'); if(typeof initGame === 'function') initGame(); });
-      const bBtn = $('backBtn'); if(bBtn) bBtn.addEventListener('click', ()=> { showScreen('home'); });
-
-      // Shop open/close wiring (safe guards)
-      const shopBtn = $('shopBtn'); if(shopBtn) shopBtn.addEventListener('click', ()=> { const m=$('shopModal'); if(m) { m.style.display='flex'; m.setAttribute('aria-hidden','false'); }});
-      const openShopBtn = $('openShopBtn'); if(openShopBtn) openShopBtn.addEventListener('click', ()=> { const m=$('shopModal'); if(m) { m.style.display='flex'; m.setAttribute('aria-hidden','false'); }});
-      const closeShop = $('closeShop'); if(closeShop) closeShop.addEventListener('click', ()=> { const m=$('shopModal'); if(m) { m.style.display='none'; m.setAttribute('aria-hidden','true'); }});
-
-      // make sure game-board has grid-template-columns set to match your game.js WIDTH (default width=6 here)
-      const g = $('game-board'); if(g){ g.style.gridTemplateColumns = 'repeat(6, 1fr)'; }
-    })();
+      const closeShop = document.getElementById('closeShop');
+      if(closeShop) closeShop.addEventListener('click', () => {
+        const modal = document.getElementById('shopModal');
+        if(modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
+      });
+    });
   </script>
+
 </body>
   </html>
