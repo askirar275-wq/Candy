@@ -13,7 +13,13 @@
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    #game-board { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; max-width:520px; margin:12px auto; }
+    #game-board { 
+      display:grid; 
+      grid-template-columns: repeat(6,1fr); 
+      gap:10px; 
+      max-width:520px; 
+      margin:12px auto; 
+    }
   </style>
 </head>
 <body>
@@ -89,47 +95,59 @@
   </div>
 
   <!-- 🧠 JS Files -->
-  <script src="js/boot.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- 🎮 Game Logic -->
-  <script src="js/storage.js"></script>
-  <script src="js/game.js"></script>
-
-  <!-- 🧩 UI Controls -->
+  <!-- ✅ SAFE UI SCRIPT (No Errors Ever) -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const startBtn = document.getElementById('startBtn');
-      if (startBtn) startBtn.addEventListener('click', () => {
-        document.getElementById('home-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        if (typeof initGame === 'function') initGame();
-        else console.warn('initGame not found in game.js');
-      });
+  document.addEventListener('DOMContentLoaded', () => {
+    function $id(id) {
+      const el = document.getElementById(id);
+      if (!el) console.warn('Missing element:', id);
+      return el;
+    }
 
-      const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
-      if (openShopBtn) openShopBtn.addEventListener('click', () => {
-        const modal = document.getElementById('shopModal');
-        if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden', 'false'); }
-      });
-
-      const closeShop = document.getElementById('closeShop');
-      if (closeShop) closeShop.addEventListener('click', () => {
-        const modal = document.getElementById('shopModal');
-        if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }
-      });
-
-      const backBtn = document.getElementById('backBtn');
-      if (backBtn) backBtn.addEventListener('click', () => {
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('home-screen').classList.add('active');
-      });
+    const startBtn = $id('startBtn');
+    if (startBtn) startBtn.addEventListener('click', () => {
+      $id('home-screen')?.classList.remove('active');
+      $id('game-screen')?.classList.add('active');
+      if (typeof initGame === 'function') initGame();
+      else console.warn('initGame() not found');
     });
+
+    const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
+    if (openShopBtn) openShopBtn.addEventListener('click', () => {
+      const modal = $id('shopModal');
+      if (modal) modal.style.display = 'flex';
+    });
+
+    const closeShop = $id('closeShop');
+    if (closeShop) closeShop.addEventListener('click', () => {
+      const modal = $id('shopModal');
+      if (modal) modal.style.display = 'none';
+    });
+
+    const backBtn = $id('backBtn');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      $id('game-screen')?.classList.remove('active');
+      $id('home-screen')?.classList.add('active');
+    });
+
+    console.log('✅ Safe UI script loaded successfully');
+  });
   </script>
 
-  <!-- 🐞 Eruda Debug Console Loader -->
-  <script src="js/eruda-loader.js"></script>
+  <!-- 🐞 Eruda Console -->
+  <script>
+  (function () {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+    document.body.appendChild(s);
+    s.onload = function () { eruda.init(); console.log('🐞 Eruda console loaded'); };
+  })();
+  </script>
 </body>
   </html>
