@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match 🍫</title>
+  <title>Candy Match 🍬</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="css/home.css">
@@ -13,12 +13,13 @@
   <style>
     .screen { display: none; }
     .screen.active { display: block; }
-    #game-board { 
-      display: grid; 
-      grid-template-columns: repeat(6, 1fr); 
-      gap: 10px; 
-      max-width: 520px; 
-      margin: 12px auto; 
+    /* safety grid if CSS not loaded */
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      max-width: 520px;
+      margin: 12px auto;
     }
   </style>
 </head>
@@ -80,15 +81,13 @@
     </div>
   </div>
 
-  <!-- JS FILES -->
+  <!-- JS FILES (order important) -->
   <script src="js/boot.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/game.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/parallax.js"></script>
 
-  <!-- INLINE SCRIPT -->
+  <!-- inline UI glue -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const startBtn = document.getElementById('startBtn');
@@ -96,24 +95,20 @@
         document.getElementById('home-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
         if(typeof initGame === 'function') initGame();
+        else console.warn('initGame not found');
       });
 
       const openShopBtn = document.getElementById('openShopBtn') || document.getElementById('shopBtn');
       if(openShopBtn) openShopBtn.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
-        if(modal) {
-          modal.style.display = 'flex';
-          modal.setAttribute('aria-hidden', 'false');
-        }
+        if(modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false'); }
+        else console.warn('shopModal not found');
       });
 
       const closeShop = document.getElementById('closeShop');
       if(closeShop) closeShop.addEventListener('click', () => {
         const modal = document.getElementById('shopModal');
-        if(modal) {
-          modal.style.display = 'none';
-          modal.setAttribute('aria-hidden', 'true');
-        }
+        if(modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
       });
 
       const backBtn = document.getElementById('backBtn');
@@ -123,5 +118,10 @@
       });
     });
   </script>
+
+  <!-- नीचे वाली दो लाइनें (आपने माँगा था: body से ठीक ऊपर) -->
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
+
 </body>
-                             </html>
+</html>
