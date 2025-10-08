@@ -3,95 +3,130 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Candy Match — Jungle Adventure</title>
+  <title>Candy Match 🍬</title>
 
-  <!-- 🌴 Styles -->
-  <link rel="stylesheet" href="css/style.css">
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/inventory.css">
-
-  <!-- Favicon -->
-  <link rel="icon" href="images/candy1.png">
+  <link rel="stylesheet" href="css/inventory.css"> <!-- आपने बनाई थी -->
 </head>
-
 <body>
-  <div class="home-screen">
-    <h1>🍭 Candy Match</h1>
-    <p>स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-    <button id="startBtn">🎮 Start</button>
-    <button id="shopBtn">🛍 Shop</button>
-    <button id="settingsBtn">⚙️ Settings</button>
-    <button id="installBtn">⬇️ Install</button>
-    <p class="footer">Made with ❤️ — Arun App Studio</p>
+  <!-- ===== HOME SCREEN ===== -->
+  <div id="home-screen" class="screen active" >
+    <img src="images/candy1.png" alt="logo" class="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
+    <h1 class="title">🍭 Candy Match</h1>
+    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+
+    <div class="buttons" style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:12px;">
+      <button id="startBtn" style="width:80%;padding:12px;border-radius:12px;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:12px;border-radius:12px;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:12px;border-radius:12px;">⚙️ Settings</button>
+    </div>
+
+    <button id="installBtn" class="install" style="margin-top:12px;padding:8px 14px;border-radius:10px;">⬇️ Install</button>
+    <p class="footer" style="margin-top:12px;color:#666">Made with ❤️ — Arun App Studio</p>
   </div>
 
-  <!-- 🕹 Game Screen -->
-  <div id="game-screen" style="display:none;">
-    <button id="homeBtn">🏠 Home</button>
-    <h2>Score: <span id="score">0</span></h2>
-    <div id="coin-display">Coins: <span id="coins">0</span></div>
-    <div id="board" class="board"></div>
-    <div class="controls">
-      <button id="restartBtn">Restart</button>
-      <button id="shuffleBtn">Shuffle</button>
-      <button id="openShopBtn">Open Shop</button>
+  <!-- ===== GAME SCREEN ===== -->
+  <div id="game-screen" class="screen" style="display:none;">
+    <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:18px;max-width:900px;margin:0 auto;">
+      <button id="backBtn" style="padding:8px 12px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0; font-size:32px;">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+    </div>
+
+    <div id="game-board" class="board"
+         style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:18px;max-width:520px;margin:18px auto;border-radius:20px;">
+      <!-- tiles rendered by game.js -->
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:12px;margin:18px auto;max-width:520px;">
+      <button id="restartBtn" style="padding:10px 16px;border-radius:12px;">Restart</button>
+      <button id="shuffleBtn" style="padding:10px 16px;border-radius:12px;">Shuffle</button>
+      <button id="openShopBtn" style="padding:10px 16px;border-radius:12px;">Open Shop</button>
     </div>
   </div>
 
-  <!-- 🛒 Shop (hidden initially) -->
-  <div id="shop" style="display:none;">
-    <h2>🛍 Shop</h2>
-    <p>Coins से power-ups खरीदें — Demo</p>
+  <!-- ===== SHOP MODAL ===== -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none;">
+    <div class="shop-card" style="max-width:480px;margin:18px auto;">
+      <div class="shop-top" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h3 style="margin:0">🛒 Shop</h3>
+          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#666">Your Coins</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
+        </div>
+      </div>
 
-    <div class="shop-item">
-      <span>💣 Bomb</span> <span>₹200</span>
-      <button class="buy" data-item="bomb">Buy</button>
+      <div class="shop-grid" style="margin-top:12px;">
+        <div class="shop-item">
+          <div style="font-size:18px">💣 Bomb</div>
+          <div style="font-weight:700;margin-top:6px">₹ 200</div>
+          <button class="buy-btn" data-item="Bomb" data-price="200">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:18px">🔀 Shuffle</div>
+          <div style="font-weight:700;margin-top:6px">₹ 100</div>
+          <button class="buy-btn" data-item="Shuffle" data-price="100">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:18px">➕ Extra Moves</div>
+          <div style="font-weight:700;margin-top:6px">₹ 80</div>
+          <button class="buy-btn" data-item="Extra Moves" data-price="80">Buy</button>
+        </div>
+
+        <div class="shop-item">
+          <div style="font-size:18px">✨ Rainbow Candy</div>
+          <div style="font-weight:700;margin-top:6px">₹ 350</div>
+          <button class="buy-btn" data-item="Rainbow Candy" data-price="350">Buy</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button id="closeShopBtn" style="padding:8px 12px;border-radius:8px;">Close</button>
+      </div>
     </div>
-
-    <div class="shop-item">
-      <span>🔀 Shuffle</span> <span>₹100</span>
-      <button class="buy" data-item="shuffle">Buy</button>
-    </div>
-
-    <div class="shop-item">
-      <span>➕ Extra Moves</span> <span>₹80</span>
-      <button class="buy" data-item="moves">Buy</button>
-    </div>
-
-    <div class="shop-item">
-      <span>🌈 Rainbow Candy</span> <span>₹350</span>
-      <button class="buy" data-item="rainbow">Buy</button>
-    </div>
-
-    <button id="closeShopBtn">Close</button>
   </div>
 
-  <!-- 🍬 Inventory Toolbar -->
-  <div id="inv-toolbar">
-    <button class="inv-btn" id="inv-bomb">💣<span class="inv-count">0</span></button>
-    <button class="inv-btn" id="inv-shuffle">🔀<span class="inv-count">0</span></button>
-    <button class="inv-btn" id="inv-moves">➕<span class="inv-count">0</span></button>
-    <button class="inv-btn" id="inv-rainbow">🌈<span class="inv-count">0</span></button>
-  </div>
-
-  <!-- ====== Scripts ====== -->
-  <script src="js/game.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/shop.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/parallax.js"></script>
-
-  <!-- ✅ Mobile Console Debugger (Eruda) -->
+  <!-- ===== DEBUG / Eruda (optional) ===== -->
   <script>
-    (function () {
-      var script = document.createElement('script');
-      script.src = "https://cdn.jsdelivr.net/npm/eruda";
-      document.body.appendChild(script);
-      script.onload = function () {
-        eruda.init();
-        console.log("%cEruda Console Started!", "color:#ff66a5;font-weight:bold;");
-      };
-    })();
+    const DEBUG_MODE = true;
+    if (DEBUG_MODE) {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/eruda";
+      s.onload = () => { eruda.init(); console.log("✅ Eruda started"); };
+      document.body.appendChild(s);
+    }
+  </script>
+
+  <!-- ===== SCRIPTS - keep these links (order matters) ===== -->
+  <script src="js/home.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/shop.js"></script>       <!-- shop.js (safer version) -->
+  <script src="js/inventory.js"></script>  <!-- if use inventory -->
+  <script src="js/parallax.js"></script>   <!-- optional parallax helper -->
+
+  <!-- small inline safety: ensure coins shown on load -->
+  <script>
+    window.addEventListener('load', () => {
+      const coins = Number(localStorage.getItem('coins') || 250);
+      const coinsEls = document.querySelectorAll('#coins, #shopCoins');
+      coinsEls.forEach(el => { if(el) el.textContent = coins; });
+    });
+
+    // Hook home "Shop" button to open same modal (safety if different id)
+    document.addEventListener('DOMContentLoaded', () => {
+      const homeShop = document.getElementById('shopBtn');
+      const openShopBtn = document.getElementById('openShopBtn');
+      if (homeShop && openShopBtn) {
+        homeShop.addEventListener('click', () => openShopBtn.click());
+      }
+    });
   </script>
 </body>
-    </html>
+      </html>
