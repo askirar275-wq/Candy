@@ -112,13 +112,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       const $ = id => document.getElementById(id);
 
-      const required = [
-        'startBtn','shopBtn','backBtn','game-board',
-        'openShopBtn','shopModal','coins','score',
-        'closeShop','restartBtn','shuffleBtn'
-      ];
-      required.forEach(id => { if(!$(id)) console.warn('Missing element:', id); });
-
       const show = id => { const el = $(id); if(el) el.classList.add('active'); };
       const hide = id => { const el = $(id); if(el) el.classList.remove('active'); };
 
@@ -151,11 +144,14 @@
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- ✅ ERUDA CONSOLE -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <!-- ✅ ERUDA (debug only) -->
   <script>
-    eruda.init();
-    console.log("Eruda console enabled — tap ⚙️ to open");
+    if (window.location.search.includes('debug=1')) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = () => { eruda.init(); console.log('🛠️ Eruda Debug Console Enabled'); };
+      document.body.appendChild(s);
+    }
   </script>
 </body>
-</html>
+                                                                                         </html>
