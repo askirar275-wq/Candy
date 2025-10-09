@@ -5,50 +5,47 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Level Map — Candy</title>
 
-  <!-- external CSS -->
+  <!-- CSS -->
   <link rel="stylesheet" href="css/level-map.css">
 
   <style>
-    /* Fallback styles */
-    body { margin:0; font-family:"Poppins",sans-serif; background:#ffeef6; }
+    /* फॉलबैक (अगर css फाइल न मिले) */
+    body { margin:0; font-family: "Poppins", sans-serif; background:#ffeef6; }
     .map-container { position:relative; min-height:100vh; overflow:auto; padding:22px 16px 120px; }
-    #levelPath { position:relative; width:100%; height:auto; min-height:900px; }
+    #levelPath { position:relative; width:100%; height:auto; min-height:520px; }
     .note { text-align:center; color:#6b5b5b; margin-bottom:10px; }
+    .loading { text-align:center; color:#666; padding:12px; }
   </style>
 </head>
 <body>
   <div class="map-container">
-    <div class="note">🎮 Level Map — नीचे scroll करो और किसी unlocked level पर टैप करो</div>
+    <div class="note">Level Map — नीचे scroll करो और किसी unlocked level पर टैप करो</div>
 
     <div id="levelPath" aria-live="polite">
       <div class="loading">Loading map…</div>
     </div>
 
     <div style="text-align:center;margin-top:18px;">
-      <button id="backHome"
-        style="padding:10px 18px;border-radius:20px;border:0;background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;">
-        🏠 Home
-      </button>
+      <button id="backHome" class="btn">🏠 Home</button>
     </div>
   </div>
 
-  <!-- Eruda Console (for debugging) -->
+  <!-- ===== Eruda mobile console (optional but helpful) ===== -->
   <script>
-    (function() {
-      const enableEruda = true; // इसे false कर दो अगर नहीं चाहिए
-      if (enableEruda) {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-        s.onload = function() {
-          eruda.init();
-          console.log('%cEruda console loaded ✅', 'color:lime;font-weight:bold;');
-        };
-        document.body.appendChild(s);
-      }
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function () {
+        try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
+      };
+      document.body.appendChild(s);
     })();
   </script>
 
-  <!-- JS Files -->
+  <!-- safety loader message -->
+  <script>console.log('level-map.html loaded');</script>
+
+  <!-- main map logic -->
   <script src="js/level-map.js"></script>
 </body>
 </html>
