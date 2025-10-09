@@ -1,78 +1,136 @@
-/* ===== Candy Match Game Board Styling ===== */
+/* ===== Candy Game Board Styling ===== */
 
 body {
-  background: linear-gradient(180deg, #ffe3f2 0%, #fff7e7 100%);
-  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-  color: #3b2a24;
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(180deg, #ffd7e6 0%, #ffe7d9 100%), url('../images/bg-gradient.png') center/cover no-repeat;
+  background-attachment: fixed;
+  background-blend-mode: soft-light;
+  color: #3b2a24;
+  overflow: hidden;
 }
 
-/* Board layout */
+/* sprinkle overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url('../images/candy-sprinkle.png');
+  background-repeat: repeat;
+  background-size: 220px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* Game board grid */
 #game-board {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  margin: 20px auto;
-  max-width: 360px;
-  padding: 10px;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 5px;
+  width: 90vmin;
+  height: 90vmin;
+  max-width: 420px;
+  max-height: 420px;
+  margin: 80px auto 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 6px;
 }
 
-/* Candy images */
-#game-board img {
-  width: 58px;
-  height: 58px;
-  object-fit: contain;
+/* Each grid cell */
+.cell {
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  cursor: pointer;
-}
-
-#game-board img:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.25);
-}
-
-/* Score and Coins UI */
-.topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  justify-content: space-between;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.coins-bubble {
-  background: #fff;
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-weight: 600;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+/* Candy image */
+.tile {
+  width: 95%;
+  height: 95%;
+  object-fit: contain;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-/* Responsive adjustments */
-@media (min-width: 480px) {
+.tile.pop {
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* HUD (Score and Coins) */
+#score, #coins {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #3b2a24;
+  text-shadow: 0 2px 4px rgba(255,255,255,0.6);
+}
+
+#coins {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  background: #ffffffb3;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+#score {
+  position: fixed;
+  top: 16px;
+  left: 20px;
+  background: #ffffffb3;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+/* Buttons */
+button {
+  background: linear-gradient(45deg, #ff66cc, #ff9966);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(45deg, #ff3385, #ff6600);
+}
+
+/* Shop modal */
+#shopModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 20;
+}
+
+#shopModal button {
+  margin: 6px 0;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
   #game-board {
-    gap: 10px;
-    max-width: 420px;
+    width: 94vmin;
+    height: 94vmin;
+    gap: 3px;
   }
-  #game-board img {
-    width: 65px;
-    height: 65px;
+  .tile {
+    width: 90%;
+    height: 90%;
   }
-}
-
-@media (min-width: 768px) {
-  #game-board {
-    gap: 12px;
-    max-width: 520px;
   }
-  #game-board img {
-    width: 72px;
-    height: 72px;
-  }
-}
