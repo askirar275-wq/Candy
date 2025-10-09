@@ -1,50 +1,52 @@
-// ===== Shared Storage System for Game + Shop =====
+// js/storage.js
+// Simple wrapper for localStorage: coins, level
+(function(){
+  const KEY_COINS = 'candy_coins_v1';
+  const KEY_LEVEL = 'candy_level_v1';
 
-// LocalStorage keys
-const STORAGE_KEYS = {
-  coins: 'candy_coins',
-  inventory: 'candy_inventory'
-};
-
-// Get coins
-function getCoins() {
-  return parseInt(localStorage.getItem(STORAGE_KEYS.coins) || '0', 10);
-}
-
-// Add coins
-function addCoins(amount) {
-  const total = getCoins() + amount;
-  localStorage.setItem(STORAGE_KEYS.coins, total);
-  return total;
-}
-
-// Deduct coins
-function spendCoins(amount) {
-  const total = getCoins();
-  if (total >= amount) {
-    localStorage.setItem(STORAGE_KEYS.coins, total - amount);
-    return true;
+  function read(key, fallback){
+    try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); }
+    catch(e){ return fallback; }
   }
-  return false;
-}
-
-// Get inventory
-function getInventory() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.inventory)) || {};
-  } catch {
-    return {};
+  function write(key, value){
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch(e){ return false; }
   }
-}
 
-// Add an item (like bomb, shuffle, etc.)
-function addItem(item) {
-  const inv = getInventory();
-  inv[item] = (inv[item] || 0) + 1;
-  localStorage.setItem(STORAGE_KEYS.inventory, JSON.stringify(inv));
-}
+  // coins API
+  window.StorageAPI = {
+    getCoins(){
+      return read(KEY_COINS, 0);
+    },
+    setCoins(n){
+      write(KEY_COINS, Number(n) || 0);
+      // notify (if someone listens)
+      if(typeof window.updateCoinDisplay === 'function') window.updateCoinDisplay();
+      return StorageAPI.getCoins();
+    },
+    addCoins(n){
+      const cur = StorageAPI.getCoins();
+      const next = cur + Number(n || 0);
+      StorageAPI.setCoins(next);
+      return next;
+    },
 
-// Utility for updating UI text
-function updateCoinDisplay(el) {
-  if (el) el.textContent = getCoins();
-}
+    // level API
+    getLevel(){
+      return read(KEY_LEVEL, 1);
+    },
+    setLevel(l){
+      const L = Math.max(1, Number(l) || 1);
+      write(KEY_LEVEL, L);
+      return StorageAPI.getLevel();
+    },
+    // reset (dev helper)
+    _resetAll(){
+      write(KEY_COINS, 0);
+      write(KEY_LEVEL, 1);
+    }
+  };
+
+  // quick console log on load
+  try { console.log('Loaded: js/storage.js'); } catch(e){}
+})();
