@@ -1,52 +1,46 @@
-// js/storage.js
-// Simple wrapper for localStorage: coins, level
-(function(){
-  const KEY_COINS = 'candy_coins_v1';
-  const KEY_LEVEL = 'candy_level_v1';
-
-  function read(key, fallback){
-    try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); }
-    catch(e){ return fallback; }
+/* storage.js
+   Simple Storage API — coins, level, inventory saved in localStorage.
+   Provides StorageAPI global object used by other modules.
+*/
+window.StorageAPI = (function(){
+  const KEY = 'candy_v2_save_v1';
+  function _load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return { coins:250, level:1, inv:{bomb:0,shuffle:0,moves:0,rainbow:0} };
+      return JSON.parse(raw);
+    }catch(e){ console.warn('Storage load error', e); return { coins:250, level:1, inv:{bomb:0,shuffle:0,moves:0,rainbow:0} }; }
   }
-  function write(key, value){
-    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch(e){ return false; }
+  function _save(state){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ console.warn('Storage save error', e); }
   }
 
-  // coins API
-  window.StorageAPI = {
-    getCoins(){
-      return read(KEY_COINS, 0);
-    },
-    setCoins(n){
-      write(KEY_COINS, Number(n) || 0);
-      // notify (if someone listens)
-      if(typeof window.updateCoinDisplay === 'function') window.updateCoinDisplay();
-      return StorageAPI.getCoins();
-    },
+  let state = _load();
+
+  return {
+    getCoins(){ return Number(state.coins || 0); },
     addCoins(n){
-      const cur = StorageAPI.getCoins();
-      const next = cur + Number(n || 0);
-      StorageAPI.setCoins(next);
-      return next;
+      state.coins = Number(state.coins || 0) + Number(n||0);
+      if(state.coins < 0) state.coins = 0;
+      _save(state);
+      return state.coins;
     },
-
-    // level API
-    getLevel(){
-      return read(KEY_LEVEL, 1);
+    getLevel(){ return Number(state.level || 1); },
+    setLevel(l){ state.level = Number(l||1); _save(state); return state.level; },
+    getInv(){ return state.inv || {}; },
+    addInv(item, qty=1){
+      state.inv = state.inv || {};
+      state.inv[item] = (state.inv[item]||0) + Number(qty||1);
+      _save(state);
+      return state.inv[item];
     },
-    setLevel(l){
-      const L = Math.max(1, Number(l) || 1);
-      write(KEY_LEVEL, L);
-      return StorageAPI.getLevel();
+    useInv(item, qty=1){
+      state.inv = state.inv || {};
+      state.inv[item] = Math.max(0, (state.inv[item]||0) - Number(qty||1));
+      _save(state);
+      return state.inv[item];
     },
-    // reset (dev helper)
-    _resetAll(){
-      write(KEY_COINS, 0);
-      write(KEY_LEVEL, 1);
-    }
+    export(){ return JSON.parse(JSON.stringify(state)); },
+    import(raw){ try{ state = raw; _save(state); }catch(e){console.warn(e);} }
   };
-
-  // quick console log on load
-  try { console.log('Loaded: js/storage.js'); } catch(e){}
 })();
