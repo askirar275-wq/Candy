@@ -1,328 +1,331 @@
-/* game.js
-   Core game: create board, swap by touch/click, find matches, gravity, HUD updates.
-   Hindi comments for clarity.
-*/
-
+// js/game.js
+// Smooth swap + safe UI + level support
 (function(){
-  const defaultSize = 8; // default board size (can be overridden by LevelAPI)
-  const IMAGE_BASE = 'images/';
-  const CANDY_NAMES = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png','candy7.png','candy8.png','candy9.png','candy10.png'];
+  'use strict';
 
-  let BOARD_SIZE = defaultSize;
-  let SIZE = BOARD_SIZE * BOARD_SIZE;
-  let board = []; // array of {src: 'images/..', id: number} or null
-  let nextId = 1;
-  let score = 0, moves = 40, combo = 1;
-  let dragging = false, pointerId = null, startIndex = null, locked = false;
+  // CONFIG: candy images (folder images/)
+  const CANDY_IMAGES = [
+    'images/candy1.png','images/candy2.png','images/candy3.png','images/candy4.png',
+    'images/candy5.png','images/candy6.png','images/candy7.png','images/candy8.png',
+    'images/candy9.png','images/candy10.png'
+  ];
 
-  // preload images (light)
-  const pool = CANDY_NAMES.map(n => IMAGE_BASE + n);
+  // Levels config (example) — अगर level.js अलग है तो यहाँ sync कर लो
+  const LEVELS = [ null,
+    { id:1, title:'Beginner', goalScore:100, rewardCoins:50, boardSize:8 },
+    { id:2, title:'Explorer', goalScore:300, rewardCoins:120, boardSize:8 },
+    { id:3, title:'Challenger', goalScore:700, rewardCoins:250, boardSize:9 }
+  ];
 
-  function randCandy(){
-    return pool[Math.floor(Math.random()*pool.length)];
-  }
-
-  function makeTile(src){
-    return { id: nextId++, src: src || randCandy() };
-  }
-
-  function setBoardSizeFromLevel(){
-    try{
-      const lvl = (window.LevelAPI && window.LevelAPI.getLevel) ? window.LevelAPI.getLevel() : StorageAPI.getLevel();
-      const info = (window.LevelAPI && window.LevelAPI.getInfo) ? window.LevelAPI.getInfo(lvl) : null;
-      BOARD_SIZE = info && info.boardSize ? info.boardSize : defaultSize;
-    }catch(e){
-      BOARD_SIZE = defaultSize;
-    }
-    SIZE = BOARD_SIZE * BOARD_SIZE;
-  }
-
-  function createGridDOM(){
-    const grid = document.getElementById('game-board');
-    if(!grid) return;
-    grid.innerHTML = '';
-    grid.style.gridTemplateColumns = `repeat(${BOARD_SIZE}, 1fr)`;
-    for(let i=0;i<SIZE;i++){
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.index = String(i);
-      const img = document.createElement('img');
-      img.className = 'tile';
-      img.draggable = false;
-      cell.appendChild(img);
-      cell.addEventListener('pointerdown', onPointerDown);
-      grid.appendChild(cell);
-    }
-  }
-
-  function render(dropMap){
-    const cells = document.querySelectorAll('#game-board .cell');
-    cells.forEach((cell, i)=>{
-      const img = cell.querySelector('.tile');
-      const tile = board[i];
-      if(tile){
-        if(img.dataset.src !== tile.src){
-          img.dataset.src = tile.src; img.src = tile.src;
-        }
-        cell.style.visibility = '';
-      } else {
-        img.dataset.src = ''; img.src = '';
-        cell.style.visibility = 'hidden';
-      }
-      cell.style.transform = '';
-      cell.classList.remove('selected-cell');
-      img.classList.remove('pop');
-      // dropMap handling for new tiles (optional)
-      if(dropMap && tile && dropMap[tile.id]){
-        cell.style.transform = `translateY(${dropMap[tile.id]})`;
-        requestAnimationFrame(()=> requestAnimationFrame(()=> { cell.style.transition = 'transform 320ms cubic-bezier(.2,.8,.2,1)'; cell.style.transform = ''; }));
-      }
-    });
-    updateHUD();
-  }
-
-  function initBoard(){
-    setBoardSizeFromLevel();
-    board = new Array(SIZE).fill(null).map(()=>makeTile());
-    // avoid initial matches by regenerating (simple)
-    let tries = 0;
-    while(findMatches().length > 0 && tries++ < 800){
-      board = new Array(SIZE).fill(null).map(()=>makeTile());
-    }
-    nextId = SIZE + 1;
-  }
-
-  /* ---------- Swap animation (cloned images) ---------- */
-  function tileEl(index){
-    return document.querySelector(`.cell[data-index="${index}"] .tile`);
-  }
-  function swapModel(i,j){ [board[i], board[j]] = [board[j], board[i]]; }
-
-  function swapWithAnimation(aIndex, bIndex){
-    return new Promise(resolve => {
-      const aTile = tileEl(aIndex), bTile = tileEl(bIndex);
-      if(!aTile || !bTile){
-        swapModel(aIndex, bIndex);
-        render();
-        return resolve(true);
-      }
-      const aRect = aTile.getBoundingClientRect(), bRect = bTile.getBoundingClientRect();
-      const dx = bRect.left - aRect.left, dy = bRect.top - aRect.top;
-
-      const aClone = aTile.cloneNode(true), bClone = bTile.cloneNode(true);
-      [aClone,bClone].forEach((cl, idx)=>{
-        cl.style.position = 'absolute';
-        cl.style.left = (idx===0 ? aRect.left : bRect.left) + 'px';
-        cl.style.top = (idx===0 ? aRect.top : bRect.top) + 'px';
-        cl.style.width = aRect.width + 'px';
-        cl.style.height = aRect.height + 'px';
-        cl.style.margin = 0; cl.style.transition = 'transform 220ms cubic-bezier(.2,.9,.2,1)'; cl.style.zIndex = 9999;
-        cl.classList.add('swap-moving');
-        document.body.appendChild(cl);
-      });
-
-      aTile.style.visibility = 'hidden'; bTile.style.visibility = 'hidden';
-
-      requestAnimationFrame(()=> {
-        aClone.style.transform = `translate(${dx}px, ${dy}px)`;
-        bClone.style.transform = `translate(${-dx}px, ${-dy}px)`;
-      });
-
-      const cleanup = ()=>{
-        aClone.remove(); bClone.remove();
-        aTile.style.visibility = ''; bTile.style.visibility = '';
-        swapModel(aIndex, bIndex);
-        render();
-        resolve(true);
-      };
-      setTimeout(cleanup, 300);
-    });
-  }
-
-  /* ---------- Match detection ---------- */
-  function findMatches(){
-    const matches = new Set();
-    // horizontal
-    for(let r=0;r<BOARD_SIZE;r++){
-      for(let c=0;c<BOARD_SIZE-2;c++){
-        const i = r*BOARD_SIZE + c;
-        if(board[i] && board[i+1] && board[i+2] &&
-           board[i].src === board[i+1].src && board[i].src === board[i+2].src){
-          let k=c;
-          while(k<BOARD_SIZE && board[r*BOARD_SIZE+k] && board[r*BOARD_SIZE+k].src === board[i].src){ matches.add(r*BOARD_SIZE+k); k++; }
-        }
-      }
-    }
-    // vertical
-    for(let c=0;c<BOARD_SIZE;c++){
-      for(let r=0;r<BOARD_SIZE-2;r++){
-        const i = r*BOARD_SIZE + c;
-        if(board[i] && board[i+BOARD_SIZE] && board[i+2*BOARD_SIZE] &&
-           board[i].src === board[i+BOARD_SIZE].src && board[i].src === board[i+2*BOARD_SIZE].src){
-          let k=r;
-          while(k<BOARD_SIZE && board[k*BOARD_SIZE + c] && board[k*BOARD_SIZE + c].src === board[i].src){ matches.add(k*BOARD_SIZE + c); k++; }
-        }
-      }
-    }
-    return Array.from(matches).sort((a,b)=>a-b);
-  }
-
-  /* ---------- Handle matches (pop -> gravity -> refill) ---------- */
-  function handleMatches(matches){
-    if(!matches || matches.length === 0) return;
-    locked = true;
-    // scoring & coins: each tile -> 10 points and +1 coin
-    const removedCount = matches.length;
-    score += removedCount * 10 * (combo || 1);
-    StorageAPI.addCoins(Math.floor(removedCount)); // 1 coin per tile
-    combo++;
-    // animate pop
-    matches.forEach(i=>{
-      const el = tileEl(i);
-      if(el){
-        el.classList.add('pop');
-        el.style.transition = 'transform 320ms, opacity 320ms';
-        el.style.transform = 'scale(0.2)';
-        el.style.opacity = '0';
-      }
-      board[i] = null;
-    });
-    updateHUD();
-    setTimeout(()=> {
-      // gravity + refill: build columns
-      const cols = [];
-      for(let c=0;c<BOARD_SIZE;c++){
-        const col = [];
-        for(let r=BOARD_SIZE-1;r>=0;r--){
-          const idx = r*BOARD_SIZE + c;
-          if(board[idx]) col.push(board[idx]);
-        }
-        cols.push(col);
-      }
-      const newBoard = new Array(SIZE).fill(null);
-      const dropMap = {};
-      const tilePx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile')) || 64;
-      const oldIds = new Set(board.filter(Boolean).map(t=>t.id));
-      for(let c=0;c<BOARD_SIZE;c++){
-        const col = cols[c];
-        while(col.length < BOARD_SIZE) col.push(makeTile());
-        for(let r=BOARD_SIZE-1,i=0;r>=0;r--,i++){
-          const tile = col[i];
-          newBoard[r*BOARD_SIZE + c] = tile;
-          if(!oldIds.has(tile.id)) dropMap[tile.id] = `-${(i+1)*tilePx}px`;
-        }
-      }
-      board = newBoard;
-      render(dropMap);
-      // chain detection
-      setTimeout(()=> {
-        const next = findMatches();
-        if(next.length>0) handleMatches(next);
-        else { combo = 1; locked = false; updateHUD(); }
-      }, 260);
-    }, 360);
-  }
-
-  /* ---------- Input (pointer drag to swap) ---------- */
-  function onPointerDown(e){
-    if(locked) return;
-    const el = e.currentTarget;
-    el.setPointerCapture && el.setPointerCapture(e.pointerId);
-    dragging = true; pointerId = e.pointerId; startIndex = Number(el.dataset.index);
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-  }
-  function onPointerMove(e){
-    if(!dragging || e.pointerId !== pointerId) return;
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    if(!target) return;
-    const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
-    if(!cell) return;
-    const idx = Number(cell.dataset.index);
-    if(Number.isNaN(idx)) return;
-    if(isAdjacent(startIndex, idx) && idx !== startIndex && !locked){
-      // attempt swap
-      locked = true;
-      swapWithAnimation(startIndex, idx).then(()=> {
-        const matches = findMatches();
-        if(matches.length>0){
-          moves = Math.max(0, moves-1);
-          handleMatches(matches);
-        } else {
-          // swap back
-          setTimeout(()=> {
-            swapWithAnimation(startIndex, idx).then(()=> { locked = false; updateHUD(); });
-          }, 260);
-        }
-      });
-      startIndex = idx;
-    }
-  }
-  function onPointerUp(e){
-    dragging = false; pointerId = null; startIndex = null;
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-  }
-  function isAdjacent(a,b){
-    if(a==null||b==null) return false;
-    const r1 = Math.floor(a/BOARD_SIZE), c1 = a%BOARD_SIZE, r2 = Math.floor(b/BOARD_SIZE), c2 = b%BOARD_SIZE;
-    return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
-  }
-
-  /* ---------- HUD ---------- */
-  function updateHUD(){
-    const s = document.getElementById('score'); if(s) s.textContent = score;
-    const m = document.getElementById('moves'); if(m) m.textContent = moves;
-    const coinsEl = document.getElementById('coins'); if(coinsEl) coinsEl.textContent = StorageAPI.getCoins();
-    if(window.refreshShopUI) window.refreshShopUI();
-    // check level completion via LevelAPI goal
-    try{
-      const level = (window.LevelAPI && window.LevelAPI.getLevel) ? window.LevelAPI.getLevel() : StorageAPI.getLevel();
-      const info = (window.LevelAPI && window.LevelAPI.getInfo) ? window.LevelAPI.getInfo(level) : null;
-      if(info && score >= info.goalScore){
-        // notify level API
-        if(window.LevelAPI && window.LevelAPI.onLevelComplete) window.LevelAPI.onLevelComplete();
-        // reset score (or you can keep cumulative), here we reset
-        score = 0;
-      }
-    }catch(e){}
-  }
-
-  /* ---------- Helper functions ---------- */
-  function shuffleBoard(){
-    const srcs = board.map(b => b ? b.src : randCandy());
-    for(let i=srcs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [srcs[i],srcs[j]]=[srcs[j],srcs[i]]; }
-    board = srcs.map(s => ({id: nextId++, src:s}));
-    render();
-    updateHUD();
-  }
-  function restartGame(){
-    initGame();
-  }
-  function addMoves(n){ moves = Number(moves||0) + Number(n||0); updateHUD(); }
-
-  /* ---------- Expose API to window ---------- */
-  window.initGame = function(){
-    try{
-      setBoardSizeFromLevel();
-      initBoard();
-      createGridDOM();
-      render();
-      score = 0; moves = 40; combo = 1;
-      updateHUD();
-      console.log('Game initialized. Board size:', BOARD_SIZE);
-    }catch(e){ console.error('initGame error', e); }
+  // state
+  let state = {
+    level: 1,
+    score: 0,
+    boardSize: 8,
+    board: [], // 2D array of indices into CANDY_IMAGES
+    selected: null, // {r,c,el}
+    running: false
   };
-  window.shuffleBoard = shuffleBoard;
-  window.restartGame = restartGame;
-  window.addMoves = addMoves;
-  window.buyFromShop = window.buyFromShop || function(item){ if(typeof window.buyFromShop === 'function') window.buyFromShop(item); };
 
-  // init hook (preload minimal images)
-  window.addEventListener('load', ()=> {
-    // create DOM cells if not present
-    const grid = document.getElementById('game-board');
-    if(grid && grid.children.length === 0) createGridDOM();
-  }, {passive:true});
+  // helper: safe get element
+  const $ = id => document.getElementById(id);
+
+  // safe StorageAPI shim (fir se check) - expect actual storage.js to exist
+  if(typeof window.StorageAPI === 'undefined'){
+    window.StorageAPI = {
+      getCoins(){ return Number(localStorage.getItem('coins')||0); },
+      addCoins(n){ const v = Number(localStorage.getItem('coins')||0)+Number(n||0); localStorage.setItem('coins', v); return v; },
+      getLevel(){ return Number(localStorage.getItem('level')||1); },
+      setLevel(l){ localStorage.setItem('level', Number(l||1)); }
+    };
+  }
+
+  // update coin display
+  function updateCoinDisplay(){
+    const el = $('coins');
+    if(el) el.textContent = StorageAPI.getCoins();
+    const shop = $('shopCoins'); if(shop) shop.textContent = StorageAPI.getCoins();
+  }
+
+  // update score UI
+  function updateScoreUI(){
+    const s = $('score'); if(s) s.textContent = state.score;
+  }
+
+  // update level UI
+  function updateLevelUI(){
+    const cur = $('currentLevel'); if(cur) cur.textContent = state.level;
+    const levelInfo = LEVELS[state.level] || LEVELS[1];
+    state.boardSize = levelInfo && levelInfo.boardSize ? levelInfo.boardSize : 8;
+    // adjust CSS grid columns
+    const board = $('game-board');
+    if(board){
+      board.style.gridTemplateColumns = `repeat(${state.boardSize}, 1fr)`;
+      board.style.gridTemplateRows = `repeat(${state.boardSize}, 1fr)`;
+    }
+  }
+
+  // Random index
+  function randIndex(){ return Math.floor(Math.random()*CANDY_IMAGES.length); }
+
+  // Create empty board + fill random candies
+  function initBoard() {
+    const n = state.boardSize;
+    state.board = [];
+    for(let r=0;r<n;r++){
+      const row = [];
+      for(let c=0;c<n;c++){
+        row.push(randIndex());
+      }
+      state.board.push(row);
+    }
+  }
+
+  // Render board DOM — each .cell contains an img.tile positioned normally.
+  function renderBoard(){
+    const boardEl = $('game-board');
+    if(!boardEl) { console.warn('renderBoard: #game-board missing'); return; }
+    boardEl.innerHTML = '';
+    const n = state.boardSize;
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        const idx = state.board[r][c];
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r; cell.dataset.c = c;
+        // make cell position:relative so we can animate child
+        cell.style.position = 'relative';
+        const img = document.createElement('img');
+        img.className = 'tile';
+        img.draggable = false;
+        img.src = CANDY_IMAGES[idx];
+        img.dataset.idx = idx;
+        img.style.transition = 'transform 240ms ease';
+        img.style.position = 'absolute';
+        img.style.left = '0';
+        img.style.top = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        cell.appendChild(img);
+        // click handler
+        cell.addEventListener('click', onCellClick);
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  // check adjacency
+  function areAdjacent(a,b){
+    if(!a||!b) return false;
+    const dr = Math.abs(a.r - b.r), dc = Math.abs(a.c - b.c);
+    return (dr===1 && dc===0) || (dr===0 && dc===1);
+  }
+
+  // get cell element by r,c
+  function getCellElement(r,c){
+    return document.querySelector(`#game-board .cell[data-r="${r}"][data-c="${c}"]`);
+  }
+
+  // click handler
+  function onCellClick(e){
+    const cell = e.currentTarget;
+    const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+    // if nothing selected -> select
+    if(!state.selected){
+      selectCell(r,c,cell);
+      return;
+    }
+    // if same cell -> deselect
+    if(state.selected.r===r && state.selected.c===c){
+      unselectCell();
+      return;
+    }
+    // if adjacent -> swap with animation
+    const sel = { r: state.selected.r, c: state.selected.c, el: state.selected.el };
+    const dest = { r, c, el: cell };
+    if(areAdjacent(sel,dest)){
+      unselectCell(); // clear selection UI
+      animateSwap(sel.el, dest.el, () => {
+        // swap data in board array
+        const tmp = state.board[sel.r][sel.c];
+        state.board[sel.r][sel.c] = state.board[dest.r][dest.c];
+        state.board[dest.r][dest.c] = tmp;
+        // update img srcs to match board state (after swap)
+        const imgA = sel.el.querySelector('img.tile');
+        const imgB = dest.el.querySelector('img.tile');
+        if(imgA && imgB){
+          const aIdx = state.board[sel.r][sel.c];
+          const bIdx = state.board[dest.r][dest.c];
+          imgA.src = CANDY_IMAGES[aIdx];
+          imgA.dataset.idx = aIdx;
+          imgB.src = CANDY_IMAGES[bIdx];
+          imgB.dataset.idx = bIdx;
+        }
+        // placeholder: score change on successful swap (you can replace with match logic)
+        addScore(10);
+      });
+    } else {
+      // not adjacent -> change selection to new
+      selectCell(r,c,cell);
+    }
+  }
+
+  function selectCell(r,c,el){
+    unselectCell();
+    state.selected = { r, c, el };
+    el.classList.add('selected-cell');
+    // visual highlight
+    el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+  }
+  function unselectCell(){
+    if(state.selected && state.selected.el){
+      state.selected.el.classList.remove('selected-cell');
+      state.selected.el.style.boxShadow = '';
+    }
+    state.selected = null;
+  }
+
+  // animate swap between two cell elements (move images smoothly)
+  function animateSwap(cellA, cellB, cb){
+    if(!cellA || !cellB){ if(cb) cb(); return; }
+    const imgA = cellA.querySelector('img.tile');
+    const imgB = cellB.querySelector('img.tile');
+    if(!imgA || !imgB){ if(cb) cb(); return; }
+
+    // compute offset between cells
+    const rectA = imgA.getBoundingClientRect();
+    const rectB = imgB.getBoundingClientRect();
+    const dx = rectB.left - rectA.left;
+    const dy = rectB.top - rectA.top;
+
+    // prepare transitions
+    imgA.style.transition = 'transform 260ms ease';
+    imgB.style.transition = 'transform 260ms ease';
+    imgA.style.transform = `translate(${dx}px, ${dy}px)`;
+    imgB.style.transform = `translate(${-dx}px, ${-dy}px)`;
+
+    // when done, clear transforms and call cb
+    let done = 0;
+    function onDone(){
+      done++;
+      if(done<2) return;
+      // cleanup
+      imgA.style.transition = '';
+      imgB.style.transition = '';
+      imgA.style.transform = '';
+      imgB.style.transform = '';
+      // callback after animation completes
+      if(cb) cb();
+    }
+    const tEndA = ()=>{ imgA.removeEventListener('transitionend', tEndA); onDone(); };
+    const tEndB = ()=>{ imgB.removeEventListener('transitionend', tEndB); onDone(); };
+    imgA.addEventListener('transitionend', tEndA);
+    imgB.addEventListener('transitionend', tEndB);
+
+    // safety fallback: if transitionend doesn't fire (rare), call after timeout
+    setTimeout(()=>{ try{ imgA.dispatchEvent(new Event('transitionend')); imgB.dispatchEvent(new Event('transitionend')); }catch(e){} }, 400);
+  }
+
+  // add score
+  function addScore(n){
+    state.score += Number(n||0);
+    updateScoreUI();
+    // check level completion
+    const info = LEVELS[state.level] || LEVELS[1];
+    if(state.score >= (info.goalScore || Infinity)){
+      state.score = 0;
+      updateScoreUI();
+      levelCompleted();
+    }
+  }
+
+  // level completed handler
+  function levelCompleted(){
+    const current = state.level;
+    const next = current + 1;
+    const reward = (LEVELS[current] && LEVELS[current].rewardCoins) ? LEVELS[current].rewardCoins : 0;
+    if(reward) StorageAPI.addCoins(reward);
+    if(LEVELS[next]){
+      StorageAPI.setLevel(next);
+      state.level = next;
+      updateLevelUI();
+      showLevelUpModal(next, reward);
+    } else {
+      showLevelUpModal(current, reward, true);
+    }
+    updateCoinDisplay();
+  }
+
+  function showLevelUpModal(level, coinsReward, last=false){
+    const modal = $('levelUpModal'); if(!modal) return;
+    const title = $('levelUpTitle'); const text = $('levelUpText');
+    if(title) title.textContent = last ? 'All Levels Complete!' : 'Level Up!';
+    if(text) text.textContent = last ? `You finished level ${level}. Reward ${coinsReward} coins.` :
+                                       `Level ${level-1} complete. Level ${level} unlocked! Reward ${coinsReward} coins.`;
+    modal.style.display = 'flex';
+  }
+
+  // Public API
+  window.initGame = function(){
+    try {
+      state.level = StorageAPI.getLevel() || 1;
+      state.score = 0;
+      state.running = true;
+      updateLevelUI();
+      initBoard();
+      renderBoard();
+      updateScoreUI();
+      updateCoinDisplay();
+      console.log('Game initialized at level', state.level);
+    } catch(err){
+      console.error('initGame error', err);
+    }
+  };
+
+  window.restartGame = function(){
+    state.score = 0;
+    initBoard();
+    renderBoard();
+    updateScoreUI();
+    console.log('Game restarted');
+  };
+
+  window.shuffleBoard = function(){
+    // reshuffle: randomize indices, update images
+    for(let r=0;r<state.boardSize;r++){
+      for(let c=0;c<state.boardSize;c++){
+        state.board[r][c] = randIndex();
+      }
+    }
+    renderBoard();
+    console.log('Board shuffled');
+  };
+
+  // shop buy handler (called from safe-ui)
+  window.buyFromShop = function(item){
+    const prices = { bomb:200, shuffle:100, moves:80, rainbow:350 };
+    const p = prices[item] || 0;
+    const coins = StorageAPI.getCoins();
+    if(coins >= p){
+      StorageAPI.addCoins(-p);
+      updateCoinDisplay();
+      if(item==='shuffle') shuffleBoard();
+      console.log('Bought', item);
+    } else {
+      console.warn('Not enough coins', item);
+    }
+  };
+
+  window.addCoins = function(n){
+    StorageAPI.addCoins(Number(n||0));
+    updateCoinDisplay();
+  };
+
+  // helper: safe init if DOM ready
+  document.addEventListener('DOMContentLoaded', ()=> {
+    // if someone called initGame earlier, it's fine; else auto-init not required
+    console.log('Loaded: js/game.js');
+  });
 
 })();
