@@ -1,213 +1,269 @@
-// js/game.js
-// 🍬 Candy Match Game Core with Level Unlock + Safe UI Integration
+// ========================= Candy Match (Stable) =========================
+// Fixed version: candies no longer change when swapped
+// Includes: level, coins, shop compatibility
+
 (function(){
-  // =============== CONFIGURATION ===============
-  const LEVELS = [
-    null,
-    { id:1, title:'Beginner', goalScore: 100, rewardCoins: 50, boardSize:8 },
-    { id:2, title:'Explorer', goalScore: 300, rewardCoins: 120, boardSize:8 },
-    { id:3, title:'Challenger', goalScore: 700, rewardCoins: 250, boardSize:9 },
-    { id:4, title:'Master', goalScore: 1500, rewardCoins: 600, boardSize:9 }
+  // --- Game config ---
+  const WIDTH = 6;        // columns
+  const HEIGHT = 8;       // rows
+  const SIZE = WIDTH * HEIGHT;
+  const IMGPATH = "images/";
+  const CANDIES = [
+    "candy1.png","candy2.png","candy3.png","candy4.png",
+    "candy5.png","candy6.png","candy7.png","candy8.png"
   ];
 
-  const CANDY_IMAGES = [
-    'candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png','candy7.png','candy8.png'
-  ];
+  // --- State ---
+  let board = [];
+  let selectedIndex = null;
+  let score = 0;
+  let combo = 1;
+  let isResolving = false;
+  let nextId = 1;
 
-  // =============== GAME STATE ===============
-  let state = {
-    level: 1,
-    score: 0,
-    boardSize: 8,
-    running: false
-  };
-
+  // --- Helpers ---
   const $ = id => document.getElementById(id);
+  const randCandy = () => IMGPATH + CANDIES[Math.floor(Math.random() * CANDIES.length)];
+  const makeTile = () => ({ id: nextId++, src: randCandy() });
 
-  // =============== UI HELPERS ===============
-  window.updateCoinDisplay = function(){
-    const el = $('coins');
-    if(el) el.textContent = StorageAPI.getCoins();
-    const shopCoins = $('shopCoins');
-    if(shopCoins) shopCoins.textContent = StorageAPI.getCoins();
+  // --- Storage API ---
+  const StorageAPI = {
+    getCoins(){ return Number(localStorage.getItem('cm_coins') || 0); },
+    addCoins(n){ const v = this.getCoins() + Number(n||0); localStorage.setItem('cm_coins', String(Math.max(0,v))); },
+    getLevel(){ return Number(localStorage.getItem('cm_level') || 1); },
+    setLevel(l){ localStorage.setItem('cm_level', String(l)); }
   };
 
-  function updateLevelUI(){
-    const lvl = state.level;
-    const info = LEVELS[lvl] || LEVELS[1];
-    const cur = $('currentLevel');
-    if(cur) cur.textContent = lvl;
-
-    state.boardSize = info.boardSize || 8;
-    const board = $('game-board');
-    if(board){
-      try {
-        board.style.gridTemplateColumns = `repeat(${state.boardSize}, 1fr)`;
-        board.style.gridTemplateRows = `repeat(${state.boardSize}, 1fr)`;
-      } catch(e){ console.warn('Board style update failed', e); }
-    }
+  // --- Init ---
+  function initBoard(){
+    nextId = 1;
+    board = new Array(SIZE).fill(null).map(()=> makeTile());
+    score = 0;
+    combo = 1;
+    selectedIndex = null;
+    render();
   }
 
-  // =============== LEVEL COMPLETION ===============
-  function levelCompleted(){
-    const curLevel = state.level;
-    const nextLevel = curLevel + 1;
-    const reward = (LEVELS[curLevel] && LEVELS[curLevel].rewardCoins) ? LEVELS[curLevel].rewardCoins : 0;
+  // --- Render ---
+  function render(dropMap){
+    const grid = $('game-board') || $('board');
+    if(!grid) return console.warn('No board element found');
 
-    if(reward) StorageAPI.addCoins(reward);
+    grid.style.gridTemplateColumns = `repeat(${WIDTH}, var(--tile))`;
+    grid.innerHTML = '';
 
-    if(LEVELS[nextLevel]){
-      StorageAPI.setLevel(nextLevel);
-      state.level = nextLevel;
-      showLevelUpModal(nextLevel, reward);
-      updateLevelUI();
+    for(let i=0;i<SIZE;i++){
+      const tile = board[i];
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+
+      const img = document.createElement('img');
+      img.className = 'tile';
+      img.draggable = false;
+
+      // ✅ fix: show same candy, not new random
+      if(tile && tile.src){
+        img.src = tile.src;
+        img.style.visibility = '';
+      } else {
+        img.src = '';
+        img.style.visibility = 'hidden';
+      }
+
+      cell.appendChild(img);
+
+      // selection
+      if(selectedIndex === i) cell.classList.add('selected');
+
+      // clicking logic
+      cell.addEventListener('click', () => onCellClick(i));
+
+      grid.appendChild(cell);
+    }
+
+    // Update HUD
+    const s = $('score'); if(s) s.textContent = score;
+    const c = $('coins'); if(c) c.textContent = StorageAPI.getCoins();
+    const sc = $('shopCoins'); if(sc) sc.textContent = StorageAPI.getCoins();
+    const lvl = $('currentLevel'); if(lvl) lvl.textContent = StorageAPI.getLevel();
+  }
+
+  // --- Click handler ---
+  function onCellClick(i){
+    if(isResolving) return;
+    if(selectedIndex === null){
+      selectedIndex = i;
+      render();
+      return;
+    }
+
+    if(selectedIndex === i){
+      selectedIndex = null;
+      render();
+      return;
+    }
+
+    // Only swap adjacent
+    if(!isAdjacent(selectedIndex, i)){
+      selectedIndex = i;
+      render();
+      return;
+    }
+
+    swapTiles(selectedIndex, i);
+    render();
+    const matches = findMatches();
+    if(matches.length){
+      resolveMatches(matches);
     } else {
-      showLevelUpModal(curLevel, reward, true);
+      // revert after small delay
+      setTimeout(()=> {
+        swapTiles(selectedIndex, i);
+        render();
+      }, 250);
     }
-
-    updateCoinDisplay();
+    selectedIndex = null;
   }
 
-  function showLevelUpModal(level, coinsReward, last=false){
-    const modal = $('levelUpModal');
-    if(!modal){ console.warn('Modal missing'); return; }
-
-    const title = $('levelUpTitle');
-    const text = $('levelUpText');
-    if(title) title.textContent = last ? '🎉 All Levels Complete!' : 'Level Up!';
-    if(text) text.textContent = last
-      ? `You completed level ${level}. Reward: ${coinsReward} coins.`
-      : `Level ${level-1} complete. Level ${level} unlocked! Reward: ${coinsReward} coins.`;
-
-    try { modal.style.display = 'flex'; } catch(e){ console.warn('Modal style error', e); }
+  // --- Helpers ---
+  function isAdjacent(a,b){
+    const r1 = Math.floor(a/WIDTH), c1 = a%WIDTH;
+    const r2 = Math.floor(b/WIDTH), c2 = b%WIDTH;
+    return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
   }
 
-  function initLevelModalClose(){
-    const btn = $('levelUpClose');
-    if(btn){
-      btn.addEventListener('click', () => {
-        const modal = $('levelUpModal');
-        if(modal) modal.style.display = 'none';
-      });
-    }
+  function swapTiles(a,b){
+    [board[a], board[b]] = [board[b], board[a]];
   }
 
-  // =============== BOARD CREATION ===============
-  function randCandy(){
-    const i = Math.floor(Math.random() * CANDY_IMAGES.length);
-    return `images/${CANDY_IMAGES[i]}`;
-  }
-
-  function createBoard(){
-    const board = $('game-board');
-    if(!board){ console.error('No game-board element'); return; }
-    board.innerHTML = '';
-
-    const size = state.boardSize;
-    for(let r=0; r<size; r++){
-      for(let c=0; c<size; c++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.r = r;
-        cell.dataset.c = c;
-
-        const img = document.createElement('img');
-        img.className = 'tile';
-        img.draggable = false;
-        img.src = randCandy();
-
-        cell.appendChild(img);
-        board.appendChild(cell);
-
-        cell.addEventListener('click', () => {
-          cell.classList.toggle('selected-cell');
-        });
+  // --- Match detection ---
+  function findMatches(){
+    const set = new Set();
+    // horizontal
+    for(let r=0;r<HEIGHT;r++){
+      for(let c=0;c<WIDTH-2;c++){
+        const i = r*WIDTH + c;
+        if(board[i] && board[i+1] && board[i+2] &&
+           board[i].src === board[i+1].src &&
+           board[i].src === board[i+2].src){
+          set.add(i); set.add(i+1); set.add(i+2);
+          let k=c+3;
+          while(k<WIDTH && board[r*WIDTH+k] && board[r*WIDTH+k].src===board[i].src){
+            set.add(r*WIDTH+k); k++;
+          }
+        }
       }
     }
-  }
-
-  // =============== SCORE SYSTEM ===============
-  function updateScoreUI(){
-    const s = $('score');
-    if(s) s.textContent = state.score;
-  }
-
-  function addScore(n){
-    state.score += Number(n || 0);
-    updateScoreUI();
-
-    const info = LEVELS[state.level] || LEVELS[1];
-    if(state.score >= (info.goalScore || Infinity)){
-      state.score = 0;
-      updateScoreUI();
-      try { levelCompleted(); } catch(e){ console.error('level complete error', e); }
+    // vertical
+    for(let c=0;c<WIDTH;c++){
+      for(let r=0;r<HEIGHT-2;r++){
+        const i = r*WIDTH + c;
+        if(board[i] && board[i+WIDTH] && board[i+2*WIDTH] &&
+           board[i].src===board[i+WIDTH].src &&
+           board[i].src===board[i+2*WIDTH].src){
+          set.add(i); set.add(i+WIDTH); set.add(i+2*WIDTH);
+          let k=r+3;
+          while(k<HEIGHT && board[k*WIDTH+c] && board[k*WIDTH+c].src===board[i].src){
+            set.add(k*WIDTH+c); k++;
+          }
+        }
+      }
     }
+    return Array.from(set);
   }
 
-  // =============== PUBLIC API ===============
-  window.initGame = function(){
-    try {
-      state.level = StorageAPI.getLevel();
-      state.score = 0;
-      state.running = true;
+  // --- Resolve matches ---
+  function resolveMatches(matches){
+    if(matches.length===0) return;
+    isResolving = true;
 
-      updateLevelUI();
-      createBoard();
-      updateScoreUI();
-      updateCoinDisplay();
-      initLevelModalClose();
+    matches.forEach(i => { board[i] = null; });
 
-      console.log('🎮 Game initialized at level', state.level);
-    } catch(err){
-      console.error('Error: initGame error', err);
+    // scoring
+    score += matches.length * 10 * combo;
+    const coinGain = Math.floor(matches.length / 3) * 5;
+    if(coinGain > 0){
+      StorageAPI.addCoins(coinGain);
+      showCoinPopup('+' + coinGain + ' 💰');
     }
-  };
 
-  window.restartGame = function(){
-    state.score = 0;
-    createBoard();
-    updateScoreUI();
-    console.log('🔁 Game restarted');
-  };
+    render();
 
-  window.shuffleBoard = function(){
-    const imgs = document.querySelectorAll('#game-board .tile');
-    if(!imgs.length){ console.warn('No tiles found to shuffle'); return; }
-    imgs.forEach(img => { img.src = randCandy(); });
-    console.log('🔀 Board shuffled');
-  };
+    setTimeout(()=>{
+      // gravity
+      for(let c=0;c<WIDTH;c++){
+        const stack = [];
+        for(let r=HEIGHT-1;r>=0;r--){
+          const idx = r*WIDTH + c;
+          if(board[idx]) stack.push(board[idx]);
+        }
+        while(stack.length<HEIGHT) stack.push(makeTile());
+        for(let r=HEIGHT-1,i=0;r>=0;r--,i++){
+          board[r*WIDTH + c] = stack[i];
+        }
+      }
+      render();
+      const nextMatches = findMatches();
+      if(nextMatches.length){
+        setTimeout(()=>resolveMatches(nextMatches), 200);
+      } else {
+        combo = 1;
+        isResolving = false;
+      }
+    }, 300);
+  }
 
+  // --- Coin popup ---
+  function showCoinPopup(text){
+    const el = document.createElement('div');
+    el.className = 'coin-popup';
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1000);
+  }
+
+  // --- Restart & Shuffle ---
+  function restartGame(){
+    initBoard();
+  }
+
+  function shuffleBoard(){
+    const srcs = board.map(t => t ? t.src : randCandy());
+    for(let i=srcs.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [srcs[i],srcs[j]]=[srcs[j],srcs[i]];
+    }
+    for(let i=0;i<SIZE;i++){
+      board[i].src = srcs[i];
+    }
+    render();
+  }
+
+  // --- Shop handler ---
   window.buyFromShop = function(item){
-    const coins = StorageAPI.getCoins();
-    const prices = { bomb:200, shuffle:100, moves:80, rainbow:350 };
-    const p = prices[item] || 0;
-
-    if(coins >= p){
-      StorageAPI.addCoins(-p);
-      if(item === 'shuffle') shuffleBoard();
-      console.log('🛒 Bought', item);
-      updateCoinDisplay();
-    } else {
-      console.warn('Not enough coins for', item);
+    const prices = {bomb:200, shuffle:100, moves:80, rainbow:350};
+    const price = prices[item] || 0;
+    if(StorageAPI.getCoins() < price){
+      alert('कॉइन्स कम हैं!');
+      return;
     }
+    StorageAPI.addCoins(-price);
+    if(item==='shuffle') shuffleBoard();
+    if(item==='moves') showCoinPopup('+10 Moves ✨');
+    render();
   };
 
-  window.addScore = addScore;
-
-  window.addCoins = function(n){
-    StorageAPI.addCoins(Number(n||0));
-    updateCoinDisplay();
+  // --- Expose for UI ---
+  window.initGame = function(){
+    initBoard();
+    score = 0;
+    render();
+    console.log("✅ Game initialized");
   };
+  window.restartGame = restartGame;
+  window.shuffleBoard = shuffleBoard;
 
-  window.setGameLevel = function(l){
-    StorageAPI.setLevel(l);
-    state.level = StorageAPI.getLevel();
-    updateLevelUI();
-  };
-
-  // =============== INIT CHECK ===============
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Game script loaded safely');
-  });
-
+  // --- Auto load message ---
+  console.log("🎮 game.js loaded successfully (no random swap bug)");
 })();
