@@ -1,136 +1,16 @@
-/* ===== Candy Game Board Styling ===== */
-
-body {
-  margin: 0;
-  padding: 0;
-  font-family: "Poppins", sans-serif;
-  background: linear-gradient(180deg, #ffd7e6 0%, #ffe7d9 100%), url('../images/bg-gradient.png') center/cover no-repeat;
-  background-attachment: fixed;
-  background-blend-mode: soft-light;
-  color: #3b2a24;
-  overflow: hidden;
-}
-
-/* sprinkle overlay */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url('../images/candy-sprinkle.png');
-  background-repeat: repeat;
-  background-size: 220px;
-  opacity: 0.05;
-  pointer-events: none;
-}
-
-/* Game board grid */
-#game-board {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(8, 1fr);
-  gap: 5px;
-  width: 90vmin;
-  height: 90vmin;
-  max-width: 420px;
-  max-height: 420px;
-  margin: 80px auto 0;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 6px;
-}
-
-/* Each grid cell */
-.cell {
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-/* Candy image */
-.tile {
-  width: 95%;
-  height: 95%;
-  object-fit: contain;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.tile.pop {
-  transform: scale(0);
-  opacity: 0;
-}
-
-/* HUD (Score and Coins) */
-#score, #coins {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #3b2a24;
-  text-shadow: 0 2px 4px rgba(255,255,255,0.6);
-}
-
-#coins {
-  position: fixed;
-  top: 16px;
-  right: 20px;
-  background: #ffffffb3;
-  padding: 6px 12px;
-  border-radius: 10px;
-}
-
-#score {
-  position: fixed;
-  top: 16px;
-  left: 20px;
-  background: #ffffffb3;
-  padding: 6px 12px;
-  border-radius: 10px;
-}
-
-/* Buttons */
-button {
-  background: linear-gradient(45deg, #ff66cc, #ff9966);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 16px;
-  color: white;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(45deg, #ff3385, #ff6600);
-}
-
-/* Shop modal */
-#shopModal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  background: rgba(0, 0, 0, 0.85);
-  z-index: 20;
-}
-
-#shopModal button {
-  margin: 6px 0;
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  #game-board {
-    width: 94vmin;
-    height: 94vmin;
-    gap: 3px;
-  }
-  .tile {
-    width: 90%;
-    height: 90%;
-  }
-  }
+/* css/game.css */
+body{margin:0;font-family:"Poppins",sans-serif;background:linear-gradient(180deg,#fff0f4,#ffe7ee);}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px;max-width:980px;margin:0 auto;}
+.topbar button{padding:8px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);}
+.score-block{font-size:24px;font-weight:700;margin-left:12px;}
+.level-block,.coins-block{margin-left:auto;background:#fff;padding:6px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);}
+.board{max-width:720px;margin:20px auto;background:rgba(255,255,255,0.9);padding:14px;border-radius:18px;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;box-shadow:0 10px 30px rgba(0,0,0,0.06);}
+.cell{background:rgba(255,255,255,0.9);border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;min-height:48px;}
+.cell .tile{width:44px;height:44px;touch-action:none;user-select:none;}
+.selected-cell{outline:3px solid rgba(255,139,173,0.6);border-radius:10px;}
+.controls{display:flex;justify-content:center;gap:12px;margin:18px 0;}
+.controls button{padding:12px 18px;border-radius:12px;border:0;background:linear-gradient(90deg,#ffb6d9,#ff8fc1);color:white;font-weight:700;}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:999;}
+.modal-card{background:white;padding:16px;border-radius:12px;min-width:260px;max-width:420px;}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.shop-item{background:#fff7fb;padding:8px;border-radius:8px;text-align:center;}
