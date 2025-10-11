@@ -3,40 +3,44 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Level Map — Candy</title>
+  <title>🍬 Candy Crush Map</title>
   <link rel="stylesheet" href="css/level-map.css">
 </head>
 <body>
-  <!-- optional eruda for mobile debugging -->
+  <!-- Eruda (debug console, optional) -->
   <script>
     (function(){
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function(){ try{ eruda.init(); console.log('Eruda loaded'); }catch(e){ } };
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/eruda';
+      s.onload=function(){ try{eruda.init();console.log('🐞 Eruda loaded');}catch(e){} };
       document.body.appendChild(s);
     })();
   </script>
 
   <header class="map-header">
     <button id="mapBackBtn" class="small-btn">⬅ Home</button>
-    <h1 class="map-title">🍬 Candy Adventure</h1>
-    <div id="coinsBubble" class="coins-bubble">Coins: <span id="mapCoins">0</span></div>
+    <h1 class="map-title">Candy Adventure</h1>
+    <div id="mapCoinsBubble" class="coins-bubble">💰 <span id="mapCoins">0</span></div>
   </header>
 
-  <main class="map-wrap">
-    <div class="map-scene">
-      <div class="map-path" id="mapPath">
-        <!-- nodes will be injected by JS -->
-      </div>
-    </div>
+  <main class="map-container">
+    <div class="map-bg"></div>
+
+    <svg class="path-line" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 1600" preserveAspectRatio="xMidYMid meet">
+      <path d="M150,0 C230,150 70,300 150,450 C230,600 70,750 150,900 C230,1050 70,1200 150,1350 C230,1500 150,1600 150,1600" stroke="#ffd6ec" stroke-width="8" fill="none" stroke-linecap="round" />
+      <circle r="5" fill="#ff99cc">
+        <animateMotion dur="10s" repeatCount="indefinite" path="M150,0 C230,150 70,300 150,450 C230,600 70,750 150,900 C230,1050 70,1200 150,1350 C230,1500 150,1600 150,1600"/>
+      </circle>
+    </svg>
+
+    <div id="levelNodes"></div>
   </main>
 
-  <!-- level up modal / info -->
-  <div id="mapToast" class="map-toast" style="display:none;"></div>
-
   <footer class="map-footer">
-    <div>टैप करके level चुनें — unlocked levels पर ही जा सकते हैं</div>
+    टैप करके level चुनें — locked levels पर क्लिक नहीं होगा 🍭
   </footer>
+
+  <div id="mapToast" class="map-toast" style="display:none;"></div>
 
   <script src="js/level-map.js"></script>
 </body>
