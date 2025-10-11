@@ -3,150 +3,89 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match 🍬</title>
-
-  <!-- CSS FILES -->
+  <title>Candy Match — Demo</title>
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/inventory.css">
-
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(180deg, #ffe6f1 0%, #fff9fd 100%);
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .screen { display:none; }
-    .screen.active { display:block; }
-    button { cursor:pointer; }
-    #game-board {
-      display:grid;
-      gap:8px;
-      max-width:520px;
-      margin:20px auto;
-    }
-    .cell {
-      width:100%;
-      aspect-ratio:1/1;
-      background:#fff9;
-      border-radius:10px;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 1px 3px rgba(0,0,0,0.08);
-      transition:transform 0.2s;
-    }
-    .cell:hover { transform:scale(1.05); }
-    .tile { width:100%; height:100%; object-fit:contain; transition:transform 0.2s; }
-    .tile.pop { animation:pop 0.35s ease-out; }
-    @keyframes pop {
-      0% { transform:scale(1); opacity:1; }
-      100% { transform:scale(0); opacity:0; }
-    }
-  </style>
 </head>
-
 <body>
-  <!-- 🏠 Home Screen -->
-  <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
-    <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 class="title" style="margin:10px 0; font-size:32px; color:#d44a8c;">🍭 Candy Match</h1>
-    <p class="subtitle" style="color:#6b5b5b;margin:0;">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px;">
-      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🎮 Start</button>
-      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🛒 Shop</button>
+  <!-- HOME / LEVEL SELECT SCREEN -->
+  <div id="home-screen" class="screen active">
+    <div class="home-card">
+      <img src="images/candy1.png" alt="logo" class="logo">
+      <h1>🍭 Candy Match</h1>
+      <p class="subtitle">स्वीट गेम — मोबाइल फ्रेंडली</p>
+
+      <div class="home-controls">
+        <button id="levelMapBtn">🗺️ Level Map</button>
+        <button id="startBtn">🎮 Start (Current Level)</button>
+        <button id="shopBtn">🛒 Shop</button>
+      </div>
+
+      <div class="madeby">Made with ❤️ — Arun App Studio</div>
     </div>
   </div>
 
-  <!-- 🎮 Game Screen -->
-  <div id="game-screen" class="screen" style="padding:10px 12px;">
-    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
-      <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
-      <h2 style="margin:0;">Score: <span id="score">0</span></h2>
-      <div id="levelBadge" style="margin-left:12px;background:#fff5;padding:6px 10px;border-radius:12px;">Level: <span id="currentLevel">1</span></div>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+  <!-- LEVEL SCREEN (simple single level view before play) -->
+  <div id="level-screen" class="screen">
+    <div class="level-card">
+      <h2>Level <span id="currentLevel">1</span></h2>
+      <p id="levelTitle">Beginner</p>
+      <p id="levelGoal">Goal: <span id="levelGoalScore">100</span> points</p>
+      <button id="levelStartBtn">Start Level</button>
+      <button id="backToHomeFromLevel">Back</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div class="topbar">
+      <button id="backHome">⬅️ Home</button>
+      <div class="score-block">Score: <span id="score">0</span></div>
+      <div class="level-block">Level: <span id="currentLevelTop">1</span></div>
+      <div class="coins-block">Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="game-board" class="board"></div>
+    <div id="game-board" class="board" aria-live="polite"></div>
 
-    <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
+    <div class="controls">
       <button id="restartBtn">Restart</button>
       <button id="shuffleBtn">Shuffle</button>
-      <button id="openShopBtn">Shop</button>
+      <button id="openShopBtn">Open Shop</button>
     </div>
   </div>
 
-  <!-- 🛒 Shop Modal -->
-  <div id="shopModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:999;">
-    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:480px;">
+  <!-- SHOP modal -->
+  <div id="shopModal" class="modal" aria-hidden="true" style="display:none">
+    <div class="modal-card">
       <h3>🛒 Shop</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-        <div style="text-align:center;background:#fff7fb;padding:10px;border-radius:10px;">
-          💣 Bomb<br>₹200<br><button id="buyBomb">Buy</button>
-        </div>
-        <div style="text-align:center;background:#fff7fb;padding:10px;border-radius:10px;">
-          🔀 Shuffle<br>₹100<br><button id="buyShuffle">Buy</button>
-        </div>
-        <div style="text-align:center;background:#fff7fb;padding:10px;border-radius:10px;">
-          ➕ Moves<br>₹80<br><button id="buyMoves">Buy</button>
-        </div>
-        <div style="text-align:center;background:#fff7fb;padding:10px;border-radius:10px;">
-          🌈 Rainbow<br>₹350<br><button id="buyRainbow">Buy</button>
-        </div>
+      <div>Your Coins: <span id="shopCoins">0</span></div>
+      <div class="shop-grid">
+        <div class="shop-item"><div>💣 Bomb</div><div>₹200</div><button id="buyBomb">Buy</button></div>
+        <div class="shop-item"><div>🔀 Shuffle</div><div>₹100</div><button id="buyShuffle">Buy</button></div>
       </div>
-      <div style="text-align:right;margin-top:10px;"><button id="closeShop">Close</button></div>
-      <div style="margin-top:10px;color:#666;font-size:14px;">Your Coins: <span id="shopCoins">0</span></div>
+      <div style="text-align:right"><button id="closeShop">Close</button></div>
     </div>
   </div>
 
-  <!-- 🆙 Level Up Modal -->
-  <div id="levelUpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:1000;">
-    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:400px;text-align:center;">
+  <!-- Level Up modal -->
+  <div id="levelUpModal" class="modal" style="display:none">
+    <div class="modal-card">
       <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpText">Next level unlocked!</p>
+      <p id="levelUpText"></p>
       <button id="levelUpClose">Continue</button>
     </div>
   </div>
 
-  <div style="text-align:center;margin:22px;color:#888;">Made with ❤️ Arun App Studio</div>
-
-  <!-- JS FILES -->
+  <!-- scripts -->
+  <script src="js/eruda-loader.js"></script>   <!-- optional console -->
   <script src="js/storage.js"></script>
+  <script src="js/safe-ui.js"></script>
+  <script src="js/level-map.js"></script>
   <script src="js/game.js"></script>
-  <script src="js/level.js"></script>
-  <script src="js/inventory.js"></script>
   <script src="js/shop.js"></script>
-  <script src="js/parallax.js"></script>
+  <script src="js/inventory.js"></script>
 
-  <!-- Safe UI Script -->
-  <script>
-    (function(){
-      const $=id=>document.getElementById(id);
-      function safeAdd(id,evt,h){let el=$(id);if(!el)return;el.addEventListener(evt,h);}
-      document.addEventListener('DOMContentLoaded',()=>{
-        console.log("✅ SafeUI Loaded");
-        safeAdd('startBtn','click',()=>{ $('home-screen').classList.remove('active'); $('game-screen').classList.add('active'); if(typeof initGame==='function')initGame();});
-        safeAdd('backBtn','click',()=>{ $('game-screen').classList.remove('active'); $('home-screen').classList.add('active');});
-        const openShop=()=>{const m=$('shopModal');if(m)m.style.display='flex';};
-        safeAdd('shopBtn','click',openShop);
-        safeAdd('openShopBtn','click',openShop);
-        safeAdd('closeShop','click',()=>$('shopModal').style.display='none');
-        safeAdd('levelUpClose','click',()=>$('levelUpModal').style.display='none');
-      });
-    })();
-  </script>
-
-  <!-- Eruda Console -->
-  <script>
-    (function(){
-      let s=document.createElement('script');
-      s.src="https://cdn.jsdelivr.net/npm/eruda";
-      s.onload=function(){eruda.init();console.log("🐞 Eruda Console Loaded");};
-      document.body.appendChild(s);
-    })();
-  </script>
+  <!-- small inline fallback to ensure console logs appear -->
+  <script>console.log('index.html loaded');</script>
 </body>
 </html>
