@@ -1,46 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🍬 Candy Crush Map</title>
+  <title>🍬 Candy Adventure — Level Map</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="css/level-map.css">
-</head>
-<body>
-  <!-- Eruda (debug console, optional) -->
+
+  <!-- Eruda (mobile console) - optional -->
   <script>
     (function(){
-      const s=document.createElement('script');
+      var s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/eruda';
-      s.onload=function(){ try{eruda.init();console.log('🐞 Eruda loaded');}catch(e){} };
-      document.body.appendChild(s);
+      s.onload=function(){ try{eruda.init(); console.log('🐞 Eruda started');}catch(e){} };
+      document.body && document.body.appendChild(s);
     })();
   </script>
-
+</head>
+<body>
   <header class="map-header">
     <button id="mapBackBtn" class="small-btn">⬅ Home</button>
     <h1 class="map-title">Candy Adventure</h1>
     <div id="mapCoinsBubble" class="coins-bubble">💰 <span id="mapCoins">0</span></div>
   </header>
 
-  <main class="map-container">
-    <div class="map-bg"></div>
+  <main class="map-container" id="mapContainer">
+    <!-- Decorative parallax background layers -->
+    <div class="bg-layer bg-jungle" id="bgJungle"></div>
+    <div class="bg-layer bg-clouds" id="bgClouds"></div>
+    <div class="bg-layer bg-foreground" id="bgFore"></div>
 
-    <svg class="path-line" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 1600" preserveAspectRatio="xMidYMid meet">
-      <path d="M150,0 C230,150 70,300 150,450 C230,600 70,750 150,900 C230,1050 70,1200 150,1350 C230,1500 150,1600 150,1600" stroke="#ffd6ec" stroke-width="8" fill="none" stroke-linecap="round" />
-      <circle r="5" fill="#ff99cc">
-        <animateMotion dur="10s" repeatCount="indefinite" path="M150,0 C230,150 70,300 150,450 C230,600 70,750 150,900 C230,1050 70,1200 150,1350 C230,1500 150,1600 150,1600"/>
-      </circle>
+    <!-- SVG path (keeps fixed width; nodes positioned by JS relative to container) -->
+    <svg class="path-line" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 1600" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <path id="pathCurve" d="M150,0 C230,150 70,300 150,450 C230,600 70,750 150,900 C230,1050 70,1200 150,1350 C230,1500 150,1600 150,1600" stroke="#ffd6ec" stroke-width="8" fill="none" stroke-linecap="round" />
     </svg>
 
-    <div id="levelNodes"></div>
+    <!-- nodes container -->
+    <div id="levelNodes" class="level-nodes" aria-live="polite"></div>
   </main>
+
+  <div id="mapToast" class="map-toast" style="display:none;"></div>
 
   <footer class="map-footer">
     टैप करके level चुनें — locked levels पर क्लिक नहीं होगा 🍭
   </footer>
-
-  <div id="mapToast" class="map-toast" style="display:none;"></div>
 
   <script src="js/level-map.js"></script>
 </body>
