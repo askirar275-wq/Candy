@@ -1,4 +1,5 @@
-// js/safe-ui.js
+if (window._safeUIInitialized) return;
+window._safeUIInitialized = true;// js/safe-ui.js
 (function(){
   function $id(id){ return document.getElementById(id); }
   function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
