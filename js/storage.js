@@ -1,4 +1,4 @@
-// js/storage.js (simple fallback)
+// js/storage.js
 window.StorageAPI = (function(){
   const KEY_LEVEL = 'candy_level_v1';
   const KEY_COINS = 'candy_coins_v1';
