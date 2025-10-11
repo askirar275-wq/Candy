@@ -1,0 +1,78 @@
+/* css/level-map.css - Candy style level map */
+
+:root{
+  --bg1:#ffeef6;
+  --bg2:#fffaf0;
+  --accent:#ff80ab;
+  --node-size:84px;
+}
+
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter, Poppins, system-ui, sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#3a2a2a}
+.map-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:transparent}
+.map-title{flex:1;text-align:center;font-size:20px;margin:0;color:#d44a8c}
+.small-btn{background:#fff;border:0;padding:8px 10px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+.coins-bubble{background:#fff;padding:6px 10px;border-radius:18px;box-shadow:0 8px 16px rgba(0,0,0,0.06);font-weight:700}
+
+.map-wrap{padding:10px 0 80px;display:flex;justify-content:center}
+.map-scene{width:100%;max-width:840px;padding:20px}
+.map-path{position:relative;padding:40px 20px;border-radius:18px;background:linear-gradient(180deg,#fff,#fff8f9);box-shadow:0 20px 40px rgba(0,0,0,0.06);min-height:800px;overflow:auto}
+
+/* decorative curvy path (SVG like) */
+.map-path::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:6px;
+  top:20px;
+  bottom:20px;
+  background:linear-gradient(180deg,#ffd3e6,#ffefdf);
+  border-radius:6px;
+  box-shadow:0 6px 18px rgba(255,150,200,0.06);
+}
+
+/* Level node */
+.level-node{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:var(--node-size);
+  height:var(--node-size);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:#fff; box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  cursor:pointer; font-weight:700;
+  transition:transform .18s ease, box-shadow .18s ease, opacity .18s;
+}
+.level-node.locked{opacity:.35; cursor:default; filter:grayscale(.2)}
+.level-node.active{transform:translateX(-50%) scale(1.08); box-shadow:0 18px 34px rgba(0,0,0,0.12)}
+
+/* level label (small) */
+.level-label{position:absolute;top:calc(var(--node-size) + 8px);left:50%;transform:translateX(-50%);font-size:13px;color:#7a6a6a}
+
+/* dot & star badges */
+.node-badge{position:absolute;right:-10px;top:-10px;background:linear-gradient(180deg,#ffe07f,#ffab00);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 6px 12px rgba(0,0,0,0.12)}
+
+/* positions for nodes (example snake-like) */
+/* We'll place 10 nodes at different y offsets — JS will set classes/positions as well */
+.level-pos-1 { top:20px; }
+.level-pos-2 { top:120px; left:32%; transform:translateX(0); }
+.level-pos-3 { top:220px; left:68%; transform:translateX(0); }
+.level-pos-4 { top:340px; left:32%; transform:translateX(0); }
+.level-pos-5 { top:460px; left:68%; transform:translateX(0); }
+.level-pos-6 { top:580px; left:32%; transform:translateX(0); }
+.level-pos-7 { top:700px; left:50%; transform:translateX(-50%); }
+.level-pos-8 { top:820px; left:32%; transform:translateX(0); }
+.level-pos-9 { top:940px; left:68%; transform:translateX(0); }
+.level-pos-10{ top:1060px; left:50%; transform:translateX(-50%); }
+
+.map-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;padding:8px 14px;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,0.12);font-weight:700}
+
+.map-footer{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:linear-gradient(180deg,transparent, rgba(255,230,240,0.8));text-align:center}
+
+/* responsive */
+@media(min-width:900px){
+  :root{--node-size:96px}
+  .map-path{min-height:1300px;}
+}
