@@ -1,79 +1,63 @@
-// js/level-map.js
-// Simple level map renderer and handlers
-(function(){
-  const $ = id => document.getElementById(id);
+// ===== Level Map Logic =====
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ level-map.js loaded");
 
-  // sample levels (real app should read unlocked level from StorageAPI)
-  const LEVEL_COUNT = 30;
-  // try to read unlocked level from StorageAPI if present
-  const StorageAPI = window.StorageAPI || {
-    // fallback simple storage
-    getLevel: ()=> Number(localStorage.getItem('gameLevel')||1),
-    setLevel: (l)=> localStorage.setItem('gameLevel', String(l))
-  };
+  const path = document.getElementById("levelPath");
+  if (!path) return;
 
-  function buildMap(){
-    const container = $('levelPath');
-    if(!container) {
-      console.warn('levelPath element missing');
-      return;
-    }
-    container.innerHTML = ''; // clear
-    const row = document.createElement('div');
-    row.className = 'level-row';
-    container.appendChild(row);
+  // 6 candy images (make sure these exist in your images/ folder)
+  const candyImgs = [
+    "images/candy1.png",
+    "images/candy2.png",
+    "images/candy3.png",
+    "images/candy4.png",
+    "images/candy5.png",
+    "images/candy6.png"
+  ];
 
-    const unlocked = StorageAPI.getLevel ? StorageAPI.getLevel() : 1;
-    for(let i=1;i<=LEVEL_COUNT;i++){
-      const node = document.createElement('div');
-      node.className = 'level-node' + (i>unlocked ? ' locked' : '');
-      node.dataset.level = i;
+  const totalLevels = 18; // जितने levels चाहिए उतने रखो
+  const unlocked = localStorage.getItem("candyLevel") || 1;
 
-      const img = document.createElement('img');
-      // try to use your images if exist: images/level-<n>.png else use candy icon
-      img.src = (i<=10) ? `images/candy${((i-1)%10)+1}.png` : 'images/candy1.png';
-      img.alt = 'Level ' + i;
-      node.appendChild(img);
+  path.innerHTML = "";
 
-      const num = document.createElement('div');
-      num.className = 'num';
-      num.textContent = i;
-      node.appendChild(num);
+  for (let i = 1; i <= totalLevels; i++) {
+    const node = document.createElement("div");
+    node.className = "level-node";
+    if (i > unlocked) node.classList.add("locked");
 
-      if(i <= unlocked){
-        node.addEventListener('click', () => {
-          console.log('Level clicked', i);
-          // navigate to level (you can adjust path)
-          // example: open game with ?level=i or separate URL
-          // window.location.href = `game.html?level=${i}`;
-          alert('Open level ' + i + ' — यहाँ अपना navigation डालें');
-        });
-      } else {
-        // locked — show hint on click
-        node.addEventListener('click', () => {
-          console.log('Locked level clicked', i);
-        });
+    // candy image cycle (1-6 repeat)
+    const img = document.createElement("img");
+    img.src = candyImgs[(i - 1) % candyImgs.length];
+    node.appendChild(img);
+
+    const label = document.createElement("div");
+    label.className = "level-label";
+    label.textContent = "Level " + i;
+    node.appendChild(label);
+
+    // position nodes in zig-zag pattern
+    const y = i * 120;
+    const x = i % 2 === 0 ? "60%" : "20%";
+    node.style.top = y + "px";
+    node.style.left = x;
+
+    // tap to go
+    node.addEventListener("click", () => {
+      if (i > unlocked) {
+        alert("🔒 Level locked! पहले वाले level पूरा करो।");
+        return;
       }
+      alert("🎮 Level " + i + " start!");
+      localStorage.setItem("currentLevel", i);
+      window.location.href = "index.html";
+    });
 
-      row.appendChild(node);
-    }
+    path.appendChild(node);
   }
 
-  // back home button
-  const back = $('backHome');
-  if(back) back.addEventListener('click', () => {
-    // go to index (adjust path if needed)
-    window.location.href = 'index.html';
+  // back button
+  const back = document.getElementById("backHome");
+  if (back) back.addEventListener("click", () => {
+    window.location.href = "index.html";
   });
-
-  // init
-  document.addEventListener('DOMContentLoaded', ()=>{
-    try {
-      buildMap();
-      console.log('Level map built, unlocked level =', StorageAPI.getLevel ? StorageAPI.getLevel() : 1);
-    } catch(e){
-      console.error('Error building level map', e);
-    }
-  });
-
-})();
+});
