@@ -1,37 +1,7 @@
-body {
-  margin: 0;
-  font-family: "Poppins", sans-serif;
-  background: #ffeef6;
+/* css/level-map.css */
+.level-node {
+  transition: transform 0.2s ease;
 }
-
-.level-section {
-  position: relative;
-  background-size: cover;
-  background-position: center;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.level-btn {
-  font-size: 22px;
-  padding: 12px 26px;
-  border-radius: 25px;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(45deg, #ff80ab, #ff4081);
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.level-btn.locked {
-  background: gray;
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.level-btn.unlocked:hover {
+.level-node:hover {
   transform: scale(1.1);
-  transition: all 0.2s ease;
-}
+}}
