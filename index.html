@@ -1,113 +1,31 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Game</title>
-
-  <!-- CSS (अपने repo में रखें) -->
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/inventory.css">
-
-  <style>
-    /* छोटे safety fallback (अगर css न लोड हो तो भी playable रहे) */
-    body { margin:0; font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#ffeef6; }
-    .screen { display:none; }
-    .screen.active { display:block; }
-    #game-board { display:grid; gap:8px; max-width:640px; margin:12px auto; }
-    .cell { background: #fff7fb; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:8px; box-shadow:0 2px 0 rgba(0,0,0,0.05); }
-    .tile { width:64px; height:64px; object-fit:contain; transition: transform .18s ease; user-select:none; -webkit-user-drag:none; }
-    .selected-cell { outline:3px solid rgba(255,120,160,0.9); transform:scale(1.05); }
-    .coins-bubble { background:#fff; padding:8px 12px; border-radius:20px; display:inline-block; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Candy Game</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- HOME -->
-  <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
-    <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
-    <h1 class="title">🍭 Candy Match</h1>
-    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-
-    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:14px;">
-      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;">🎮 Start</button>
-      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;">🛒 Shop</button>
-      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:14px;">⚙️ Settings</button>
-    </div>
+  <div class="topbar">
+    <button id="homeBtn">🏠</button>
+    <div class="score">Score: <span id="score">0</span></div>
+    <div class="coins">Coins: <span id="coins">0</span></div>
+    <div class="level">Level: <span id="currentLevel">1</span></div>
   </div>
 
-  <!-- GAME -->
-  <div id="game-screen" class="screen">
-    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
-      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
-      <h2 style="margin:0">Score: <span id="score">0</span></h2>
-      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
-      <div id="levelBadge" style="margin-left:12px; background:rgba(255,255,255,0.6); padding:6px 10px; border-radius:12px; font-weight:700;">
-        Level: <span id="currentLevel">1</span>
-      </div>
-    </div>
+  <div id="game-board" class="board"></div>
 
-    <div id="game-board" class="board" aria-live="polite"></div>
-
-    <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
-      <button id="restartBtn">Restart</button>
-      <button id="shuffleBtn">Shuffle</button>
-      <button id="openShopBtn">Open Shop</button>
-    </div>
+  <div class="controls">
+    <button id="restartBtn">Restart</button>
+    <button id="shuffleBtn">Shuffle</button>
   </div>
 
-  <!-- SHOP modal (simple) -->
-  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35);">
-    <div class="shop-card" style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 style="margin:0">🛒 Shop</h3>
-        <div style="text-align:right">
-          <div style="font-size:12px;color:#666">Your Coins</div>
-          <div class="coins-bubble" id="shopCoins">0</div>
-        </div>
-      </div>
-      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="text-align:center;padding:10px;background:#fff7fb;border-radius:8px;"><div>💣 Bomb</div><div>₹200</div><button id="buyBomb">Buy</button></div>
-        <div style="text-align:center;padding:10px;background:#fff7fb;border-radius:8px;"><div>🔀 Shuffle</div><div>₹100</div><button id="buyShuffle">Buy</button></div>
-        <div style="text-align:center;padding:10px;background:#fff7fb;border-radius:8px;"><div>➕ Extra</div><div>₹80</div><button id="buyMoves">Buy</button></div>
-        <div style="text-align:center;padding:10px;background:#fff7fb;border-radius:8px;"><div>✨ Rainbow</div><div>₹350</div><button id="buyRainbow">Buy</button></div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="closeShop">Close</button></div>
-    </div>
-  </div>
-
-  <!-- Level up modal -->
-  <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:9999;">
-    <div style="background:#fff; padding:18px; border-radius:12px; width:90%; max-width:420px; text-align:center;">
-      <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpText">Congrats — next level unlocked.</p>
-      <div style="margin-top:12px;"><button id="levelUpClose">Continue</button></div>
-    </div>
-  </div>
-
-  <!-- Eruda loader (mobile console) -->
-  <script>
-    (function () {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function () {
-        try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
-      };
-      document.body.appendChild(s);
-    })();
-  </script>
-
-  <!-- Safe UI (handles buttons safely) -->
-  <script src="js/safe-ui.js"></script>
-
-  <!-- storage (you already have) -->
   <script src="js/storage.js"></script>
-
-  <!-- game core -->
   <script src="js/game.js"></script>
 
-  <!-- other optional scripts -->
-  <script src="js/shop.js"></script>
-  <script src="js/inventory.js"></script>
+  <!-- Eruda Debug Console -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init(); console.log("Eruda Console Loaded");</script>
 </body>
-        </html>
+</html>
