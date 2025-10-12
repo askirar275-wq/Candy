@@ -3,406 +3,215 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Demo</title>
+  <title>Candy Match — Home</title>
 
-  <!-- अगर आप चाहें तो ये external css replace कर सकते हैं -->
+  <!-- main styles (अपनी css फाइल path सुनिश्चित करें) -->
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/inventory.css">
+  <link rel="stylesheet" href="css/level-map.css">
+
   <style>
-    :root{
-      --bg:#ffeef6;
-      --panel:#fff;
-      --accent:#ff7aa2;
-    }
-    html,body{height:100%;margin:0;font-family:Poppins,system-ui,Arial;background:var(--bg);}
-    header{display:flex;align-items:center;gap:16px;padding:12px 16px;background:linear-gradient(90deg,#ffd7e6,#ffdfe9);}
-    .home-btn{width:48px;height:40px;border-radius:10px;background:#ffd7e6;border:0}
-    .top-info{display:flex;gap:24px;align-items:center;font-weight:700;font-size:18px}
-    .container{max-width:720px;margin:14px auto;padding:14px;}
-    .board-wrap{background:var(--panel);padding:18px;border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.06);}
-    #game-board{display:grid; gap:10px; touch-action:none; user-select:none;}
-    .cell{background:rgba(255,240,248,0.9);border-radius:12px;display:flex;align-items:center;justify-content:center;padding:6px;box-shadow:0 4px 8px rgba(0,0,0,.06);min-width:48px;min-height:48px;transition:transform .12s}
-    .cell img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block;transition:transform .18s}
-    .selected{outline:3px solid rgba(255,120,150,.2);transform:scale(1.04)}
-    .controls{display:flex;gap:12px;justify-content:center;margin-top:14px}
-    button{padding:10px 18px;border-radius:22px;border:0;background:linear-gradient(90deg,#ff8fc1,#ff6aa8);color:#fff;font-weight:700}
-    .hidden{display:none}
-    /* simple remove animation */
-    .remove { animation: vanish .28s forwards; }
-    @keyframes vanish { to { opacity:0; transform:scale(0.6); } }
-    /* responsive */
-    @media (max-width:420px){
-      .cell{min-width:44px;min-height:44px}
-      header{padding:10px}
-    }
+    /* कुछ fallback छोटे styles ताकि mobile पर basic दिखे */
+    body { margin:0; font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#ffeef6; color:#3b2a24; }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    .topbar { display:flex; align-items:center; gap:12px; padding:12px; }
+    .coins-bubble { background:#fff; padding:6px 10px; border-radius:24px; box-shadow:0 6px 12px rgba(0,0,0,0.06); }
+    /* small board fallback */
+    #game-board { display:grid; gap:10px; max-width:520px; margin:12px auto; }
+    /* shop modal default */
+    .shop-modal.hidden { display:none; }
   </style>
 </head>
 <body>
-  <header>
-    <button class="home-btn" id="backHome">🏠</button>
-    <div class="top-info">
-      <div>Score: <span id="score">0</span></div>
-      <div>Coins: <span id="coins">0</span></div>
-      <div>Level: <span id="currentLevel">1</span></div>
+  <!-- HOME -->
+  <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
+    <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
+    <h1 class="title">🍭 Candy Match</h1>
+    <p class="subtitle">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px;">
+      <button id="startBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:14px;background:#ff8fc1;color:white;border:0;font-weight:700;">⚙️ Settings</button>
     </div>
-  </header>
+  </div>
 
-  <div class="container">
-    <div class="board-wrap">
-      <!-- game board -->
-      <div id="game-board" aria-live="polite"></div>
+  <!-- LEVEL MAP SCREEN -->
+  <div id="level-map-screen" class="screen">
+    <div class="topbar">
+      <button id="mapBack" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0 12px">Level Map</h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins">0</span></div>
+    </div>
 
-      <!-- controls -->
-      <div class="controls">
-        <button id="restartBtn">Restart</button>
-        <button id="shuffleBtn">Shuffle</button>
-        <button id="openShopBtn">Shop</button>
+    <div id="levelPath" style="padding:10px;">
+      <!-- level-map.js को यहाँ पर level nodes बनानी चाहिए -->
+      <div class="loading">Loading map…</div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen" style="padding:10px 12px;">
+    <div class="topbar">
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+      <h2 style="margin:0">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto" class="coins-bubble">Coins: <span id="coins2">0</span></div>
+      <div id="levelBadge" style="margin-left:12px; background:#fff5; padding:6px 10px; border-radius:12px; font-weight:700;">
+        Level: <span id="currentLevel">1</span>
+      </div>
+    </div>
+
+    <div id="game-board" class="board" aria-live="polite"></div>
+
+    <div style="display:flex;justify-content:center;gap:12px;margin:18px 0;">
+      <button id="restartBtn">Restart</button>
+      <button id="shuffleBtn">Shuffle</button>
+      <button id="openShopBtn">Open Shop</button>
+    </div>
+  </div>
+
+  <!-- SHOP modal (hidden by default) -->
+  <div id="shopModal" class="shop-modal hidden" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:9998;">
+    <div class="shop-card" style="background:#fff; border-radius:14px; padding:14px; width:92%; max-width:520px;">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h3 style="margin:0">🛒 Shop</h3>
+          <div class="small-note">Coins से power-ups खरीदें — Demo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#666">Your Coins</div>
+          <div class="coins-bubble" id="shopCoins">0</div>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div style="padding:8px; text-align:center;"><div>💣 Bomb</div><div>₹200</div><button id="buyBomb">Buy</button></div>
+        <div style="padding:8px; text-align:center;"><div>🔀 Shuffle</div><div>₹100</div><button id="buyShuffle">Buy</button></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="closeShop">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Level up modal (hidden) -->
+  <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:9999;">
+    <div style="background:#fff; padding:18px; border-radius:12px; width:90%; max-width:420px; text-align:center;">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <div style="margin-top:12px;">
+        <button id="levelUpClose">Continue</button>
       </div>
     </div>
   </div>
 
-  <!-- shop modal (simple) -->
-  <div id="shopModal" class="hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)">
-    <div style="background:#fff;padding:16px;border-radius:12px;width:90%;max-width:420px;">
-      <h3 style="margin:0 0 8px 0">Shop</h3>
-      <p style="margin:0 0 12px 0">Demo — coins: <span id="shopCoins">0</span></p>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="closeShop">Close</button>
-      </div>
-    </div>
+  <!-- footer text -->
+  <div style="text-align:center;margin-top:22px;color:#666;font-size:18px;">
+    Made with ❤️ — Arun App Studio
   </div>
 
-  <!-- eruda mobile console (optional, helpful) -->
+  <!-- ===== Eruda (mobile console) optional - single load ===== -->
   <script>
     (function () {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function () {
-        try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
-      };
-      document.body.appendChild(s);
+      if(!window.erudaLoaded){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+        s.onload = function () {
+          try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
+        };
+        document.body.appendChild(s);
+        window.erudaLoaded = true;
+      }
     })();
   </script>
 
-  <!-- safe UI loader (separates UI and game logic) -->
+  <!-- ===== core scripts (only once each) ===== -->
+  <script src="js/storage.js"></script>
+  <script src="js/level-map.js"></script>
+  <script src="js/game.js"></script>
+
+  <!-- ===== Safe UI (single place) ===== -->
   <script>
     (function(){
-      function $id(id){return document.getElementById(id);}
-      function safeAdd(id, evt, h){
-        var el = $id(id);
-        if(!el){ console.warn('safe-ui: missing #' + id); return; }
-        el.addEventListener(evt,h);
-      }
+      function $id(id){ return document.getElementById(id); }
+      function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
+
+      let initGuard = false;
+
       document.addEventListener('DOMContentLoaded', function(){
         console.log('✅ Safe UI loaded');
 
+        // Home -> Level map
+        safeAdd('startBtn','click', function(){
+          document.getElementById('home-screen').classList.remove('active');
+          document.getElementById('level-map-screen').classList.add('active');
+          // ask level-map to render if it exports a function
+          if(typeof renderLevelMap === 'function') {
+            try { renderLevelMap(); } catch(e){ console.warn('renderLevelMap error', e); }
+          }
+        });
+
+        // map back to home
+        safeAdd('mapBack','click', function(){
+          document.getElementById('level-map-screen').classList.remove('active');
+          document.getElementById('home-screen').classList.add('active');
+        });
+
+        // level-node clicks come from level-map.js; level-map should call window.selectLevel(levelId)
+        window.selectLevel = function(levelId){
+          // set level in storage and move to game screen
+          if(typeof StorageAPI !== 'undefined' && typeof StorageAPI.setLevel === 'function'){
+            StorageAPI.setLevel(levelId);
+          }
+          // update UI badge
+          var cur = $id('currentLevel'); if(cur) cur.textContent = levelId;
+          // show game screen and init game once
+          document.getElementById('level-map-screen').classList.remove('active');
+          document.getElementById('game-screen').classList.add('active');
+
+          if(!initGuard){
+            if(typeof initGame === 'function'){
+              try { initGame(); initGuard = true; console.log('Game initialized at level', levelId); }
+              catch(e){ console.error('initGame threw', e); }
+            } else console.warn('initGame not found');
+          } else {
+            // if already initialized, just call restartGame or update level
+            if(typeof setGameLevel === 'function') setGameLevel(levelId);
+            if(typeof restartGame === 'function') restartGame();
+            console.log('Switched to level', levelId);
+          }
+        };
+
+        // game-screen buttons
+        safeAdd('backBtn','click', function(){
+          document.getElementById('game-screen').classList.remove('active');
+          document.getElementById('home-screen').classList.add('active');
+        });
+
         safeAdd('restartBtn','click', function(){ if(typeof restartGame==='function') restartGame(); else console.warn('restartGame missing'); });
         safeAdd('shuffleBtn','click', function(){ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
-        safeAdd('openShopBtn','click', function(){ var m=$id('shopModal'); if(m){ m.classList.remove('hidden'); m.style.display='flex'; } });
-        safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.classList.add('hidden'); m.style.display='none'; } });
-        safeAdd('backHome','click', function(){ /* placeholder */ console.log('Home pressed'); });
+
+        // shop open/close
+        safeAdd('shopBtn','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='flex'; m.classList.remove('hidden'); }});
+        safeAdd('openShopBtn','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='flex'; m.classList.remove('hidden'); }});
+        safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='none'; m.classList.add('hidden'); }});
+
+        // buy handlers
+        safeAdd('buyBomb','click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); });
+        safeAdd('buyShuffle','click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); });
+
+        // level up modal close
+        safeAdd('levelUpClose','click', function(){ var m=$id('levelUpModal'); if(m) m.style.display='none'; });
+
+        // update coin display periodically (or your storage can call updateCoinDisplay)
+        setInterval(function(){
+          if(typeof updateCoinDisplay === 'function') updateCoinDisplay();
+          var s1 = $id('coins'), s2 = $id('coins2'), s3 = $id('shopCoins');
+          if(s1 && typeof StorageAPI !== 'undefined' && StorageAPI.getCoins) s1.textContent = StorageAPI.getCoins();
+          if(s2 && typeof StorageAPI !== 'undefined' && StorageAPI.getCoins) s2.textContent = StorageAPI.getCoins();
+          if(s3 && typeof StorageAPI !== 'undefined' && StorageAPI.getCoins) s3.textContent = StorageAPI.getCoins();
+        }, 1000);
       });
     })();
-  </script>
-
-  <!-- storage API (simple LocalStorage wrapper) -->
-  <script>
-    // js/storage.js (inline minimal)
-    window.StorageAPI = (function(){
-      var KEY = 'candy_demo_v1';
-      function read(){ try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){ return {}; } }
-      function write(obj){ localStorage.setItem(KEY, JSON.stringify(obj||{})); }
-      return {
-        getCoins: function(){ return (read().coins||0); },
-        addCoins: function(n){ var o=read(); o.coins=(o.coins||0)+Number(n||0); write(o); },
-        getLevel: function(){ return (read().level||1); },
-        setLevel: function(l){ var o=read(); o.level = Number(l||1); write(o); },
-        initIfMissing: function(){ var o=read(); if(typeof o.coins==='undefined'){ o.coins=0; } if(typeof o.level==='undefined') o.level=1; write(o); }
-      };
-    })();
-    StorageAPI.initIfMissing();
-    console.log('Loaded: storage (inline)');
-  </script>
-
-  <!-- game core (replace with file js/game.js if you like) -->
-  <script>
-  // js/game.js (inline full)
-  (function(){
-    const CANDY_IMAGES = [
-      'images/candy1.png',
-      'images/candy2.png',
-      'images/candy3.png',
-      'images/candy4.png',
-      'images/candy5.png',
-      'images/candy6.png'
-    ];
-    const BOARD_DEFAULT = 8; // 8x8
-    let boardSize = BOARD_DEFAULT;
-    let grid = []; // 2D array of {img,index}
-    let selected = null;
-    let score = 0;
-    const $ = id => document.getElementById(id);
-
-    function randCandy(){ return CANDY_IMAGES[Math.floor(Math.random()*CANDY_IMAGES.length)]; }
-
-    function createEmptyGrid(size){
-      const g = [];
-      for(let r=0;r<size;r++){
-        g[r]=[];
-        for(let c=0;c<size;c++) g[r][c] = {src: randCandy()};
-      }
-      return g;
-    }
-
-    function renderBoard(){
-      const board = $('game-board');
-      if(!board) { console.warn('game-board missing'); return; }
-      // set css grid
-      board.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
-      board.innerHTML = '';
-      for(let r=0;r<boardSize;r++){
-        for(let c=0;c<boardSize;c++){
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.dataset.r = r; cell.dataset.c = c;
-          const img = document.createElement('img');
-          img.draggable = false;
-          img.src = grid[r][c].src;
-          cell.appendChild(img);
-          // click select for desktop
-          cell.addEventListener('click', ()=> onCellClick(r,c,cell) );
-          // touch drag
-          addSwipeHandlers(cell, r, c);
-          board.appendChild(cell);
-        }
-      }
-    }
-
-    function addSwipeHandlers(cell, r, c){
-      let startX=0,startY=0, moved=false;
-      cell.addEventListener('touchstart', e => {
-        const t = e.touches[0];
-        startX = t.clientX; startY = t.clientY; moved=false;
-      });
-      cell.addEventListener('touchmove', e => {
-        moved=true;
-      });
-      cell.addEventListener('touchend', e => {
-        if(!moved) { onCellClick(r,c,cell); return; }
-        // detect direction by comparing first touch to last changed touch coords (approx)
-        const t = (e.changedTouches && e.changedTouches[0]) || {};
-        const dx = (t.clientX||startX) - startX;
-        const dy = (t.clientY||startY) - startY;
-        if(Math.abs(dx) > Math.abs(dy)){
-          if(dx > 20) trySwap(r,c, r, c+1);
-          else if(dx < -20) trySwap(r,c, r, c-1);
-        } else {
-          if(dy > 20) trySwap(r,c, r+1, c);
-          else if(dy < -20) trySwap(r,c, r-1, c);
-        }
-      });
-      // mouse drag support (desktop)
-      let isDown=false;
-      cell.addEventListener('mousedown', e=>{ isDown=true; startX=e.clientX; startY=e.clientY; });
-      document.addEventListener('mouseup', e=>{ if(!isDown) return; isDown=false; const dx = e.clientX - startX, dy = e.clientY - startY;
-        if(Math.abs(dx)>10 || Math.abs(dy)>10){
-          if(Math.abs(dx)>Math.abs(dy)){
-            if(dx>0) trySwap(r,c, r, c+1); else trySwap(r,c, r, c-1);
-          } else {
-            if(dy>0) trySwap(r,c, r+1, c); else trySwap(r,c, r-1, c);
-          }
-        }
-      });
-    }
-
-    function onCellClick(r,c,cell){
-      // select logic
-      if(selected){
-        // if same cell -> deselect
-        if(selected.r==r && selected.c==c){ selected=null; renderBoard(); return; }
-        // if adjacent -> swap
-        if(isAdjacent(selected, {r,c})){
-          trySwap(selected.r, selected.c, r, c);
-          selected=null;
-        } else {
-          selected = {r,c};
-        }
-      } else selected = {r,c};
-      highlightSelected();
-    }
-
-    function highlightSelected(){
-      document.querySelectorAll('#game-board .cell').forEach(el => el.classList.remove('selected'));
-      if(!selected) return;
-      const sel = document.querySelector(`#game-board .cell[data-r="${selected.r}"][data-c="${selected.c}"]`);
-      if(sel) sel.classList.add('selected');
-    }
-
-    function isAdjacent(a,b){
-      const dr = Math.abs(a.r - b.r), dc = Math.abs(a.c - b.c);
-      return (dr+dc)===1;
-    }
-
-    function trySwap(r1,c1,r2,c2){
-      if(r2<0||c2<0||r2>=boardSize||c2>=boardSize) return;
-      // swap in grid
-      const tmp = grid[r1][c1].src;
-      grid[r1][c1].src = grid[r2][c2].src;
-      grid[r2][c2].src = tmp;
-      renderBoard();
-      // check matches
-      const matches = findAllMatches();
-      if(matches.length===0){
-        // revert if no match (swap back after small delay for UX)
-        setTimeout(()=>{ const t=grid[r1][c1].src; grid[r1][c1].src=grid[r2][c2].src; grid[r2][c2].src=t; renderBoard(); }, 220);
-      } else {
-        // process matches
-        setTimeout(()=> processMatches(matches), 80);
-      }
-    }
-
-    // find runs >=3 horizontally/vertically, return array of coords to remove
-    function findAllMatches(){
-      const remove = [];
-      // horizontal
-      for(let r=0;r<boardSize;r++){
-        let runStart=0;
-        for(let c=1;c<=boardSize;c++){
-          if(c<boardSize && grid[r][c].src === grid[r][runStart].src) continue;
-          const len = c-runStart;
-          if(len>=3){
-            for(let k=runStart;k<c;k++) remove.push({r,c:k});
-          }
-          runStart = c;
-        }
-      }
-      // vertical
-      for(let c=0;c<boardSize;c++){
-        let runStart=0;
-        for(let r=1;r<=boardSize;r++){
-          if(r<boardSize && grid[r][c].src === grid[runStart][c].src) continue;
-          const len = r-runStart;
-          if(len>=3){
-            for(let k=runStart;k<r;k++) remove.push({r:k,c});
-          }
-          runStart = r;
-        }
-      }
-      // dedupe (by key) and return unique coords
-      const map = {};
-      remove.forEach(p => map[p.r+','+p.c]=p);
-      return Object.values(map);
-    }
-
-    function processMatches(matches){
-      if(!matches || matches.length===0) return;
-      // score
-      score += matches.length * 10;
-      $('score').textContent = score;
-      // animate removal: add class remove to matched cells
-      matches.forEach(m => {
-        const sel = document.querySelector(`#game-board .cell[data-r="${m.r}"][data-c="${m.c}"] img`);
-        if(sel){
-          sel.classList.add('remove');
-        }
-      });
-      // after animation, clear srcs and apply gravity
-      setTimeout(()=>{
-        matches.forEach(m => { grid[m.r][m.c].src = null; });
-        applyGravityAndFill();
-      }, 300);
-    }
-
-    function applyGravityAndFill(){
-      // for each column, let candies fall
-      for(let c=0;c<boardSize;c++){
-        let write = boardSize-1;
-        for(let r=boardSize-1;r>=0;r--){
-          if(grid[r][c].src){
-            grid[write][c].src = grid[r][c].src;
-            write--;
-          }
-        }
-        // fill rest with new candies
-        for(let r=write;r>=0;r--){
-          grid[r][c].src = randCandy();
-        }
-      }
-      // re-render with small delay for UX
-      setTimeout(()=> {
-        renderBoard();
-        // after refill, check chain matches automatically
-        const next = findAllMatches();
-        if(next.length>0){
-          setTimeout(()=> processMatches(next), 140);
-        }
-      }, 80);
-    }
-
-    // shuffle board: randomize all
-    window.shuffleBoard = function(){
-      grid = createEmptyGrid(boardSize);
-      renderBoard();
-      console.log('Board shuffled');
-    };
-
-    // restart
-    window.restartGame = function(){
-      score = 0; $('score').textContent = 0;
-      grid = createEmptyGrid(boardSize);
-      renderBoard();
-      console.log('Game restarted');
-    };
-
-    // init
-    window.initGame = function(size){
-      try {
-        // allow passing board size (optional)
-        boardSize = Number(size) || BOARD_DEFAULT;
-        // load level from storage
-        const lvl = StorageAPI.getLevel() || 1;
-        $('currentLevel').textContent = lvl;
-        // create grid and render
-        grid = createEmptyGrid(boardSize);
-        renderBoard();
-        // show starting automatic matches resolution (prevent initial >=3 random chains by resolving)
-        setTimeout(()=>{
-          const found = findAllMatches();
-          if(found.length>0) processMatches(found);
-        },100);
-        // update coins display
-        const coins = StorageAPI.getCoins(); $('coins').textContent = coins; $('shopCoins').textContent = coins;
-        console.log('Game initialized at level', lvl);
-      } catch(e){
-        console.error('initGame error', e);
-      }
-    };
-
-    // small buyFromShop placeholder (uses StorageAPI)
-    window.buyFromShop = function(item){
-      const prices = {bomb:200, shuffle:100, moves:80, rainbow:350};
-      const p = prices[item] || 0;
-      if(StorageAPI.getCoins() >= p){
-        StorageAPI.addCoins(-p);
-        $('coins').textContent = StorageAPI.getCoins();
-        if(item==='shuffle') shuffleBoard();
-        console.log('Bought', item);
-      } else console.warn('Not enough coins');
-    };
-
-    // expose addCoins helper
-    window.addCoins = function(n){ StorageAPI.addCoins(Number(n||0)); $('coins').textContent = StorageAPI.getCoins(); };
-
-    // start auto (if safe-ui calls initGame, OK)
-    // if script loaded directly, init with default
-    console.log('Loaded: inline game.js (6 candies).');
-  })();
-  </script>
-
-  <!-- finally call initGame when page ready -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function(){ 
-      // small delay to let storage/DOM settle
-      setTimeout(()=> { if(typeof initGame==='function') initGame(8); else console.warn('initGame not defined'); }, 120);
-    });
   </script>
 </body>
-    </html>
+        </html>
