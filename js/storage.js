@@ -1,12 +1,11 @@
 // js/storage.js
-window.StorageAPI = (function(){
-  const KEY_LEVEL = 'candy_level_v1';
-  const KEY_COINS = 'candy_coins_v1';
-  return {
-    getLevel: function(){ const v = localStorage.getItem(KEY_LEVEL); return v ? Number(v) : 1; },
-    setLevel: function(l){ localStorage.setItem(KEY_LEVEL, Number(l)); },
-    getCoins: function(){ const v = localStorage.getItem(KEY_COINS); return v ? Number(v) : 0; },
-    addCoins: function(n){ const cur = Number(localStorage.getItem(KEY_COINS) || 0); localStorage.setItem(KEY_COINS, cur + Number(n)); }
-  };
-})();
-console.log('Loaded: js/storage.js');
+window.StorageAPI = {
+  getCoins() { return parseInt(localStorage.getItem("coins") || "0"); },
+  addCoins(v) {
+    const newVal = this.getCoins() + v;
+    localStorage.setItem("coins", newVal);
+    return newVal;
+  },
+  getLevel() { return parseInt(localStorage.getItem("level") || "1"); },
+  setLevel(l) { localStorage.setItem("level", l); }
+};
