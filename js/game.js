@@ -1,508 +1,203 @@
-// js/game.js — fixed swipe (vertical+horizontal), match+gravity, 6 candies
-(function(){
-  // ----- CONFIG -----
-  const CANDY_IMAGES = [
-    'images/candy1.png',
-    'images/candy2.png',
-    'images/candy3.png',
-    'images/candy4.png',
-    'images/candy5.png',
-    'images/candy6.png'
+/* ---------- Candy Match Game Core ---------- */
+(function() {
+  const boardSize = 8;
+  const candyTypes = [
+    "images/candy1.png",
+    "images/candy2.png",
+    "images/candy3.png",
+    "images/candy4.png",
+    "images/candy5.png",
+    "images/candy6.png"
   ];
 
-  const LEVELS = [ null,
-    { id:1, title:'Beginner', goalScore:100, rewardCoins:50, boardSize:8 },
-    { id:2, title:'Explorer', goalScore:300, rewardCoins:120, boardSize:8 },
-    { id:3, title:'Challenger', goalScore:700, rewardCoins:250, boardSize:9 }
-  ];
+  let board = [];
+  let score = 0;
+  let coins = 0;
+  let level = 1;
+  let firstCandy = null;
+  let isAnimating = false;
 
-  // ----- STATE & HELPERS -----
-  const $ = id => document.getElementById(id);
-  let state = { level:1, score:0, boardSize:8, board:[] };
+  const scoreEl = document.getElementById("score");
+  const coinsEl = document.getElementById("coins");
+  const levelEl = document.getElementById("currentLevel");
+  const boardEl = document.getElementById("game-board");
 
-  function randIndex(){ return Math.floor(Math.random()*CANDY_IMAGES.length); }
-
-  // adjust CSS variable for cell size (responsive)
-  function adjustCellSizeForViewport(boardEl, boardSize){
-    if(!boardEl) return;
-    const maxW = Math.min(window.innerWidth - 40, 760);
-    const gap = parseFloat(getComputedStyle(boardEl).gap || 10);
-    const usable = maxW - gap*(boardSize-1);
-    let cell = Math.floor(usable/boardSize);
-    if(cell < 40) cell = 40;
-    if(cell > 96) cell = 96;
-    document.documentElement.style.setProperty('--cell-size', cell+'px');
-  }
-
-  // ----- STORAGE HOOKS (storage.js must provide these) -----
-  window.updateCoinDisplay = function(){
-    const el = $('coins'); if(el) el.textContent = (typeof StorageAPI !== 'undefined' ? StorageAPI.getCoins() : 0);
-    const sc = $('shopCoins'); if(sc) sc.textContent = (typeof StorageAPI !== 'undefined' ? StorageAPI.getCoins() : 0);
+  /* ========== GAME INIT ========== */
+  window.initGame = function() {
+    console.log("Game initialized");
+    score = 0;
+    firstCandy = null;
+    isAnimating = false;
+    createBoard();
+    updateUI();
   };
 
-  // ----- LEVEL / UI -----
-  function updateScoreUI(){ const s = $('score'); if(s) s.textContent = state.score; }
-  function updateLevelUI(){
-    const lvl = state.level || 1;
-    const info = LEVELS[lvl] || LEVELS[1];
-    state.boardSize = info.boardSize || 8;
-    const cur = $('currentLevel'); if(cur) cur.textContent = lvl;
-    const board = $('game-board');
-    if(board){
-      board.style.gridTemplateColumns = `repeat(${state.boardSize}, 1fr)`;
-      adjustCellSizeForViewport(board, state.boardSize);
+  /* ========== CREATE BOARD ========== */
+  function createBoard() {
+    board = [];
+    boardEl.innerHTML = "";
+    for (let r = 0; r < boardSize; r++) {
+      const row = [];
+      for (let c = 0; c < boardSize; c++) {
+        const candy = document.createElement("img");
+        candy.src = getRandomCandy();
+        candy.className = "candy";
+        candy.dataset.row = r;
+        candy.dataset.col = c;
+        candy.draggable = true;
+
+        // drag events
+        candy.addEventListener("dragstart", dragStart);
+        candy.addEventListener("dragover", dragOver);
+        candy.addEventListener("drop", dragDrop);
+        candy.addEventListener("dragend", dragEnd);
+
+        boardEl.appendChild(candy);
+        row.push(candy);
+      }
+      board.push(row);
     }
   }
 
-  // ----- BOARD DATA -----
-  function createBoardArray(){
-    const n = state.boardSize;
-    state.board = [];
-    for(let r=0;r<n;r++){
-      state.board[r] = [];
-      for(let c=0;c<n;c++) state.board[r][c] = randIndex();
-    }
-    removeInitialMatches();
+  function getRandomCandy() {
+    const rand = Math.floor(Math.random() * candyTypes.length);
+    return candyTypes[rand];
   }
 
-  // avoid initial accidental matches
-  function removeInitialMatches(){
-    const n = state.boardSize;
-    for(let r=0;r<n;r++){
-      for(let c=0;c<n;c++){
-        if(c>=2 && state.board[r][c] === state.board[r][c-1] && state.board[r][c] === state.board[r][c-2]){
-          state.board[r][c] = (state.board[r][c] + 1) % CANDY_IMAGES.length;
+  /* ========== DRAG HANDLERS ========== */
+  let fromRow, fromCol, toRow, toCol;
+
+  function dragStart() {
+    fromRow = parseInt(this.dataset.row);
+    fromCol = parseInt(this.dataset.col);
+  }
+
+  function dragOver(e) {
+    e.preventDefault();
+  }
+
+  function dragDrop() {
+    toRow = parseInt(this.dataset.row);
+    toCol = parseInt(this.dataset.col);
+  }
+
+  function dragEnd() {
+    const rowDiff = Math.abs(toRow - fromRow);
+    const colDiff = Math.abs(toCol - fromCol);
+    if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+      swapCandy();
+      setTimeout(() => {
+        if (!checkMatches()) {
+          swapCandy(); // revert if no match
         }
-        if(r>=2 && state.board[r][c] === state.board[r-1][c] && state.board[r][c] === state.board[r-2][c]){
-          state.board[r][c] = (state.board[r][c] + 1) % CANDY_IMAGES.length;
+      }, 200);
+    }
+  }
+
+  function swapCandy() {
+    const temp = board[fromRow][fromCol].src;
+    board[fromRow][fromCol].src = board[toRow][toCol].src;
+    board[toRow][toCol].src = temp;
+  }
+
+  /* ========== CHECK MATCHES ========== */
+  function checkMatches() {
+    let matchFound = false;
+
+    // Horizontal matches
+    for (let r = 0; r < boardSize; r++) {
+      for (let c = 0; c < boardSize - 2; c++) {
+        const candy1 = board[r][c];
+        const candy2 = board[r][c + 1];
+        const candy3 = board[r][c + 2];
+        if (
+          candy1.src === candy2.src &&
+          candy2.src === candy3.src &&
+          candy1.src.includes("images")
+        ) {
+          candy1.src = "";
+          candy2.src = "";
+          candy3.src = "";
+          score += 30;
+          coins += 5;
+          matchFound = true;
         }
       }
     }
-  }
 
-  // ----- RENDER -----
-  function renderBoard(){
-    const board = $('game-board'); if(!board) return;
-    adjustCellSizeForViewport(board, state.boardSize);
-    board.innerHTML = '';
-    for(let r=0;r<state.boardSize;r++){
-      for(let c=0;c<state.boardSize;c++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.r = r; cell.dataset.c = c;
-        const img = document.createElement('img');
-        img.className = 'tile';
-        img.draggable = false;
-        img.dataset.r = r; img.dataset.c = c;
-        img.src = CANDY_IMAGES[state.board[r][c]];
-        cell.appendChild(img);
-        addInteraction(cell, img);
-        board.appendChild(cell);
+    // Vertical matches
+    for (let c = 0; c < boardSize; c++) {
+      for (let r = 0; r < boardSize - 2; r++) {
+        const candy1 = board[r][c];
+        const candy2 = board[r + 1][c];
+        const candy3 = board[r + 2][c];
+        if (
+          candy1.src === candy2.src &&
+          candy2.src === candy3.src &&
+          candy1.src.includes("images")
+        ) {
+          candy1.src = "";
+          candy2.src = "";
+          candy3.src = "";
+          score += 30;
+          coins += 5;
+          matchFound = true;
+        }
       }
     }
-  }
 
-  // update image src for a cell
-  function setCellImg(r,c){
-    const img = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"] .tile`);
-    if(img) img.src = CANDY_IMAGES[state.board[r][c]];
-  }
-
-  // ----- INTERACTION (tap + swipe) -----
-  function addInteraction(cell, img){
-    // tap select / swap
-    cell.addEventListener('click', ()=> {
-      const prev = document.querySelector('.cell.selected-cell');
-      if(prev && prev !== cell){
-        prev.classList.remove('selected-cell');
-        doSwapCells(prev, cell);
-      } else {
-        cell.classList.toggle('selected-cell');
-      }
-    });
-
-    // swipe support (touch)
-    let sx = null, sy = null;
-    img.addEventListener('touchstart', e => {
-      if(e.touches && e.touches.length) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
-    }, {passive:true});
-
-    img.addEventListener('touchmove', e => {
-      // prevent page scroll while swiping inside board
-      if(sx !== null) e.preventDefault();
-    }, {passive:false});
-
-    img.addEventListener('touchend', e => {
-      if(sx === null) return;
-      const ex = e.changedTouches[0].clientX, ey = e.changedTouches[0].clientY;
-      const dx = ex - sx, dy = ey - sy;
-      const threshold = 18; // minimum movement to consider swipe
-      if(Math.abs(dx) < threshold && Math.abs(dy) < threshold){ sx = sy = null; return; }
-
-      const r = +img.dataset.r, c = +img.dataset.c;
-      let tr = r, tc = c;
-      if(Math.abs(dx) > Math.abs(dy)){
-        tc = c + (dx > 0 ? 1 : -1);
-      } else {
-        tr = r + (dy > 0 ? 1 : -1);
-      }
-      sx = sy = null;
-
-      // bounds check
-      if(tr < 0 || tr >= state.boardSize || tc < 0 || tc >= state.boardSize) return;
-      const other = document.querySelector(`.cell[data-r="${tr}"][data-c="${tc}"]`);
-      if(other) doSwapCells(cell, other);
-    }, {passive:true});
-  }
-
-  // ----- SWAP LOGIC -----
-  function doSwapCells(cellA, cellB){
-    const ar = +cellA.dataset.r, ac = +cellA.dataset.c;
-    const br = +cellB.dataset.r, bc = +cellB.dataset.c;
-
-    // only neighbors allowed
-    if((Math.abs(ar - br) + Math.abs(ac - bc)) !== 1) return;
-
-    // swap in data
-    const tmp = state.board[ar][ac];
-    state.board[ar][ac] = state.board[br][bc];
-    state.board[br][bc] = tmp;
-
-    // update DOM images immediately
-    setCellImg(ar,ac); setCellImg(br,bc);
-
-    // check matches
-    const matches = findMatches();
-    if(matches.length === 0){
-      // revert after short delay for visual feedback
-      setTimeout(()=>{
-        const tmp2 = state.board[ar][ac];
-        state.board[ar][ac] = state.board[br][bc];
-        state.board[br][bc] = tmp2;
-        setCellImg(ar,ac); setCellImg(br,bc);
-      }, 160);
-      return;
+    if (matchFound) {
+      setTimeout(dropCandies, 250);
+      updateUI();
     }
-
-    // if matches exist, process them
-    processMatches();
+    return matchFound;
   }
 
-  // ----- MATCH DETECTION -----
-  function findMatches(){
-    const n = state.boardSize;
-    const toRemove = [];
-    // rows
-    for(let r=0;r<n;r++){
-      let run = 1;
-      for(let c=1;c<=n;c++){
-        if(c<n && state.board[r][c] === state.board[r][c-1]) run++;
-        else {
-          if(run >= 3){
-            for(let k=c-run;k<c;k++) toRemove.push([r,k]);
+  /* ========== DROP CANDIES ========== */
+  function dropCandies() {
+    for (let c = 0; c < boardSize; c++) {
+      for (let r = boardSize - 1; r >= 0; r--) {
+        if (board[r][c].src === "" || board[r][c].src.includes("undefined")) {
+          for (let above = r - 1; above >= 0; above--) {
+            if (board[above][c].src !== "") {
+              board[r][c].src = board[above][c].src;
+              board[above][c].src = "";
+              break;
+            }
           }
-          run = 1;
+        }
+      }
+      // fill top empty spots
+      for (let r = 0; r < boardSize; r++) {
+        if (board[r][c].src === "" || board[r][c].src.includes("undefined")) {
+          board[r][c].src = getRandomCandy();
         }
       }
     }
-    // cols
-    for(let c=0;c<n;c++){
-      let run = 1;
-      for(let r=1;r<=n;r++){
-        if(r<n && state.board[r][c] === state.board[r-1][c]) run++;
-        else {
-          if(run >= 3){
-            for(let k=r-run;k<r;k++) toRemove.push([k,c]);
-          }
-          run = 1;
-        }
-      }
+    setTimeout(checkMatches, 300);
+  }
+
+  /* ========== UI UPDATE ========== */
+  function updateUI() {
+    scoreEl.textContent = score;
+    coinsEl.textContent = coins;
+    levelEl.textContent = level;
+  }
+
+  /* ========== RESTART / SHUFFLE ========== */
+  window.restartGame = function() {
+    console.log("Game restarted");
+    initGame();
+  };
+
+  window.shuffleBoard = function() {
+    console.log("Board shuffled");
+    const candies = board.flat();
+    candies.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < candies.length; i++) {
+      candies[i].src = getRandomCandy();
     }
-    // unique
-    const seen = new Set();
-    const unique = [];
-    toRemove.forEach(([r,c])=>{
-      const k = `${r},${c}`;
-      if(!seen.has(k)){ seen.add(k); unique.push([r,c]); }
-    });
-    return unique;
-  }
-
-  // ----- PROCESS MATCHES + ANIMATE + GRAVITY -----
-  function processMatches(){
-    const matches = findMatches();
-    if(matches.length === 0) return;
-
-    // increment score (example)
-    state.score += matches.length * 10;
-    updateScoreUI();
-
-    // visually hide matched tiles and set to null in data
-    matches.forEach(([r,c])=>{
-      state.board[r][c] = null;
-      const img = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"] .tile`);
-      if(img){
-        img.style.transition = 'transform 180ms ease, opacity 180ms ease';
-        img.style.transform = 'scale(0.4)';
-        img.style.opacity = '0';
-      }
-    });
-
-    // after animation, apply gravity and refill then check again
-    setTimeout(()=>{
-      applyGravityAndRefill();
-      // small delay then check chain reactions
-      setTimeout(()=> processMatches(), 190);
-    }, 200);
-  }
-
-  function applyGravityAndRefill(){
-    const n = state.boardSize;
-    for(let c=0;c<n;c++){
-      const stack = [];
-      for(let r=n-1;r>=0;r--){
-        if(state.board[r][c] !== null && state.board[r][c] !== undefined){
-          stack.push(state.board[r][c]);
-        }
-      }
-      for(let r=n-1;r>=0;r--){
-        const val = stack.length ? stack.shift() : randIndex();
-        state.board[r][c] = val;
-        const img = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"] .tile`);
-        if(img){
-          img.src = CANDY_IMAGES[val];
-          img.style.transition = 'transform 220ms ease, opacity 220ms ease';
-          img.style.transform = 'scale(1)';
-          img.style.opacity = '1';
-        }
-      }
-    }
-  }
-
-  // ----- PUBLIC GAME API -----
-  window.shuffleBoard = function(){
-    const n = state.boardSize;
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++) state.board[r][c] = randIndex();
-    removeInitialMatches();
-    renderBoard();
-    console.log('Board shuffled');
+    checkMatches();
   };
 
-  window.restartGame = function(){
-    state.score = 0; updateScoreUI(); createBoardArray(); renderBoard();
-    console.log('Game restarted');
-  };
-
-  window.initGame = function(){
-    state.level = (typeof StorageAPI !== 'undefined' ? StorageAPI.getLevel() : 1);
-    state.score = 0; updateScoreUI();
-    updateLevelUI();
-    createBoardArray();
-    renderBoard();
-    updateCoinDisplay();
-    console.log('Game initialized at level', state.level);
-  };
-
-  window.buyFromShop = function(item){
-    const prices = { bomb:200, shuffle:100, moves:80, rainbow:350 };
-    const p = prices[item] || 0;
-    if(typeof StorageAPI !== 'undefined' && StorageAPI.getCoins() >= p){
-      StorageAPI.addCoins(-p);
-      updateCoinDisplay();
-      if(item === 'shuffle') shuffleBoard();
-      console.log('Bought', item);
-    } else console.warn('Not enough coins or StorageAPI missing');
-  };
-
-  console.log('Loaded: js/game.js (swipe fixes applied)');
-/* ---- Level Complete System ---- */
-
-// Show level complete modal
-function showLevelCompleteModal() {
-  let modal = document.getElementById('levelCompleteModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'levelCompleteModal';
-    modal.style.position = 'fixed';
-    modal.style.inset = '0';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.background = 'rgba(0,0,0,0.5)';
-    modal.style.zIndex = '9999';
-    modal.innerHTML = `
-      <div style="
-        background:#fff;
-        border-radius:16px;
-        padding:24px;
-        width:90%;
-        max-width:420px;
-        text-align:center;
-        box-shadow:0 6px 18px rgba(0,0,0,0.25);
-      ">
-        <h2 style="margin-bottom:8px;color:#ff4081;">🎉 Level Complete!</h2>
-        <p id="levelCompleteText" style="margin-bottom:16px;font-size:16px;">
-          You reached the target score!
-        </p>
-        <button id="nextLevelBtn" style="
-          padding:10px 20px;
-          border-radius:20px;
-          border:0;
-          background:linear-gradient(45deg,#ff80ab,#ff4081);
-          color:white;
-          font-weight:700;
-        ">Next Level ➡️</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
-
-  // Add event
-  document.getElementById('nextLevelBtn').onclick = () => {
-    modal.style.display = 'none';
-    goToNextLevel();
-  };
-}
-
-// Go to next level
-function goToNextLevel() {
-  state.level++;
-  if (state.level > LEVELS.length - 1) {
-    state.level = 1; // restart from level 1 after finishing all
-  }
-
-  // reward coins
-  if (typeof StorageAPI !== 'undefined') {
-    StorageAPI.addCoins(LEVELS[state.level - 1].rewardCoins || 50);
-    updateCoinDisplay();
-  }
-
-  // reset score, board, UI
-  state.score = 0;
-  updateScoreUI();
-  updateLevelUI();
-  createBoardArray();
-  renderBoard();
-  console.log('Moved to Level', state.level);
-}
-
-// Check for level completion
-function checkLevelCompletion() {
-  const goal = (LEVELS[state.level] && LEVELS[state.level].goalScore) || 200;
-  if (state.score >= goal) {
-    showLevelCompleteModal();
-  }
-}
-
-// Call this inside processMatches() after updating score})();
-/* --- Level Complete + Map transition logic --- */
-(function(){
-  // helper
-  function $id(id){ return document.getElementById(id); }
-
-  // show modal with reward info
-  function showLevelComplete(level, rewardCoins){
-    const modal = $id('levelCompleteModal');
-    const card = $id('levelCompleteCard');
-    if(!modal || !card) return;
-    const txt = $id('levelCompleteMsg');
-    const rewardEl = $id('levelReward');
-    if(rewardEl) rewardEl.textContent = rewardCoins || 0;
-    if(txt) txt.textContent = `Level ${level} completed — Reward: ${rewardCoins || 0} coins`;
-    modal.classList.add('show');
-    modal.setAttribute('aria-hidden','false');
-
-    // small animate in
-    setTimeout(()=> card.style.opacity = '1', 10);
-    setTimeout(()=> card.style.transform = 'scale(1)', 10);
-  }
-
-  // hide modal
-  function hideLevelComplete(){
-    const modal = $id('levelCompleteModal');
-    if(!modal) return;
-    const card = $id('levelCompleteCard');
-    if(card){
-      card.style.transform = 'scale(0.96)';
-      card.style.opacity = '0';
-    }
-    setTimeout(()=> {
-      modal.classList.remove('show');
-      modal.setAttribute('aria-hidden','true');
-    }, 260);
-  }
-
-  // called when progress to next level
-  function goToNextLevelFromModal(){
-    try {
-      hideLevelComplete();
-      // next level index
-      const next = (state.level < LEVELS.length-1) ? state.level + 1 : 1;
-      state.level = next;
-      state.score = 0;
-      // persist if StorageAPI available
-      if(typeof StorageAPI !== 'undefined' && StorageAPI.setLevel) StorageAPI.setLevel(next);
-      updateLevelUI && updateLevelUI();
-      updateScoreUI && updateScoreUI();
-      createBoard && createBoard();
-      updateCoinDisplay && updateCoinDisplay();
-      console.log('Transitioned to next level', next);
-    } catch(e){ console.error('goToNextLevelFromModal error', e); }
-  }
-
-  // transition to map page (fade out, then navigate)
-  function transitionToMap(){
-    // fade out main game area for nice effect
-    const gs = $id('game-screen') || document.querySelector('.screen.active');
-    if(gs) gs.classList.add('page-fadeout');
-    // small delay to allow fade then navigate
-    setTimeout(()=> {
-      // navigate to map page - if you have level-map.html:
-      if(window.location.origin && window.location.pathname){
-        window.location.href = 'level-map.html';
-      } else {
-        // fallback: just hide modal and show home
-        hideLevelComplete();
-      }
-    }, 420);
-  }
-
-  // attach modal buttons (safe add)
-  document.addEventListener('DOMContentLoaded', ()=>{
-    const nextBtn = $id('levelNextBtn');
-    const mapBtn  = $id('levelMapBtn');
-    const modal   = $id('levelCompleteModal');
-
-    if(nextBtn) nextBtn.addEventListener('click', goToNextLevelFromModal);
-    if(mapBtn) mapBtn.addEventListener('click', transitionToMap);
-
-    // close modal if clicking outside card
-    if(modal) modal.addEventListener('click', (ev)=>{
-      const card = $id('levelCompleteCard');
-      if(card && !card.contains(ev.target)) hideLevelComplete();
-    });
-  });
-
-  // check for completion — call this after you update score
-  window.checkLevelCompletion = function(){
-    try {
-      const levelInfo = (LEVELS && LEVELS[state.level]) ? LEVELS[state.level] : null;
-      const goal = levelInfo ? (levelInfo.goalScore || Infinity) : Infinity;
-      if(state.score >= goal){
-        // reward coins (store)
-        const reward = levelInfo ? (levelInfo.rewardCoins || 0) : 0;
-        if(typeof StorageAPI !== 'undefined' && StorageAPI.addCoins) {
-          StorageAPI.addCoins(reward);
-          updateCoinDisplay && updateCoinDisplay();
-        }
-        // show modal
-        showLevelComplete(state.level, reward);
-      }
-    } catch(e){ console.error('checkLevelCompletion error', e); }
-  };
-
-  // make sure this debug message appears
-  console.log('LevelComplete module loaded');
 })();
