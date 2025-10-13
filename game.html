@@ -3,60 +3,180 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Game</title>
+  <title>Candy Match — Arun App Studio</title>
 
-  <!-- main page styles -->
-  <link rel="stylesheet" href="css/style.css"> <!-- shared header/footer styles (optional) -->
-  <link rel="stylesheet" href="css/game.css">  <!-- game specific styles (below) -->
+  <!-- CSS: अपने repo के paths के अनुसार रखें -->
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/inventory.css">
+
+  <style>
+    /* safety fallback अगर कोई css न लोड हो */
+    body { margin:0; font-family: system-ui, Arial, sans-serif; background: #ffeef6; -webkit-font-smoothing:antialiased; }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    #game-board { display:grid; grid-template-columns: repeat(8, 1fr); gap:12px; max-width:520px; margin:16px auto; }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <button class="btn small" id="backHome">← Home</button>
-    </div>
-    <div style="display:flex;gap:18px;align-items:center;">
-      <div>Score: <strong id="score">0</strong></div>
-      <div>Coins: <strong id="coins">0</strong></div>
-      <div>Level: <strong id="currentLevel">1</strong></div>
-    </div>
-  </header>
+  <!-- ===== HOME SCREEN ===== -->
+  <div id="home-screen" class="screen active">
+    <img src="images/candy1.png" alt="logo" style="width:84px;height:84px;display:block;margin:8px auto;">
+    <h1 class="title">🍭 Candy Match</h1>
+    <p class="subtitle">स्वीट्स को मिलाओ और लेवल पार करो!</p>
 
-  <main class="game-shell">
-    <div class="board-card">
-      <div id="game-board" class="game-board" aria-live="polite"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:20px;max-width:420px;margin-left:auto;margin-right:auto">
+      <button id="playBtn" style="width:80%;padding:14px;border-radius:22px;">Play</button>
+      <button id="openMapBtn" style="width:80%;padding:14px;border-radius:22px;">Level Map</button>
+      <button id="settingsBtn" style="width:80%;padding:14px;border-radius:22px;">Settings</button>
     </div>
 
-    <div class="controls">
-      <button id="restartBtn" class="btn">Restart</button>
-      <button id="shuffleBtn" class="btn">Shuffle</button>
-      <button id="openShopBtn" class="btn">Shop</button>
-    </div>
-  </main>
+    <div style="text-align:center;margin-top:30px;color:#8f7d84">Made with ❤️ — Arun App Studio</div>
+  </div>
 
-  <!-- level up modal (kept hidden) -->
-  <div id="levelUpModal" class="modal" style="display:none;">
-    <div class="modal-card">
-      <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpText">Congrats — next level unlocked.</p>
-      <button id="levelUpClose" class="btn">Continue</button>
+  <!-- ===== LEVEL MAP SCREEN ===== -->
+  <div id="map-screen" class="screen">
+    <div style="padding:12px;display:flex;align-items:center;gap:12px;">
+      <button id="mapBack" style="padding:8px 12px;border-radius:10px">← Back</button>
+      <h2 style="margin:0">Level Map</h2>
+    </div>
+
+    <div id="levelPath" style="padding:12px;">
+      <!-- level-map.js should populate this area with level nodes -->
+      <div class="loading">Loading map…</div>
     </div>
   </div>
 
-  <!-- Eruda mobile console loader (optional, useful) -->
+  <!-- ===== GAME SCREEN ===== -->
+  <div id="game-screen" class="screen">
+    <div class="topbar" style="display:flex;align-items:center;gap:12px;padding:12px;">
+      <button id="backHome" style="padding:8px 10px;border-radius:8px;">⬅️ Home</button>
+
+      <div style="flex:1;text-align:center">
+        <div style="font-weight:800">Score: <span id="score">0</span></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="background:#fff;border-radius:18px;padding:8px 12px">Coins: <span id="coins">0</span></div>
+        <div style="background:#fff;border-radius:18px;padding:8px 12px">Level: <span id="currentLevel">1</span></div>
+      </div>
+    </div>
+
+    <div id="board-wrap" style="max-width:760px;margin:10px auto;padding:18px;border-radius:20px;background:rgba(255,255,255,0.9);box-shadow:0 12px 30px rgba(0,0,0,0.06);">
+      <div id="game-board" class="board" aria-live="polite"></div>
+
+      <div style="display:flex;justify-content:center;gap:18px;margin-top:18px;">
+        <button id="restartBtn" style="padding:12px 18px;border-radius:24px;">Restart</button>
+        <button id="shuffleBtn" style="padding:12px 18px;border-radius:24px;">Shuffle</button>
+        <button id="openShopBtn" style="padding:12px 18px;border-radius:24px;">Shop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SHOP MODAL ===== -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:9999">
+    <div style="background:#fff;padding:14px;border-radius:12px;width:94%;max-width:420px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0">🛒 Shop</h3>
+        <div id="shopCoins">0</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+        <div style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div>💣 Bomb</div><div>₹200</div><button id="buyBomb">Buy</button>
+        </div>
+        <div style="padding:10px;border-radius:10px;background:#fff7fb;text-align:center;">
+          <div>🔀 Shuffle</div><div>₹100</div><button id="buyShuffle">Buy</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        <button id="closeShop">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Level Up Modal (hidden) ===== -->
+  <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:9999;">
+    <div style="background:#fff; padding:18px; border-radius:12px; width:90%; max-width:420px; text-align:center;">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <div style="margin-top:12px;"><button id="levelUpClose">Continue</button></div>
+    </div>
+  </div>
+
+  <!-- ===== Small safety script + eruda loader + safe-ui (put before storage/game so they attach gracefully) ===== -->
   <script>
+    // Eruda mobile console (optional but useful)
     (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function () { try { eruda.init(); console.log('Eruda loaded'); } catch(e){console.warn(e);} };
-      document.body.appendChild(s);
+      s.onload = function () {
+        try { eruda.init(); console.log('🧠 Eruda Console चालू हो गया'); } catch(e){ console.warn('Eruda load failed', e); }
+      };
+      document.head.appendChild(s);
     })();
   </script>
 
-  <!-- safe-ui loader so buttons don't throw when game script not ready -->
-  <script src="js/safe-ui.js"></script>
+  <script>
+  // Safe UI loader: single place to attach UI events (prevents addEventListener on null)
+  (function(){
+    function $id(id){ return document.getElementById(id); }
+    function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
 
-  <!-- storage & game logic -->
-  <script src="js/storage.js"></script>
-  <script src="js/game.js"></script>
+    document.addEventListener('DOMContentLoaded', function(){
+      console.log('✅ Safe UI loaded');
+
+      safeAdd('playBtn','click', function(){
+        // go to map screen first (as requested)
+        var hs=$id('home-screen'), ms=$id('map-screen');
+        if(hs) hs.classList.remove('active'); if(ms) ms.classList.add('active');
+      });
+
+      safeAdd('openMapBtn','click', function(){
+        var hs=$id('home-screen'), ms=$id('map-screen');
+        if(hs) hs.classList.remove('active'); if(ms) ms.classList.add('active');
+      });
+
+      safeAdd('mapBack','click', function(){
+        var ms=$id('map-screen'), gs=$id('game-screen');
+        if(ms) ms.classList.remove('active'); if(gs) gs.classList.add('active');
+        // try to init game if present
+        if(typeof initGame === 'function') initGame();
+      });
+
+      safeAdd('backHome','click', function(){
+        var gs=$id('game-screen'), hs=$id('home-screen');
+        if(gs) gs.classList.remove('active'); if(hs) hs.classList.add('active');
+      });
+
+      // Shop open/close
+      function openShop(){ var m=$id('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } else console.warn('shopModal not found'); }
+      safeAdd('openShopBtn','click', openShop);
+      safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
+
+      // Controls
+      safeAdd('restartBtn','click', function(){ if(typeof restartGame==='function') restartGame(); else console.warn('restartGame missing'); });
+      safeAdd('shuffleBtn','click', function(){ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
+
+      // shop buys
+      safeAdd('buyBomb','click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); else console.warn('buyFromShop missing'); });
+      safeAdd('buyShuffle','click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); else console.warn('buyFromShop missing'); });
+
+      safeAdd('levelUpClose','click', function(){ var m=$id('levelUpModal'); if(m) m.style.display='none'; });
+
+      // on initial load, update coin UI if storage script available later
+      if(typeof updateCoinDisplay === 'function') updateCoinDisplay();
+    });
+  })();
+  </script>
+
+  <!-- ===== Storage and core game scripts (load AFTER the safe-ui above) ===== -->
+  <script src="js/storage.js"></script>    <!-- must expose StorageAPI.getCoins(), addCoins(), getLevel(), setLevel() -->
+  <script src="js/level-map.js"></script>  <!-- builds level UI inside #levelPath -->
+  <script src="js/game.js"></script>       <!-- main game logic: must define initGame, restartGame, shuffleBoard etc -->
+  <script src="js/shop.js"></script>
+  <script src="js/inventory.js"></script>
+
+  <!-- small safety log -->
+  <script> try { console.log('index.html loaded'); } catch(e){} </script>
 </body>
-                                </html>
+                                               </html>
