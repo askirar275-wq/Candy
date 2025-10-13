@@ -1,10 +1,16 @@
-/* game.css */
-.board { width: min(92vw, 520px); transition: width .2s ease; }
-/* grid size will be set dynamically via JS (grid-template-columns) */
-.cell { background:rgba(255,245,250,0.8); border-radius:12px; display:flex;align-items:center;justify-content:center; width:100%; padding:6%; position:relative; overflow:visible; transition:transform .18s ease, opacity .18s linear; }
-.tile{ width:70%; height:auto; display:block; user-select:none; pointer-events:none; transition: transform .18s ease; }
-.cell.selected { box-shadow:0 6px 18px rgba(0,0,0,0.08) inset; transform:translateY(-6px) scale(1.02); }
-.cell.pop { transform: scale(0.1); opacity:0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s; }
-
-/* small mobile tuning */
-@media(min-width:600px){ .tile{width:80%} }
+:root{--bg:#ffeef6;--card:#fff;--accent:#ff6fa8;--shadow:rgba(0,0,0,0.08)}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);}
+.screen{display:none}
+.screen.active{display:block}
+.topbar{display:flex;gap:18px;align-items:center;padding:12px 16px;background:linear-gradient(180deg,#ffdfe8,#fff);}
+.game-shell{display:flex;flex-direction:column;align-items:center;padding:18px;min-height:60vh}
+.board-card{background:var(--card);border-radius:18px;padding:14px;box-shadow:0 12px 28px var(--shadow);width:min(720px,96%)}
+.game-board{display:grid;gap:10px;justify-items:center;align-items:center;padding:8px}
+.cell{width:64px;height:64px;border-radius:12px;background:#fff;display:flex;justify-content:center;align-items:center;box-shadow:0 8px 14px rgba(0,0,0,0.06);transition:transform .18s ease,opacity .18s}
+.cell img.tile{width:78%;height:auto;pointer-events:none;user-select:none}
+.cell.selected{transform:translateY(-6px) scale(1.02);box-shadow:0 14px 26px rgba(0,0,0,.12)}
+.controls{display:flex;gap:18px;margin-top:14px;justify-content:center}
+.btn{background:linear-gradient(45deg,#ff8fb0,#ff6fa8);border:none;color:#fff;padding:12px 20px;border-radius:28px;font-weight:600;cursor:pointer}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:999}
+.modal-card{background:#fff;padding:18px;border-radius:12px;text-align:center;width:90%;max-width:420px}
+@media(max-width:420px){.cell{width:48px;height:48px}.game-board{gap:8px}}
