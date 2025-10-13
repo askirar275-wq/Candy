@@ -1,36 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match - Fun Game</title>
-
-  <!-- CSS -->
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Play</title>
+  <link rel="stylesheet" href="css/game.css"> <!-- optional -->
+  <style>
+    /* small fallback styles so board visible even if css missing */
+    body{font-family:Inter,system-ui,Arial;margin:0;background:#fff9fb}
+    .screen{display:none;padding:18px}
+    .screen.active{display:block}
+    #game-area{max-width:520px;margin:18px auto}
+    #board{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:520px;margin:12px auto}
+    .cell{background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;height:64px;box-shadow:0 6px 14px rgba(0,0,0,0.06)}
+    .cell img{width:84%;height:84%;object-fit:contain;pointer-events:none}
+    .topbar{display:flex;align-items:center;gap:12px;padding:8px}
+    button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(180deg,#ffb3d1,#ff6fb3);color:#fff;font-weight:700;cursor:pointer}
+  </style>
 </head>
 <body>
 
-  <!-- 🏠 Home Screen -->
-  <div id="home-screen" class="screen active">
-    <div class="overlay">
-      <h1 class="title">🍬 Candy Match</h1>
-      <p class="subtitle">स्वीट्स को मिलाओ और मज़ा लो!</p>
-      <div class="buttons">
-        <button id="play">🎮 खेल शुरू करें</button>
+  <!-- HOME -->
+  <div id="home-screen" class="screen active" style="text-align:center;padding-top:40px">
+    <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:0 auto 8px">
+    <h1>🍭 Candy Match</h1>
+    <p>Mobile friendly — Swipe या tap करके खेलो</p>
+    <div style="margin-top:18px;display:flex;flex-direction:column;gap:12px;align-items:center">
+      <button id="startBtn" style="width:70%">▶ Start Game</button>
+      <button id="openShopBtn" style="width:70%">🛒 Shop</button>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen" class="screen" aria-live="polite">
+    <div class="topbar" style="padding:8px 12px;">
+      <button id="backBtn">⬅ Home</button>
+      <div style="margin-left:12px;font-weight:800">Score: <span id="score">0</span></div>
+      <div style="margin-left:auto">Coins: <span id="coins">0</span></div>
+    </div>
+
+    <div id="game-area">
+      <div id="board" aria-label="Game board"></div>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:12px">
+        <button id="restartBtn">Restart</button>
+        <button id="shuffleBtn">Shuffle</button>
+        <button id="hintBtn">Hint</button>
       </div>
     </div>
   </div>
 
-  <!-- 🎮 Game Screen -->
-  <div id="game-screen" class="screen">
-    <div id="topbar">
-      <button id="back">⬅ Home</button>
-      <div class="info">Score: <span id="score">0</span></div>
+  <!-- SHOP modal simple -->
+  <div id="shopModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:999">
+    <div style="background:#fff;padding:12px;border-radius:12px;max-width:420px;width:92%;">
+      <h3>🛒 Shop (Demo)</h3>
+      <p>Coins: <span id="shopCoins">0</span></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="buyBomb">Buy Bomb (200)</button>
+        <button id="buyShuffle">Buy Shuffle (100)</button>
+      </div>
+      <div style="text-align:right;margin-top:10px"><button id="closeShop">Close</button></div>
     </div>
-    <div id="board"></div>
   </div>
 
-  <!-- JS -->
+  <!-- Scripts: Eruda (mobile console) + safe UI + game.js -->
+  <!-- Eruda (loads console on mobile) -->
+  <script>
+    (function(){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/eruda';
+      s.onload=function(){ try{ eruda.init(); console.log('Eruda loaded'); }catch(e){console.warn('Eruda init failed',e);} };
+      document.body.appendChild(s);
+    })();
+  </script>
+
+  <!-- Safe UI bindings (keeps things robust) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      function $id(id){ return document.getElementById(id); }
+
+      // screen switches and safe calls
+      $id('startBtn').addEventListener('click', function(){
+        $id('home-screen').classList.remove('active');
+        $id('game-screen').classList.add('active');
+        if(typeof initGame === 'function'){
+          try { initGame(); }
+          catch(err){ console.error('initGame threw:', err); alert('Game start में error — console देखें'); }
+        } else {
+          console.warn('initGame not found (js/game.js missing or path wrong)');
+          alert('Game file missing। Check console (Eruda) for details.');
+        }
+      });
+
+      $id('backBtn').addEventListener('click', function(){
+        $id('game-screen').classList.remove('active');
+        $id('home-screen').classList.add('active');
+      });
+
+      // shop open/close
+      $id('openShopBtn').addEventListener('click', ()=>{ $id('shopModal').style.display='flex'; $id('shopCoins').textContent = localStorage.getItem('candy_coins') || 0; });
+      $id('closeShop').addEventListener('click', ()=>{ $id('shopModal').style.display='none'; });
+
+      // restart/shuffle/hint — call game functions if exist
+      $id('restartBtn').addEventListener('click', ()=>{ if(typeof restartGame==='function') restartGame(); else if(typeof initGame==='function') initGame(); else console.warn('restartGame/initGame missing'); });
+      $id('shuffleBtn').addEventListener('click', ()=>{ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
+      $id('hintBtn').addEventListener('click', ()=>{ if(typeof showHint==='function') showHint(); else console.warn('showHint missing'); });
+
+      // on load, log missing elements
+      ['board','score'].forEach(id => { if(!$id(id)) console.warn('Missing element #' + id); });
+    });
+  </script>
+
+  <!-- your main game script (सबसे अंत में) -->
   <script src="js/game.js"></script>
+
 </body>
-</html>
+    </html>
