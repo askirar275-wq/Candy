@@ -1,85 +1,68 @@
-:root {
-  --bg: #ffeef6;
-  --card: #fff;
-  --accent: #ff6fa8;
-  --shadow: rgba(0,0,0,0.08);
-}
 body {
   margin: 0;
   font-family: "Poppins", sans-serif;
-  background: var(--bg);
+  background: #ffeef6;
   text-align: center;
 }
 
-/* Screens */
-.screen { display: none; }
-.screen.active { display: block; padding: 20px; }
+.screen {
+  display: none;
+  padding: 20px;
+}
+.screen.active {
+  display: block;
+}
 
-/* Topbar */
+.btn {
+  background: linear-gradient(45deg, #ff80ab, #ff4081);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 16px;
+}
+.btn.small {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+.btn.back {
+  background: #ffb6c1;
+}
+
 .topbar {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: linear-gradient(180deg,#ffdfe8,#fff);
+  background: #ffdce5;
   padding: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-radius: 10px;
 }
 
-/* Game Board */
-.board-card {
-  background: var(--card);
-  border-radius: 18px;
-  padding: 14px;
-  margin: 20px auto;
-  box-shadow: 0 12px 28px var(--shadow);
-  width: min(720px, 96%);
-}
-.game-board {
+.board {
   display: grid;
-  gap: 10px;
-  justify-items: center;
+  gap: 6px;
+  justify-content: center;
+  margin: 20px auto;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
+
 .cell {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
   background: #fff;
   display: flex;
-  justify-content: center;
   align-items: center;
-  box-shadow: 0 8px 14px rgba(0,0,0,0.06);
-  transition: transform .2s;
+  justify-content: center;
+  transition: transform 0.15s ease;
 }
-.cell img.tile {
-  width: 78%;
+.cell img {
+  width: 85%;
   height: auto;
-  pointer-events: none;
 }
-.cell.selected { transform: scale(1.1); }
-
-/* Buttons */
-.btn {
-  background: linear-gradient(45deg, #ff8fb0, #ff6fa8);
-  border: none;
-  border-radius: 25px;
-  color: #fff;
-  font-weight: 600;
-  padding: 10px 20px;
-  margin: 5px;
-  cursor: pointer;
-}
-.btn.small { font-size: 14px; padding: 8px 14px; }
-
-/* Modal */
-.modal {
-  position: fixed; inset: 0;
-  display: flex; justify-content: center; align-items: center;
-  background: rgba(0,0,0,0.4);
-}
-.modal-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
+.cell.active {
+  transform: scale(1.2);
 }
