@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Candy Match - Game</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <div class="topbar">
+    <button onclick="location.href='level-map.html'">← Home</button>
+    <div>Score: <span id="score">0</span></div>
+    <div>Coins: <span id="coins">0</span></div>
+    <div>Level: <span id="currentLevel">1</span></div>
+  </div>
+
+  <div id="game-board" class="board"></div>
+
+  <div class="controls">
+    <button id="restartBtn">Restart</button>
+    <button id="shuffleBtn">Shuffle</button>
+  </div>
+
+  <div id="levelUpModal" class="modal">
+    <div class="modal-content">
+      <h2 id="levelUpText">Level Complete!</h2>
+      <button id="levelUpClose">Next Level</button>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
+</body>
+        </html>
