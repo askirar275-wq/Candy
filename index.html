@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match - Simple</title>
+  <title>Candy Match - Fun Game</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="css/style.css">
@@ -12,16 +12,20 @@
 
   <!-- 🏠 Home Screen -->
   <div id="home-screen" class="screen active">
-    <h1>🍭 Candy Match</h1>
-    <p>स्वीट्स को मिलाओ और स्कोर बढ़ाओ!</p>
-    <button id="play">Play</button>
+    <div class="overlay">
+      <h1 class="title">🍬 Candy Match</h1>
+      <p class="subtitle">स्वीट्स को मिलाओ और मज़ा लो!</p>
+      <div class="buttons">
+        <button id="play">🎮 खेल शुरू करें</button>
+      </div>
+    </div>
   </div>
 
   <!-- 🎮 Game Screen -->
   <div id="game-screen" class="screen">
     <div id="topbar">
       <button id="back">⬅ Home</button>
-      <div>Score: <span id="score">0</span></div>
+      <div class="info">Score: <span id="score">0</span></div>
     </div>
     <div id="board"></div>
   </div>
