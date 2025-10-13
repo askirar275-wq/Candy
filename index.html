@@ -1,77 +1,134 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>Candy Match — Home</title>
+
+  <!-- आपका CSS (अगर अलग फाइल है तो path बदलें) -->
+  <link rel="stylesheet" href="css/home.css">
+
+  <!-- छोटा fallback style अगर home.css न मिले -->
+  <style>
+    :root{
+      --pink1:#ff8fc1;
+      --pink2:#ff4f9e;
+      --bg:#ffeef6;
+      --card:#fff;
+      --shadow: 0 8px 20px rgba(0,0,0,.08);
+    }
+    html,body{height:100%;margin:0;font-family:Inter, "Poppins", system-ui, sans-serif;background:linear-gradient(180deg,var(--bg),#fff); color:#222;}
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:18px;padding:36px 20px;}
+    .hero-card{width:100%;max-width:640px;background:var(--card);border-radius:28px;padding:34px 28px;box-shadow:var(--shadow);text-align:center;}
+    .logo{width:110px;height:110px;display:block;margin:0 auto 8px;object-fit:contain;}
+    h1{font-size:44px;margin:6px 0;color:#ff2680;font-weight:800;letter-spacing:0.5px;}
+    p.lead{margin:6px 0 18px;color:#6c5663;font-size:18px;}
+    .big-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-width:240px;padding:16px 28px;border-radius:999px;border:0;background:linear-gradient(180deg,var(--pink1),var(--pink2));color:white;font-size:20px;box-shadow:0 8px 18px rgba(255,80,150,0.18);cursor:pointer}
+    .big-btn:active{transform:translateY(2px);}
+    .btn-row{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:6px;}
+    .footer{margin-top:18px;color:#8b6b78;font-size:15px;}
+    /* small screens tweak */
+    @media(min-width:520px){
+      .btn-row{flex-direction:row;}
+      .big-btn{min-width:260px;}
+    }
+    /* small floating settings icon (reuse from your UI) */
+    .float-gear{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:12px;background:#f3d9e6;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,0.12);z-index:1200;}
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="hero-card" role="main" aria-labelledby="title">
+      <!-- logo image: change path/name if needed -->
+      <img src="images/logo-candy.png" alt="Candy logo" class="logo" onerror="this.style.display='none'">
+      <h1 id="title">Candy Match</h1>
+      <p class="lead">स्वीट्स को मिलाओ और लेवल पार करो!</p>
 
-<!-- HOME SCREEN -->
-<section id="home-screen" class="screen active">
-  <div class="home-container">
-    <img src="images/candy_icon.png" alt="Candy" class="logo" />
-    <h1 class="title">🍬 Candy Match</h1>
-    <p class="tagline">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
-    <button id="startBtn" class="btn"><i>🎮</i> Start</button>
-    <button id="shopBtn" class="btn"><i>🛒</i> Shop</button>
-    <button id="settingsBtn" class="btn"><i>⚙️</i> Settings</button>
-    <button id="installBtn" class="btn secondary"><i>⬇️</i> Install</button>
-    <footer>Made with ❤️ — Arun App Studio</footer>
-  </div>
-</section>
+      <div class="btn-row" role="navigation" aria-label="Main actions">
+        <button id="startBtn" class="big-btn">🎮 खेल शुरू करें</button>
+        <button id="shopBtn"  class="big-btn" style="background:linear-gradient(180deg,#ffd6e8,#ff95d0);color:#3b0b21">🛒 शॉप</button>
+        <button id="settingsBtn" class="big-btn" style="background:linear-gradient(180deg,#ffd6f0,#ffb5dc);color:#3b0b21">⚙️ सेटिंग</button>
+      </div>
 
-<!-- LEVEL MAP -->
-<section id="map-screen" class="screen">
-  <button class="back-btn" id="mapBack">← Back</button>
-  <h2>Level Map</h2>
-  <div class="levels">
-    <button data-level="1">Level 1</button>
-    <button data-level="2">Level 2</button>
-    <button data-level="3">Level 3</button>
+      <div class="footer">Made with ❤️ — Arun App Studio</div>
+    </div>
   </div>
-</section>
 
-<!-- GAME -->
-<section id="game-screen" class="screen">
-  <div class="topbar">
-    <button class="back-btn" id="backBtn">← Home</button>
-    <div class="info">Score: <span id="score">0</span></div>
-    <div class="info">Coins: <span id="coins">0</span></div>
-    <div class="info">Level: <span id="currentLevel">1</span></div>
+  <!-- floating gear (optional) -->
+  <div class="float-gear" id="openGear" title="Open debug">
+    ⚙️
   </div>
-  <div id="board"></div>
-  <div class="controls">
-    <button id="restartBtn">Restart</button>
-    <button id="shuffleBtn">Shuffle</button>
-    <button id="mapBtn">Map</button>
-  </div>
-</section>
 
-<!-- SHOP -->
-<section id="shop-screen" class="screen">
-  <button class="back-btn" id="shopBack">← Back</button>
-  <h2>Shop</h2>
-  <p>Coins: <span id="shopCoins">0</span></p>
-  <div class="shop-items">
-    <button id="buyBomb">💣 Bomb (200)</button>
-    <button id="buyShuffle">🔄 Shuffle (100)</button>
-  </div>
-</section>
+  <!-- ===== Eruda loader (mobile console) ===== -->
+  <script>
+    (function(){
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function(){
+        try{ eruda.init(); console.log('🧠 Eruda Console चालू हो गया'); }
+        catch(e){ console.warn('Eruda init error', e); }
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
 
-<!-- SETTINGS -->
-<section id="settings-screen" class="screen">
-  <button class="back-btn" id="settingsBack">← Back</button>
-  <h2>Settings</h2>
-  <div class="settings-options">
-    <label><input type="checkbox" id="soundToggle" checked /> 🔊 Sound</label>
-    <label><input type="checkbox" id="vibrationToggle" checked /> 📳 Vibration</label>
-  </div>
-</section>
+  <!-- ===== Safe UI (single small file you can also keep as js/safe-ui.js) ===== -->
+  <script>
+    // छोटा Safe UI script — buttons को सुरक्षित तरीके से hook करेगा
+    (function(){
+      function $id(id){ return document.getElementById(id); }
+      function safeAdd(id, evt, fn){
+        var el = $id(id);
+        if(!el){ console.warn('safe-ui: missing #' + id); return; }
+        el.addEventListener(evt, fn, {passive:true});
+      }
 
-<script src="js/main.js"></script>
-<script src="js/game.js"></script>
+      document.addEventListener('DOMContentLoaded', function(){
+        console.log('✅ Safe UI loaded');
+
+        safeAdd('startBtn','click', function(){
+          // Home -> पहले level map दिखाएँ (यदि level-map page है) या सीधे गेम init करें
+          // आप चाहें तो यहाँ location.href='level-map.html' कर दें
+          if(typeof initGame === 'function'){
+            try { initGame(); }
+            catch(e){ console.error('Error: initGame error', e); alert('Game init failed — console देखें'); }
+          } else {
+            // अगर आपने level-map बनाया है तो redirect करें अन्यथा गेम वाली स्क्रीन दिखाएँ
+            // location.href = 'level-map.html';
+            console.warn('initGame not found — redirecting to level-map (if exists)');
+            if (confirm('Level map दिखाएँ? OK = Level Map, Cancel = सीधे गेम खोलें')) {
+              location.href = 'level-map.html';
+            } else {
+              // अगर game.js मौजूद है पर initGame नहीं मिला तो खोलने से पहले reload करें
+              location.href = 'game.html';
+            }
+          }
+        });
+
+        safeAdd('shopBtn','click', function(){
+          // अगर आपने shop modal game में रखा है तो navigate करें या modal खोलें
+          if(typeof openShop === 'function'){ openShop(); }
+          else { location.href = 'shop.html'; }
+        });
+
+        safeAdd('settingsBtn','click', function(){
+          location.href = 'settings.html';
+        });
+
+        safeAdd('openGear','click', function(){
+          // quick helper: open eruda console UI (if available)
+          try{
+            if(window.eruda) window.eruda.show();
+            else alert('Eruda loaded? console देखें।');
+          }catch(e){ console.warn('openGear error', e); }
+        });
+      });
+    })();
+  </script>
+
+  <!-- आपके बाकी स्क्रिप्ट — storage/game/etc (यदि चाहें यहां जोड़ें) -->
+  <!-- <script src="js/storage.js"></script>
+  <script src="js/game.js"></script> -->
 
 </body>
-    </html>
+</html>
