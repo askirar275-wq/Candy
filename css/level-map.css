@@ -1,2 +1,91 @@
-.level-list{display:flex;flex-wrap:wrap;gap:12px;padding:12px}
-.level-item{padding:12px 16px;background:#fff;border-radius:12px;box-shadow:0 6px 10px rgba(0,0,0,0.06)}
+/* basic layout */
+:root{
+  --bg:#ffeef7;
+  --card:#fff;
+  --accent:#ff80ab;
+  --muted:#6b5b5b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter, system-ui, Arial, sans-serif;
+  background:var(--bg);
+  color:#222;
+}
+
+/* header */
+.lm-header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:16px;
+  background:linear-gradient(180deg,#ffdfe8,#ffd7e0);
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.lm-header h1{margin:0;font-size:20px;font-weight:700}
+.back-btn{
+  display:inline-block;padding:8px 12px;border-radius:12px;background:var(--accent);color:white;text-decoration:none;font-weight:700;
+}
+
+/* container */
+.map-container{
+  padding:18px;
+}
+
+/* canvas - use large area to scroll horizontally if needed */
+.map-canvas{
+  position:relative;
+  background: #fff;
+  border-radius:18px;
+  padding:20px;
+  min-height:420px;
+  box-shadow:0 8px 18px rgba(0,0,0,0.06);
+  overflow:auto;
+}
+
+/* loading text */
+.loading{
+  color:var(--muted);
+  font-size:18px;
+}
+
+/* level node style */
+.level-node{
+  position:absolute;
+  width:72px;
+  height:72px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#fff,#fff7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 6px 12px rgba(0,0,0,0.06);
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s;
+}
+.level-node img{
+  max-width:56px;
+  max-height:56px;
+  display:block;
+}
+.level-node.locked{opacity:.45; filter:grayscale(.5)}
+.level-node:hover{transform:translateY(-6px); box-shadow:0 12px 20px rgba(0,0,0,0.12)}
+
+/* connector lines */
+.map-line{
+  position:absolute;
+  height:6px;
+  background:linear-gradient(90deg,#ffd1e3,#ffb0d1);
+  border-radius:6px;
+  transform-origin:left center;
+  box-shadow:0 6px 12px rgba(0,0,0,0.03);
+}
+
+/* modal */
+.modal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999}
+.modal .modal-card{background:var(--card);padding:18px;border-radius:12px;width:90%;max-width:420px;text-align:center}
+
+/* responsive smaller nodes on phones */
+@media (max-width:420px){
+  .level-node{width:64px;height:64px}
+}
