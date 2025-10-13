@@ -1,150 +1,138 @@
-// game.js - simple match-3 core (6 candies), swipe support, gravity, refill, levels
 (function(){
-  const IMAGES = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png']; // place in images/
-  const LEVELS = [null, {id:1,goal:100,reward:50,size:8}, {id:2,goal:220,reward:120,size:8}, {id:3,goal:500,reward:250,size:8}];
-  let state = { level:1, score:0, size:8 };
+  const candies = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png'];
+  let grid = [], size = 8, score = 0;
 
-  const $ = id=>document.getElementById(id);
-  function log(){ if(window.console) console.log.apply(console,arguments); }
+  const $ = id => document.getElementById(id);
 
-  function randImg(){ return 'images/' + IMAGES[Math.floor(Math.random()*IMAGES.length)]; }
+  // रैंडम कैंडी
+  const randCandy = () => 'images/' + candies[Math.floor(Math.random() * candies.length)];
 
-  // storage helpers
-  function updateCoinDisplay(){ const el=$('coins'); if(el) el.textContent = StorageAPI.getCoins(); const sc=$('currentLevel'); if(sc) sc.textContent = state.level; }
+  // ग्रिड बनाओ
+  function createGrid(){
+    grid = Array.from({length: size}, ()=>Array.from({length: size}, randCandy));
+    renderGrid();
+  }
 
-  // grid data (2D array of image src or null)
-  let grid = [];
+  // ग्रिड दिखाओ
+  function renderGrid(){
+    const board = $('game-board');
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r; cell.dataset.c = c;
 
-  function initGrid(){ grid = []; for(let r=0;r<state.size;r++){ const row=[]; for(let c=0;c<state.size;c++){ row.push(randImg()); } grid.push(row); } }
-
-  // render grid
-  function renderGrid(){ const board = $('game-board'); if(!board) return; board.innerHTML=''; board.style.gridTemplateColumns = `repeat(${state.size}, 1fr)`;
-    for(let r=0;r<state.size;r++){
-      for(let c=0;c<state.size;c++){
-        const cell = document.createElement('div'); cell.className='cell'; cell.dataset.r=r; cell.dataset.c=c;
-        const img = document.createElement('img'); img.className='tile'; img.draggable=false; img.alt=''; img.src = grid[r][c] || '';
+        const img = document.createElement('img');
+        img.className = 'tile';
+        img.src = grid[r][c];
         cell.appendChild(img);
-        attachPointerHandlers(cell);
         board.appendChild(cell);
+
+        attachSwipe(cell);
       }
     }
   }
 
-  // utilities
-  function inBounds(r,c){ return r>=0 && c>=0 && r<state.size && c<state.size }
-  function swapCells(r1,c1,r2,c2){ const t = grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=t }
-
-  // match detection - returns array of coordinates to clear
-  function detectMatches(){ const toClear = Array.from({length:state.size},()=>Array(state.size).fill(false));
-    // rows
-    for(let r=0;r<state.size;r++){
-      let runStart=0;
-      for(let c=1;c<=state.size;c++){
-        if(c<state.size && grid[r][c]===grid[r][runStart]) continue;
-        const runLen = c-runStart;
-        if(runLen>=3){ for(let k=runStart;k<c;k++) toClear[r][k]=true }
-        runStart=c;
-      }
-    }
-    // cols
-    for(let c=0;c<state.size;c++){
-      let runStart=0;
-      for(let r=1;r<=state.size;r++){
-        if(r<state.size && grid[r][c]===grid[runStart][c]) continue;
-        const runLen = r-runStart;
-        if(runLen>=3){ for(let k=runStart;k<r;k++) toClear[k][c]=true }
-        runStart=r;
-      }
-    }
-    // collect list
-    const list=[];
-    for(let r=0;r<state.size;r++) for(let c=0;c<state.size;c++) if(toClear[r][c]) list.push([r,c]);
-    return list;
-  }
-
-  // remove matched tiles, award score, apply gravity and refill
-  function collapseAndRefill(matched){ if(!matched || matched.length===0) return 0; const points = matched.length*20; state.score += points; // update score
-    // set matched to null
-    matched.forEach(([r,c])=>{ grid[r][c]=null });
-    // gravity: for each column, pull items down
-    for(let c=0;c<state.size;c++){
-      let write = state.size-1;
-      for(let r=state.size-1;r>=0;r--){ if(grid[r][c]!==null){ grid[write][c]=grid[r][c]; write--; } }
-      while(write>=0){ grid[write][c]=randImg(); write--; }
-    }
-    return points;
-  }
-
-  // repeatedly detect-match -> collapse until no more auto matches
-  function resolveBoard(){ let totalPoints=0; while(true){ const m = detectMatches(); if(m.length===0) break; const pts = collapseAndRefill(m); totalPoints+=pts; renderGrid(); }
-    updateScoreUI(); return totalPoints;
-  }
-
-  function updateScoreUI(){ const s=$('score'); if(s) s.textContent=state.score }
-
-  // swipe support: we use pointer/touch events
-  let pointer = {down:false, startX:0, startY:0, cellR:null, cellC:null};
-  function attachPointerHandlers(cell){
-    cell.addEventListener('pointerdown', (e)=>{
-      cell.setPointerCapture(e.pointerId);
-      pointer.down=true; pointer.startX=e.clientX; pointer.startY=e.clientY; pointer.cellR=Number(cell.dataset.r); pointer.cellC=Number(cell.dataset.c);
-      cell.classList.add('selected');
+  // स्वाइप इवेंट
+  let startX, startY;
+  function attachSwipe(cell){
+    cell.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
     });
-    cell.addEventListener('pointerup', (e)=>{
-      try{ e.target.releasePointerCapture(e.pointerId); }catch(e){}
-      pointer.down=false; const sel = document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected');
-    });
-    cell.addEventListener('pointercancel', ()=>{ pointer.down=false; const sel=document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected'); });
-    cell.addEventListener('pointermove', (e)=>{
-      if(!pointer.down) return; const dx = e.clientX - pointer.startX; const dy = e.clientY - pointer.startY; const absX = Math.abs(dx); const absY = Math.abs(dy);
-      const threshold = 20; // minimal swipe distance
-      if(Math.max(absX,absY) < threshold) return;
-      // determine direction
-      let dr=0, dc=0;
-      if(absX>absY){ dc = dx<0 ? -1 : 1; } else { dr = dy<0 ? -1 : 1; }
-      const r1 = pointer.cellR, c1 = pointer.cellC; const r2 = r1+dr, c2 = c1+dc;
-      if(!inBounds(r2,c2)) return;
-      // perform swap, check for match, if not swap back
-      swapCells(r1,c1,r2,c2); renderGrid(); const matches = detectMatches(); if(matches.length>0){ const pts = collapseAndRefill(matches); updateScoreUI(); // resolve chain
-        setTimeout(()=>{ resolveBoard(); },120);
-      } else { // revert
-        setTimeout(()=>{ swapCells(r1,c1,r2,c2); renderGrid(); },120);
-      }
-      // reset pointer down so one swipe per drag
-      pointer.down=false; const sel=document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected');
+    cell.addEventListener('touchend', e => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      if(Math.max(absX, absY) < 25) return;
+      const r = +cell.dataset.r, c = +cell.dataset.c;
+      let r2=r, c2=c;
+      if(absX > absY) c2 += dx > 0 ? 1 : -1;
+      else r2 += dy > 0 ? 1 : -1;
+      if(r2<0||r2>=size||c2<0||c2>=size) return;
+      swap(r,c,r2,c2);
     });
   }
 
-  // shuffle board
-  window.shuffleBoard = function(){ for(let r=0;r<state.size;r++) for(let c=0;c<state.size;c++) grid[r][c]=randImg(); renderGrid(); log('Board shuffled'); };
-  window.restartGame = function(){ state.score=0; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game restarted'); };
-
-  // level map render
-  window.renderLevelMap = function(){ const list = $('levelList'); if(!list) return; list.innerHTML=''; for(let i=1;i<LEVELS.length;i++){ const li=document.createElement('div'); li.style.padding='8px'; li.style.margin='6px'; li.style.border='1px solid #f0d'; li.style.display='inline-block'; li.style.borderRadius='10px'; li.style.cursor='pointer'; li.textContent = 'Level ' + i + '  — goal ' + LEVELS[i].goal; li.dataset.level = i; li.addEventListener('click',()=>{ StorageAPI.setLevel(i); startLevel(i); document.getElementById('map-screen').classList.remove('active'); document.getElementById('game-screen').classList.add('active'); }); list.appendChild(li); } };
-
-  function startLevel(l){ state.level = Number(l||StorageAPI.getLevel()||1); state.size = LEVELS[state.level].size || 8; state.score = 0; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game initialized at level', state.level); }
-
-  // level completion check
-  function checkLevelComplete(){ const goal = (LEVELS[state.level] && LEVELS[state.level].goal) || Infinity; if(state.score >= goal){ // give reward & unlock
-      const reward = LEVELS[state.level] ? LEVELS[state.level].reward : 0; if(reward) StorageAPI.addCoins(reward); const next = state.level+1; if(LEVELS[next]) StorageAPI.setLevel(next); // show modal
-      const modal = $('levelUpModal'); if(modal){ $('levelUpTitle').textContent='Level Up!'; $('levelUpText').textContent = 'You reached the goal. Reward: ' + reward + ' coins.'; modal.style.display='flex'; }
-      updateCoinDisplay();
-    }
+  function swap(r1,c1,r2,c2){
+    [grid[r1][c1], grid[r2][c2]] = [grid[r2][c2], grid[r1][c1]];
+    renderGrid();
+    checkMatches();
   }
 
-  // expose update functions for safe-ui
-  window.initGame = function(){ try{ state.level = StorageAPI.getLevel() || 1; state.size = LEVELS[state.level].size || 8; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game initialized at level', state.level); } catch(e){ console.error('initGame error', e); } };
+  // मैच डिटेक्शन
+  function checkMatches(){
+    let matched = [];
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size-2;c++){
+        if(grid[r][c] && grid[r][c]===grid[r][c+1] && grid[r][c]===grid[r][c+2])
+          matched.push([r,c],[r,c+1],[r,c+2]);
+      }
+    }
+    for(let c=0;c<size;c++){
+      for(let r=0;r<size-2;r++){
+        if(grid[r][c] && grid[r][c]===grid[r+1][c] && grid[r][c]===grid[r+2][c])
+          matched.push([r,c],[r+1,c],[r+2,c]);
+      }
+    }
+    if(matched.length>0) removeMatched(matched);
+  }
 
-  // quick add coins (console)
-  window.addCoins = function(n){ StorageAPI.addCoins(Number(n||0)); updateCoinDisplay(); };
+  // मैच हटाना + ग्रेविटी
+  function removeMatched(matched){
+    matched.forEach(([r,c])=> grid[r][c]=null);
+    score += matched.length * 10;
+    $('score').textContent = score;
 
-  // basic auto-resolve every few seconds to clear accidental auto-matches on start
-  setTimeout(()=>{ if(typeof initGame==='function'){ initGame(); } },200);
+    // ग्रेविटी
+    for(let c=0;c<size;c++){
+      for(let r=size-1;r>=0;r--){
+        if(!grid[r][c]){
+          for(let k=r-1;k>=0;k--){
+            if(grid[k][c]){
+              grid[r][c]=grid[k][c]; grid[k][c]=null; break;
+            }
+          }
+        }
+      }
+      for(let r=0;r<size;r++) if(!grid[r][c]) grid[r][c]=randCandy();
+    }
+    renderGrid();
+    setTimeout(checkMatches,100);
+  }
 
-  // after every grid change, check level completion (simple hook)
-  const scoreObserver = new MutationObserver(()=>{ checkLevelComplete(); });
-  const scoreNode = $('score'); if(scoreNode) scoreObserver.observe(scoreNode,{childList:true});
+  // गेम शुरू
+  window.restartGame = function(){
+    score=0; $('score').textContent='0';
+    createGrid();
+  };
+  window.shuffleBoard = function(){
+    grid.flat().sort(()=>Math.random()-0.5);
+    createGrid();
+  };
 
-  // save modules loaded
-  try{ console.log('Loaded: js/game.js'); }catch(e){}
+  // लेवल लिस्ट दिखाओ
+  window.renderLevelMap = function(){
+    const map = $('levelList');
+    map.innerHTML = '';
+    for(let i=1;i<=5;i++){
+      const btn=document.createElement('button');
+      btn.className='btn';
+      btn.textContent='Level '+i;
+      btn.onclick=()=>startLevel(i);
+      map.appendChild(btn);
+    }
+  };
+
+  function startLevel(lvl){
+    $('currentLevel').textContent=lvl;
+    createGrid();
+    document.getElementById('map-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+  }
+
+  // गेम इनिशियलाइज़
+  document.addEventListener("DOMContentLoaded", ()=> createGrid());
 })();
