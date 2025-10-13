@@ -1,527 +1,77 @@
 <!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Candy Match — Demo</title>
-<style>
-  /* सरल responsive styling */
-  :root{
-    --bg:#ffeef6;
-    --card:#fff;
-    --accent1:#ff8fc1;
-    --accent2:#ff6fb3;
-  }
-  html,body{height:100%}
-  body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#fff0f6,#ffeef6);color:#222}
-  .center-card{max-width:760px;margin:28px auto;padding:20px;}
-  .screen{display:none}
-  .screen.active{display:block}
-  /* Home */
-  .home-card{background:var(--card);border-radius:18px;padding:32px;text-align:center;box-shadow:0 6px 30px rgba(0,0,0,0.08)}
-  .title{font-size:40px;margin:0 0 6px;color:#ff4d8a}
-  .subtitle{color:#6b5b5b;margin:0 0 18px}
-  .big-btn{display:inline-block;padding:14px 28px;border-radius:40px;background:linear-gradient(45deg,var(--accent1),var(--accent2));color:#fff;font-weight:700;cursor:pointer;border:0;box-shadow:0 8px 18px rgba(255,111,179,0.18)}
-  /* Topbar game */
-  .topbar{display:flex;align-items:center;gap:12px;padding:12px}
-  .topbar .homebtn{padding:10px;border-radius:10px;background:#fff;border:1px solid rgba(0,0,0,0.05)}
-  .info{font-weight:700}
-  /* Board */
-  #board-wrap{max-width:520px;margin:12px auto;padding:18px;background:rgba(255,255,255,0.96);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
-  #board{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:8px}
-  .cell{background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;height:64px;box-shadow:0 8px 20px rgba(0,0,0,0.06);transition:transform .15s ease}
-  .cell.selected{transform:scale(0.98);box-shadow:0 10px 30px rgba(0,0,0,0.08)}
-  .cell img{width:76%;height:76%;object-fit:contain;pointer-events:none}
-  /* controls */
-  .controls{display:flex;gap:12px;justify-content:center;margin-top:14px}
-  .small-btn{padding:10px 14px;border-radius:30px;background:linear-gradient(45deg,#ffb6d9,#ff80b3);color:#fff;border:0;cursor:pointer}
-  /* modal */
-  .modal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:999}
-  .modal .card{background:#fff;padding:14px;border-radius:12px;max-width:420px;width:92%}
-  /* responsive */
-  @media (max-width:420px){
-    .title{font-size:34px}
-    #board{grid-template-columns:repeat(6,1fr);gap:6px}
-    .cell{height:56px}
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
-<div class="center-card">
-
-  <!-- HOME -->
-  <div id="home-screen" class="screen active">
-    <div class="home-card">
-      <div style="font-size:28px">🍬</div>
-      <h1 class="title">Candy Match</h1>
-      <p class="subtitle">स्वीट्स मिलाओ और level पार करो — मोबाइल के लिए optimized</p>
-      <div style="margin-top:18px">
-        <button id="startBtn" class="big-btn">🎮 खेल शुरू करें</button>
-      </div>
-      <div style="margin-top:22px;color:#666">(Eruda console enabled — errors देखने के लिए मोबाइल पर टैप करें)</div>
-    </div>
+<!-- HOME SCREEN -->
+<section id="home-screen" class="screen active">
+  <div class="home-container">
+    <img src="images/candy_icon.png" alt="Candy" class="logo" />
+    <h1 class="title">🍬 Candy Match</h1>
+    <p class="tagline">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
+    <button id="startBtn" class="btn"><i>🎮</i> Start</button>
+    <button id="shopBtn" class="btn"><i>🛒</i> Shop</button>
+    <button id="settingsBtn" class="btn"><i>⚙️</i> Settings</button>
+    <button id="installBtn" class="btn secondary"><i>⬇️</i> Install</button>
+    <footer>Made with ❤️ — Arun App Studio</footer>
   </div>
+</section>
 
-  <!-- LEVEL MAP (सरल placeholder) -->
-  <div id="map-screen" class="screen">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-      <button id="mapBack" class="homebtn">← Back</button>
-      <h2 style="margin:0">Level Map</h2>
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <!-- unlocked levels -->
-      <div style="background:#fff;padding:10px;border-radius:12px;min-width:140px">Level 1 — Beginner<br><button class="small-btn" data-level="1">Play</button></div>
-      <div style="background:#fff;padding:10px;border-radius:12px;min-width:140px">Level 2 — Explorer<br><button class="small-btn" data-level="2">Play</button></div>
-      <div style="background:#fff;padding:10px;border-radius:12px;min-width:140px">Level 3 — Challenger<br><button class="small-btn" data-level="3">Play</button></div>
-    </div>
+<!-- LEVEL MAP -->
+<section id="map-screen" class="screen">
+  <button class="back-btn" id="mapBack">← Back</button>
+  <h2>Level Map</h2>
+  <div class="levels">
+    <button data-level="1">Level 1</button>
+    <button data-level="2">Level 2</button>
+    <button data-level="3">Level 3</button>
   </div>
+</section>
 
-  <!-- GAME SCREEN -->
-  <div id="game-screen" class="screen" aria-live="polite">
-    <div class="topbar">
-      <button id="backBtn" class="homebtn">← Home</button>
-      <div style="margin-left:12px" class="info">Score: <span id="score">0</span></div>
-      <div style="margin-left:auto" class="info">Coins: <span id="coins">0</span></div>
-      <div style="margin-left:12px" id="levelBadge">Level: <span id="currentLevel">1</span></div>
-    </div>
-
-    <div id="board-wrap">
-      <div id="board" role="grid" aria-label="Candy board"></div>
-      <div class="controls">
-        <button id="restartBtn" class="small-btn">Restart</button>
-        <button id="shuffleBtn" class="small-btn">Shuffle</button>
-        <button id="openMap" class="small-btn">Map</button>
-      </div>
-    </div>
+<!-- GAME -->
+<section id="game-screen" class="screen">
+  <div class="topbar">
+    <button class="back-btn" id="backBtn">← Home</button>
+    <div class="info">Score: <span id="score">0</span></div>
+    <div class="info">Coins: <span id="coins">0</span></div>
+    <div class="info">Level: <span id="currentLevel">1</span></div>
   </div>
-
-</div>
-
-<!-- simple shop modal (demo) -->
-<div id="shopModal" class="modal">
-  <div class="card">
-    <h3>Shop (Demo)</h3>
-    <p>Coins: <span id="shopCoins">0</span></p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="buyBomb" class="small-btn">Bomb ₹200</button>
-      <button id="buyShuffle" class="small-btn">Shuffle ₹100</button>
-    </div>
-    <div style="text-align:right;margin-top:12px"><button id="closeShop" class="small-btn">Close</button></div>
+  <div id="board"></div>
+  <div class="controls">
+    <button id="restartBtn">Restart</button>
+    <button id="shuffleBtn">Shuffle</button>
+    <button id="mapBtn">Map</button>
   </div>
-</div>
+</section>
 
-<!-- ==== Eruda mobile console ==== -->
-<script>
-  (function(){
-    var s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/eruda';
-    s.onload=function(){ try{ eruda.init(); console.log('Eruda Console चालू हो गया'); }catch(e){console.warn('Eruda init failed',e);} };
-    document.body.appendChild(s);
-  })();
-</script>
+<!-- SHOP -->
+<section id="shop-screen" class="screen">
+  <button class="back-btn" id="shopBack">← Back</button>
+  <h2>Shop</h2>
+  <p>Coins: <span id="shopCoins">0</span></p>
+  <div class="shop-items">
+    <button id="buyBomb">💣 Bomb (200)</button>
+    <button id="buyShuffle">🔄 Shuffle (100)</button>
+  </div>
+</section>
 
-<!-- ==== Inline game logic (self-contained) ==== -->
-<script>
-/*
-  Simple candy match core:
-  - boardSize: variable (rows/cols equal)
-  - candyImages: use images/c1.png ... c6.png (put them in your project)
-  - swipe/tap to swap adjacent tiles
-  - detect runs of 3+, remove, gravity, refill
-  - exports: initGame(), restartGame(), shuffleBoard()
-*/
-(function(){
-  const boardEl = () => document.getElementById('board');
-  const scoreEl = () => document.getElementById('score');
-  const coinsEl = () => document.getElementById('coins');
-  const levelEl = () => document.getElementById('currentLevel');
+<!-- SETTINGS -->
+<section id="settings-screen" class="screen">
+  <button class="back-btn" id="settingsBack">← Back</button>
+  <h2>Settings</h2>
+  <div class="settings-options">
+    <label><input type="checkbox" id="soundToggle" checked /> 🔊 Sound</label>
+    <label><input type="checkbox" id="vibrationToggle" checked /> 📳 Vibration</label>
+  </div>
+</section>
 
-  // config
-  const BOARD_SIZE = 7;            // square grid
-  const CANDY_COUNT = 6;           // only 6 different candies
-  const CANDY_IMAGES = [];         // filled below
-  for(let i=1;i<=CANDY_COUNT;i++) CANDY_IMAGES.push(`images/c${i}.png`);
-
-  // state
-  const state = {
-    size: BOARD_SIZE,
-    cells: [],      // array size*size - holds candy index (0..CANDY_COUNT-1) or null
-    score: 0,
-    coins: Number(localStorage.getItem('candy_coins')||0),
-    level: Number(localStorage.getItem('candy_level')||1),
-    dragging: null, // {r,c}
-  };
-
-  // helpers
-  function idx(r,c){ return r*state.size + c; }
-  function rc(i){ return [Math.floor(i/state.size), i % state.size]; }
-
-  function randCandy() { return Math.floor(Math.random()*CANDY_COUNT); }
-
-  // init board with no immediate matches
-  function fillBoardInitial(){
-    const n = state.size*state.size;
-    state.cells = new Array(n).fill(null);
-    for(let r=0;r<state.size;r++){
-      for(let c=0;c<state.size;c++){
-        let i = idx(r,c);
-        let tries=0;
-        do{
-          state.cells[i] = randCandy();
-          tries++;
-          // prevent creating immediate horizontal/vertical three-of-kind
-          if(c>=2 && state.cells[idx(r,c-1)]===state.cells[i] && state.cells[idx(r,c-2)]===state.cells[i]) continue;
-          if(r>=2 && state.cells[idx(r-1,c)]===state.cells[i] && state.cells[idx(r-2,c)]===state.cells[i]) continue;
-          break;
-        } while(tries<10);
-      }
-    }
-  }
-
-  // render board DOM
-  function renderBoard(){
-    const board = boardEl();
-    if(!board) { console.warn('board element missing'); return; }
-    board.innerHTML = '';
-    board.style.gridTemplateColumns = `repeat(${state.size},1fr)`;
-    for(let r=0;r<state.size;r++){
-      for(let c=0;c<state.size;c++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.r = r;
-        cell.dataset.c = c;
-        const img = document.createElement('img');
-        const val = state.cells[idx(r,c)];
-        img.src = val===null ? '' : CANDY_IMAGES[val];
-        img.alt = '';
-        cell.appendChild(img);
-
-        // tap select / swap
-        cell.addEventListener('click', onCellClick);
-        // touch swipe
-        addSwipeHandlers(cell);
-
-        board.appendChild(cell);
-      }
-    }
-  }
-
-  // UI update
-  function updateScoreUI(){ const s = scoreEl(); if(s) s.textContent = state.score; }
-  function updateCoinsUI(){ const s = coinsEl(); if(s) s.textContent = state.coins; localStorage.setItem('candy_coins', state.coins); }
-  function updateLevelUI(){ const e = levelEl(); if(e) e.textContent = state.level; localStorage.setItem('candy_level', state.level); }
-
-  // swap two tiles in state and animate re-render
-  function swapTiles(r1,c1,r2,c2){
-    if(!areAdjacent(r1,c1,r2,c2)) return false;
-    const i1 = idx(r1,c1), i2 = idx(r2,c2);
-    const tmp = state.cells[i1]; state.cells[i1]=state.cells[i2]; state.cells[i2]=tmp;
-    renderBoard();
-    return true;
-  }
-  function areAdjacent(r1,c1,r2,c2){
-    const dr=Math.abs(r1-r2), dc=Math.abs(c1-c2);
-    return (dr===1 && dc===0) || (dr===0 && dc===1);
-  }
-
-  // match detection: return array of indices to remove
-  function findMatches(){
-    const toRemove = new Set();
-    const s = state.size;
-    // horizontal
-    for(let r=0;r<s;r++){
-      let runVal = null, runStart=0, runLen=0;
-      for(let c=0;c<s;c++){
-        const v = state.cells[idx(r,c)];
-        if(v!==null && v===runVal){ runLen++; } else {
-          if(runLen>=3) for(let k=0;k<runLen;k++) toRemove.add(idx(r,runStart+k));
-          runVal=v; runStart=c; runLen=1;
-        }
-      }
-      if(runLen>=3) for(let k=0;k<runLen;k++) toRemove.add(idx(r,runStart+k));
-    }
-    // vertical
-    for(let c=0;c<s;c++){
-      let runVal = null, runStart=0, runLen=0;
-      for(let r=0;r<s;r++){
-        const v = state.cells[idx(r,c)];
-        if(v!==null && v===runVal){ runLen++; } else {
-          if(runLen>=3) for(let k=0;k<runLen;k++) toRemove.add(idx(runStart+k,c));
-          runVal=v; runStart=r; runLen=1;
-        }
-      }
-      if(runLen>=3) for(let k=0;k<runLen;k++) toRemove.add(idx(runStart+k,c));
-    }
-    return Array.from(toRemove);
-  }
-
-  // remove and drop gravity, return number removed
-  function removeAndDrop(indices){
-    if(indices.length===0) return 0;
-    indices.forEach(i=> state.cells[i]=null);
-    // gravity: for each column, pack non-null downwards
-    const s = state.size;
-    for(let c=0;c<s;c++){
-      const col = [];
-      for(let r=0;r<s;r++){
-        const v = state.cells[idx(r,c)];
-        if(v!==null) col.push(v);
-      }
-      // fill from bottom
-      for(let r=s-1, j=col.length-1; r>=0; r--, j--){
-        state.cells[idx(r,c)] = j>=0 ? col[j] : null;
-      }
-      // top empty become new random candies later
-    }
-    return indices.length;
-  }
-
-  // fill empty top with random candies
-  function refillBoard(){
-    const s = state.size;
-    for(let r=0;r<s;r++){
-      for(let c=0;c<s;c++){
-        const i = idx(r,c);
-        if(state.cells[i]===null) state.cells[i] = randCandy();
-      }
-    }
-  }
-
-  // process matches until none left (cascade)
-  function resolveMatchesCascade(){
-    let totalRemoved = 0;
-    let loop=0;
-    do{
-      const matches = findMatches();
-      if(matches.length===0) break;
-      const removed = removeAndDrop(matches);
-      totalRemoved += removed;
-      refillBoard();
-      updateScore(removed * 10); // each candy 10 pts
-      loop++;
-    } while(loop<10);
-    return totalRemoved;
-  }
-
-  // scoring
-  function updateScore(n){
-    state.score += n;
-    updateScoreUI();
-  }
-
-  // shuffle board (randomly reassign)
-  function shuffleBoard(){
-    for(let i=0;i<state.size*state.size;i++) state.cells[i]=randCandy();
-    // ensure no immediate matches
-    // if matches exist, simple re-run small tries
-    for(let t=0;t<6;t++){
-      if(findMatches().length===0) break;
-      for(let i=0;i<state.size*state.size;i++) if(Math.random()<0.3) state.cells[i]=randCandy();
-    }
-    renderBoard();
-    console.log('Board shuffled');
-  }
-
-  // click/tap handling
-  let selected = null;
-  function onCellClick(e){
-    const r = Number(this.dataset.r), c = Number(this.dataset.c);
-    if(!selected){
-      selected = {r,c};
-      this.classList.add('selected');
-    } else {
-      const prev = selected;
-      if(prev.r===r && prev.c===c){
-        // same cell clicked => deselect
-        selected = null;
-        this.classList.remove('selected');
-        return;
-      }
-      if(areAdjacent(prev.r,prev.c,r,c)){
-        // try swap
-        const swapped = swapTiles(prev.r,prev.c,r,c);
-        // if after swap no matches, swap back
-        const matches = findMatches();
-        if(matches.length===0){
-          // revert after slight delay so user sees swap
-          setTimeout(()=>{ swapTiles(prev.r,prev.c,r,c); renderBoard(); }, 120);
-        } else {
-          // we have matches — resolve cascade
-          setTimeout(()=>{ resolveMatchesCascade(); renderBoard(); }, 160);
-        }
-      } else {
-        // not adjacent: deselect previous, select new
-        const prevEl = document.querySelector('.cell.selected');
-        if(prevEl) prevEl.classList.remove('selected');
-        selected = {r,c};
-        this.classList.add('selected');
-        return;
-      }
-      // clear selection UI
-      const prevEl = document.querySelector('.cell.selected');
-      if(prevEl) prevEl.classList.remove('selected');
-      selected = null;
-    }
-  }
-
-  // touch swipe helpers — detect direction and swap with neighbor
-  function addSwipeHandlers(el){
-    let startX=0, startY=0, moved=false;
-    el.addEventListener('touchstart', function(ev){
-      const t = ev.touches[0];
-      startX = t.clientX; startY = t.clientY; moved=false;
-    }, {passive:true});
-    el.addEventListener('touchmove', function(ev){
-      moved=true;
-    }, {passive:true});
-    el.addEventListener('touchend', function(ev){
-      if(!moved) return; // treat as tap (click handler will run)
-      const touch = ev.changedTouches[0];
-      const endX = touch.clientX, endY = touch.clientY;
-      const dx = endX - startX, dy = endY - startY;
-      if(Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
-      const r = Number(this.dataset.r), c = Number(this.dataset.c);
-      // determine direction
-      const adx=Math.abs(dx), ady=Math.abs(dy);
-      let tr=r, tc=c;
-      if(adx>ady){
-        // horizontal
-        if(dx>0) tc = c+1; else tc = c-1;
-      } else {
-        // vertical
-        if(dy>0) tr = r+1; else tr = r-1;
-      }
-      if(tr<0||tr>=state.size||tc<0||tc>=state.size) return;
-      // swap with neighbor
-      if(areAdjacent(r,c,tr,tc)){
-        swapTiles(r,c,tr,tc);
-        // if no match revert quick
-        setTimeout(()=>{
-          if(findMatches().length===0) swapTiles(r,c,tr,tc);
-          else { setTimeout(()=>{ resolveMatchesCascade(); renderBoard(); }, 120); }
-        }, 100);
-      }
-    }, {passive:true});
-  }
-
-  // public API functions
-  window.initGame = function(level){
-    try{
-      state.level = level ? Number(level) : (Number(localStorage.getItem('candy_level'))||1);
-      fillBoardInitial();
-      renderBoard();
-      state.score = 0;
-      updateScoreUI();
-      updateCoinsUI();
-      updateLevelUI();
-      console.log('Game initialized at level', state.level);
-      // initial safe cascade (in case)
-      setTimeout(()=>{ resolveMatchesCascade(); renderBoard(); }, 40);
-    } catch(err){
-      console.error('initGame error', err);
-      throw err;
-    }
-  };
-
-  window.restartGame = function(){
-    state.score = 0;
-    fillBoardInitial();
-    renderBoard();
-    updateScoreUI();
-    console.log('Game restarted');
-  };
-
-  window.shuffleBoard = function(){ shuffleBoard(); };
-
-  window.buyFromShop = function(item){
-    const prices = { bomb:200, shuffle:100 };
-    const p = prices[item] || 0;
-    if(state.coins >= p){ state.coins -= p; updateCoinsUI(); if(item==='shuffle') shuffleBoard(); console.log('Bought', item); }
-    else console.warn('Not enough coins');
-  };
-
-  // hint (simple: find a possible swap that creates a match)
-  window.showHint = function(){
-    const s = state.size;
-    for(let r=0;r<s;r++){
-      for(let c=0;c<s;c++){
-        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-        for(const d of dirs){
-          const rr=r+d[0], cc=c+d[1];
-          if(rr<0||rr>=s||cc<0||cc>=s) continue;
-          // swap temporarily
-          const i1=idx(r,c), i2=idx(rr,cc);
-          [state.cells[i1], state.cells[i2]] = [state.cells[i2], state.cells[i1]];
-          const matches = findMatches();
-          // revert
-          [state.cells[i1], state.cells[i2]] = [state.cells[i2], state.cells[i1]];
-          if(matches.length>0){
-            // highlight those cells briefly
-            const el = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-            if(el){ el.classList.add('selected'); setTimeout(()=>el.classList.remove('selected'),700); }
-            return;
-          }
-        }
-      }
-    }
-    alert('कोई hint नहीं मिला — Shuffle करें');
-  };
-
-  // initialize UI bindings (buttons)
-  document.addEventListener('DOMContentLoaded', function(){
-    // safe bindings
-    document.getElementById('startBtn').addEventListener('click', function(){
-      document.getElementById('home-screen').classList.remove('active');
-      document.getElementById('map-screen').classList.add('active');
-    });
-
-    document.getElementById('mapBack').addEventListener('click', function(){
-      document.getElementById('map-screen').classList.remove('active');
-      document.getElementById('home-screen').classList.add('active');
-    });
-
-    // map play buttons
-    document.querySelectorAll('[data-level]').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const lvl = this.dataset.level || 1;
-        document.getElementById('map-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        window.initGame(lvl);
-      });
-    });
-
-    // back home
-    document.getElementById('backBtn').addEventListener('click', function(){
-      document.getElementById('game-screen').classList.remove('active');
-      document.getElementById('home-screen').classList.add('active');
-    });
-
-    document.getElementById('restartBtn').addEventListener('click', ()=>window.restartGame());
-    document.getElementById('shuffleBtn').addEventListener('click', ()=>window.shuffleBoard());
-    document.getElementById('openMap').addEventListener('click', ()=>{
-      document.getElementById('game-screen').classList.remove('active');
-      document.getElementById('map-screen').classList.add('active');
-    });
-
-    // shop demo
-    document.getElementById('openMap').addEventListener('dblclick', ()=>{ // double click opens shop as quick demo
-      document.getElementById('shopModal').style.display='flex';
-      document.getElementById('shopCoins').textContent = state.coins;
-    });
-    document.getElementById('closeShop').addEventListener('click', ()=>document.getElementById('shopModal').style.display='none');
-    document.getElementById('buyBomb').addEventListener('click', ()=>window.buyFromShop('bomb'));
-    document.getElementById('buyShuffle').addEventListener('click', ()=>window.buyFromShop('shuffle'));
-
-    // expose small debug
-    window._STATE = state;
-
-    // auto init minimal: show home (no auto game)
-    console.log('Safe UI loaded');
-  });
-
-})();
-</script>
+<script src="js/main.js"></script>
+<script src="js/game.js"></script>
 
 </body>
-  </html>
+    </html>
