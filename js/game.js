@@ -315,4 +315,85 @@
   };
 
   console.log('Loaded: js/game.js (swipe fixes applied)');
-})();
+/* ---- Level Complete System ---- */
+
+// Show level complete modal
+function showLevelCompleteModal() {
+  let modal = document.getElementById('levelCompleteModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'levelCompleteModal';
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.background = 'rgba(0,0,0,0.5)';
+    modal.style.zIndex = '9999';
+    modal.innerHTML = `
+      <div style="
+        background:#fff;
+        border-radius:16px;
+        padding:24px;
+        width:90%;
+        max-width:420px;
+        text-align:center;
+        box-shadow:0 6px 18px rgba(0,0,0,0.25);
+      ">
+        <h2 style="margin-bottom:8px;color:#ff4081;">🎉 Level Complete!</h2>
+        <p id="levelCompleteText" style="margin-bottom:16px;font-size:16px;">
+          You reached the target score!
+        </p>
+        <button id="nextLevelBtn" style="
+          padding:10px 20px;
+          border-radius:20px;
+          border:0;
+          background:linear-gradient(45deg,#ff80ab,#ff4081);
+          color:white;
+          font-weight:700;
+        ">Next Level ➡️</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+
+  // Add event
+  document.getElementById('nextLevelBtn').onclick = () => {
+    modal.style.display = 'none';
+    goToNextLevel();
+  };
+}
+
+// Go to next level
+function goToNextLevel() {
+  state.level++;
+  if (state.level > LEVELS.length - 1) {
+    state.level = 1; // restart from level 1 after finishing all
+  }
+
+  // reward coins
+  if (typeof StorageAPI !== 'undefined') {
+    StorageAPI.addCoins(LEVELS[state.level - 1].rewardCoins || 50);
+    updateCoinDisplay();
+  }
+
+  // reset score, board, UI
+  state.score = 0;
+  updateScoreUI();
+  updateLevelUI();
+  createBoardArray();
+  renderBoard();
+  console.log('Moved to Level', state.level);
+}
+
+// Check for level completion
+function checkLevelCompletion() {
+  const goal = (LEVELS[state.level] && LEVELS[state.level].goalScore) || 200;
+  if (state.score >= goal) {
+    showLevelCompleteModal();
+  }
+}
+
+// Call this inside processMatches() after updating score})();
