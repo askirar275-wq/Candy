@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Candy Match - Home</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Home</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="home">
-  <div class="container">
-    <h1 class="title">🍬 Candy Match</h1>
-    <button class="btn" onclick="location.href='level-map.html'">Play</button>
-    <button class="btn" onclick="resetGame()">Reset Progress</button>
-    <p class="footer">© 2025 Candy Match</p>
-  </div>
+<body>
+  <main class="home-center">
+    <img src="images/candy1.png" alt="" class="home-logo">
+    <h1>🍬 Candy Match</h1>
+    <p class="sub">स्वीट गेम — खेलो और levels अनलॉक करो</p>
+
+    <div class="home-actions">
+      <button class="btn big" onclick="location.href='level-map.html'">Play</button>
+      <button class="btn" onclick="StorageAPI.reset(); alert('Progress reset');">Reset Progress</button>
+    </div>
+
+    <footer class="made">Made with ❤️ — Arun App Studio</footer>
+  </main>
 
   <script src="js/storage.js"></script>
-  <script>
-    function resetGame(){
-      StorageAPI.reset();
-      alert('Progress Reset!');
-    }
-  </script>
 </body>
 </html>
