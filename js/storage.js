@@ -1,12 +1,12 @@
-// storage.js — simple coin & level storage system
-console.log("Loaded: storage.js ✅");
+console.log("storage.js loaded");
 
 window.StorageAPI = {
   getCoins() {
     return Number(localStorage.getItem("coins") || 0);
   },
   addCoins(amount) {
-    let coins = this.getCoins() + amount;
+    let coins = this.getCoins() + Number(amount || 0);
+    if (coins < 0) coins = 0;
     localStorage.setItem("coins", coins);
     return coins;
   },
@@ -17,7 +17,6 @@ window.StorageAPI = {
     localStorage.setItem("level", level);
   },
   reset() {
-    localStorage.removeItem("coins");
-    localStorage.removeItem("level");
+    localStorage.clear();
   },
 };
