@@ -3,49 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Game — Candy Match</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/game.css">
+  <title>Candy Match — Game</title>
+
+  <!-- main page styles -->
+  <link rel="stylesheet" href="css/style.css"> <!-- shared header/footer styles (optional) -->
+  <link rel="stylesheet" href="css/game.css">  <!-- game specific styles (below) -->
 </head>
 <body>
   <header class="topbar">
-    <button class="back" onclick="location.href='level-map.html'">← Home</button>
-    <div class="top-info">Score: <span id="score">0</span></div>
-    <div class="top-info">Coins: <span id="coins">0</span></div>
-    <div class="top-info">Level: <span id="currentLevel">1</span></div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="btn small" id="backHome">← Home</button>
+    </div>
+    <div style="display:flex;gap:18px;align-items:center;">
+      <div>Score: <strong id="score">0</strong></div>
+      <div>Coins: <strong id="coins">0</strong></div>
+      <div>Level: <strong id="currentLevel">1</strong></div>
+    </div>
   </header>
 
-  <main class="game-main">
-    <div id="boardWrap" class="board-wrap">
-      <div id="gameBoard" class="board" aria-live="polite"></div>
+  <main class="game-shell">
+    <div class="board-card">
+      <div id="game-board" class="game-board" aria-live="polite"></div>
     </div>
 
     <div class="controls">
       <button id="restartBtn" class="btn">Restart</button>
       <button id="shuffleBtn" class="btn">Shuffle</button>
-      <button id="openShop" class="btn">Shop</button>
+      <button id="openShopBtn" class="btn">Shop</button>
     </div>
   </main>
 
-  <!-- level up modal -->
-  <div id="levelUpModal" class="modal" style="display:none">
+  <!-- level up modal (kept hidden) -->
+  <div id="levelUpModal" class="modal" style="display:none;">
     <div class="modal-card">
       <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpMsg"></p>
-      <div style="text-align:center;margin-top:12px;">
-        <button id="levelUpClose" class="btn">Continue</button>
-      </div>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <button id="levelUpClose" class="btn">Continue</button>
     </div>
   </div>
 
-  <!-- safe UI + eruda loader (optional) -->
+  <!-- Eruda mobile console loader (optional, useful) -->
   <script>
-  (function(){ // optional mobile console eruda
-    var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; s.onload=function(){ try{eruda.init(); console.log('Eruda loaded');}catch(e){} }; document.head.appendChild(s);
-  })();
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function () { try { eruda.init(); console.log('Eruda loaded'); } catch(e){console.warn(e);} };
+      document.body.appendChild(s);
+    })();
   </script>
 
+  <!-- safe-ui loader so buttons don't throw when game script not ready -->
+  <script src="js/safe-ui.js"></script>
+
+  <!-- storage & game logic -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 </body>
-</html>
+                                </html>
