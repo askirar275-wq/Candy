@@ -1,60 +1,17 @@
-// ui.js
+// Safe UI glue: attach buttons and protect missing elements
 (function(){
   function $id(id){ return document.getElementById(id); }
-  function safe(fn){ try{ fn(); } catch(e){ console.error('UI error', e); } }
-
+  function safeAdd(id,evt,fn){ const el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,fn); }
   document.addEventListener('DOMContentLoaded', function(){
-    console.log('UI: DOMContentLoaded');
+    console.log('\u2705 Safe UI loaded');
+    safeAdd('playBtn','click', ()=>{ document.getElementById('home-screen').classList.remove('active'); document.getElementById('map-screen').classList.add('active'); if(window.renderLevelMap) renderLevelMap(); });
+    safeAdd('backFromMap','click', ()=>{ document.getElementById('map-screen').classList.remove('active'); document.getElementById('home-screen').classList.add('active'); });
+    safeAdd('openMapBtn','click', ()=>{ document.getElementById('game-screen').classList.remove('active'); document.getElementById('map-screen').classList.add('active'); if(window.renderLevelMap) renderLevelMap(); });
+    safeAdd('homeBtn','click', ()=>{ document.getElementById('game-screen').classList.remove('active'); document.getElementById('home-screen').classList.add('active'); });
+    safeAdd('restartBtn','click', ()=>{ if(typeof restartGame==='function') restartGame(); else console.warn('restartGame missing'); });
+    safeAdd('shuffleBtn','click', ()=>{ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
 
-    const screens = {
-      home: $id('home'),
-      map: $id('map'),
-      game: $id('game')
-    };
-
-    function show(name){
-      Object.values(screens).forEach(s => { if(s) s.classList.remove('active'); });
-      if(screens[name]) screens[name].classList.add('active');
-      else console.warn('UI: screen not found', name);
-    }
-
-    // Buttons (guarded)
-    const playBtn = $id('playBtn'); if(playBtn) playBtn.addEventListener('click', () => {
-      safe(() => {
-        if(typeof renderLevelMap === 'function') renderLevelMap();
-        show('map');
-      });
-    });
-
-    const backHomeBtn = $id('backHomeBtn'); if(backHomeBtn) backHomeBtn.addEventListener('click', () => show('home'));
-    const backMapBtn = $id('backMapBtn'); if(backMapBtn) backMapBtn.addEventListener('click', () => show('map'));
-
-    const restartBtn = $id('restartBtn'); if(restartBtn) restartBtn.addEventListener('click', () => { if(typeof initGame==='function'){ initGame(currentLevel); } else console.warn('initGame missing'); });
-    const shuffleBtn = $id('shuffleBtn'); if(shuffleBtn) shuffleBtn.addEventListener('click', () => { if(typeof shuffleBoard==='function'){ shuffleBoard(); } else console.warn('shuffleBoard missing'); });
-
-    // expose renderLevelMap if game provides it - or provide default here
-    window.renderLevelMap = window.renderLevelMap || function(){
-      const container = $id('levelButtons');
-      if(!container){ console.warn('renderLevelMap: levelButtons missing'); return; }
-      container.innerHTML = '';
-      for(let i=1;i<=5;i++){
-        const btn = document.createElement('button');
-        btn.className = 'btn';
-        btn.textContent = 'Level ' + i;
-        btn.addEventListener('click', () => {
-          if(typeof startLevel === 'function'){ startLevel(i); }
-          else {
-            // fallback: call initGame and show game
-            currentLevel = i;
-            if(typeof initGame === 'function'){ initGame(i); show('game'); }
-            else console.warn('startLevel/initGame missing');
-          }
-        });
-        container.appendChild(btn);
-      }
-    };
-
-    // initial screen
-    show('home');
+    // level up modal close
+    const lvlClose = $id('levelUpClose'); if(lvlClose) lvlClose.addEventListener('click', ()=>{ const m = $id('levelUpModal'); if(m) m.style.display='none'; });
   });
 })();
