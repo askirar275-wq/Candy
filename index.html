@@ -5,110 +5,165 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match — Game</title>
 
-  <!-- आपकी मौजूदा CSS फाइलें (जरूरी) -->
+  <!-- मुख्य CSS फाइलें (अपने repo के हिसाब से paths ठीक करो) -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/inventory.css">
 
-  <!-- छोटा fallback (अगर कोई css न मिले) -->
+  <!-- छोटे fallback styles ताकि board दिखे अगर external css लोड न हुआ हो -->
   <style>
-    body{ margin:0; font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#ffeaf0; }
+    :root { --pink:#ffdfe8; }
+    body { margin:0; font-family: "Poppins", Arial, sans-serif; background:var(--pink); -webkit-font-smoothing:antialiased; }
+    .topbar { display:flex; align-items:center; gap:12px; padding:12px; }
+    .coins-bubble { background:#fff; padding:8px 12px; border-radius:20px; box-shadow:0 6px 12px rgba(0,0,0,0.06); }
+    #game-board { 
+      margin:16px auto; 
+      width: calc(100% - 40px);
+      max-width: 540px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 18px;
+      padding: 18px;
+      display:grid;
+      grid-template-columns: repeat(8, 1fr); /* default grid for board */
+      gap: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.06);
+      touch-action: none; /* for swipe touch handling in JS */
+    }
+    /* basic tile fallback */
+    .cell { background: #fff; border-radius:14px; height: 56px; display:flex; align-items:center; justify-content:center; box-shadow: 0 6px 12px rgba(0,0,0,0.04); }
+    .cell img.tile { width:48px; height:48px; object-fit:contain; user-select:none; -webkit-user-drag:none; }
+    /* selected cell highlight */
+    .selected-cell { outline: 3px solid rgba(255,105,180,0.35); transform: scale(0.98); }
+    /* shop modal fallback */
+    .shop-modal { display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:9999; }
+    .shop-card { background:#fff; padding:12px; border-radius:12px; width:92%; max-width:460px; }
+    /* level badge */
+    #levelBadge { margin-left:12px; background:#fff; padding:6px 10px; border-radius:12px; font-weight:700; }
+    /* small responsive */
+    @media (max-width:420px){ #game-board{ padding:12px; gap:10px; } .cell{ height:48px } .cell img.tile{ width:40px;height:40px } }
   </style>
 </head>
 <body>
-  <!-- Topbar -->
-  <header style="padding:14px 12px; background:linear-gradient(180deg,#ffdce6,#ffd1e0); display:flex; align-items:center; gap:12px;">
-    <button id="backBtn" style="background:#ffdff0;border:0;padding:8px 10px;border-radius:10px;">⬅️ Home</button>
-    <div style="font-weight:700; font-size:20px; margin-left:6px;">Score: <span id="score">0</span></div>
-    <div style="margin-left:auto; display:flex; gap:12px; align-items:center;">
-      <div style="background:#fff;padding:8px 12px;border-radius:16px;">Coins: <span id="coins">0</span></div>
-      <div id="levelBadge" style="background:#fff5;padding:6px 10px;border-radius:12px;font-weight:700;">Level: <span id="currentLevel">1</span></div>
+  <!-- Top bar -->
+  <div class="topbar">
+    <button id="backBtn" style="padding:10px;border-radius:12px;background:#ffdff0;border:0;">⬅️ Home</button>
+    <h2 style="margin:0 6px 0 6px; font-size:22px;">Score: <span id="score">0</span></h2>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+      <div id="levelBadge">Level: <span id="currentLevel">1</span></div>
+      <div class="coins-bubble">Coins: <span id="coins">0</span></div>
     </div>
-  </header>
+  </div>
 
-  <!-- Game board container -->
-  <main style="padding:18px;">
-    <div id="game-wrapper" style="max-width:900px;margin:0 auto;">
-      <div id="game-board" aria-live="polite"></div>
-
-      <div style="display:flex;justify-content:center;gap:18px;margin-top:18px;">
-        <button id="restartBtn" class="ui-btn">Restart</button>
-        <button id="shuffleBtn" class="ui-btn">Shuffle</button>
-        <button id="openShopBtn" class="ui-btn">Shop</button>
-      </div>
-    </div>
-
-    <!-- Shop Modal (simple) -->
-    <div id="shopModal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:9998;">
-      <div style="background:#fff; border-radius:12px; padding:14px; width:92%; max-width:420px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0">🛒 Shop</h3>
-          <div style="font-size:12px;color:#666">Coins: <span id="shopCoins">0</span></div>
-        </div>
-        <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <div class="shop-item">Bomb <div>₹200</div><button id="buyBomb">Buy</button></div>
-          <div class="shop-item">Shuffle <div>₹100</div><button id="buyShuffle">Buy</button></div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="closeShop">Close</button></div>
-      </div>
-    </div>
-
-    <!-- Level up modal -->
-    <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:9999;">
-      <div style="background:#fff; padding:18px; border-radius:12px; width:90%; max-width:420px; text-align:center;">
-        <h2 id="levelUpTitle">Level Up!</h2>
-        <p id="levelUpText">Congrats — next level unlocked.</p>
-        <div style="margin-top:12px;"><button id="levelUpClose">Continue</button></div>
-      </div>
-    </div>
-
+  <!-- Game board -->
+  <main style="display:flex;justify-content:center;">
+    <div id="game-board" aria-live="polite" role="grid"></div>
   </main>
 
-  <!-- ===== Eruda (mobile console) - optional but helpful ===== -->
+  <!-- Controls -->
+  <div style="display:flex;justify-content:center;gap:18px;margin:18px 12px;">
+    <button id="restartBtn" style="padding:12px 22px;border-radius:28px;background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;border:0;font-weight:700;">Restart</button>
+    <button id="shuffleBtn" style="padding:12px 22px;border-radius:28px;background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;border:0;font-weight:700;">Shuffle</button>
+    <button id="openShopBtn" style="padding:12px 22px;border-radius:28px;background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;border:0;font-weight:700;">Shop</button>
+    <button id="openMapBtn" style="padding:12px 22px;border-radius:28px;background:linear-gradient(45deg,#7ad0ff,#2db7f5);color:#fff;border:0;font-weight:700;">Map</button>
+  </div>
+
+  <!-- Shop modal (IDs used by shop.js) -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true">
+    <div class="shop-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h3 style="margin:0">🛒 Shop</h3><small>Coins से power-ups खरीदें</small></div>
+        <div style="text-align:right"><small>Your Coins</small><div id="shopCoins" class="coins-bubble" style="display:inline-block;margin-left:6px;">0</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+        <div style="padding:8px;border-radius:8px;background:#fff7fb;text-align:center;">
+          <div>💣 Bomb</div><div style="font-weight:700">₹200</div><button id="buyBomb">Buy</button>
+        </div>
+        <div style="padding:8px;border-radius:8px;background:#fff7fb;text-align:center;">
+          <div>🔀 Shuffle</div><div style="font-weight:700">₹100</div><button id="buyShuffle">Buy</button>
+        </div>
+        <div style="padding:8px;border-radius:8px;background:#fff7fb;text-align:center;">
+          <div>➕ Moves</div><div style="font-weight:700">₹80</div><button id="buyMoves">Buy</button>
+        </div>
+        <div style="padding:8px;border-radius:8px;background:#fff7fb;text-align:center;">
+          <div>✨ Rainbow</div><div style="font-weight:700">₹350</div><button id="buyRainbow">Buy</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        <button id="closeShop">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Up modal -->
+  <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:9999;">
+    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:420px;text-align:center;">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — level unlocked.</p>
+      <div style="margin-top:12px;"><button id="levelUpClose">Continue</button></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;margin:28px 0;color:#777;">Made with ❤️ — Arun App Studio</div>
+
+  <!-- Eruda console loader (optional) -->
   <script>
     (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function () {
-        try { eruda.init(); console.log('🐞 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
-      };
+      s.onload = function () { try { eruda.init(); console.log('Eruda console loaded'); } catch(e){ console.warn('Eruda failed', e); } };
       document.body.appendChild(s);
     })();
   </script>
 
-  <!-- Safe UI loader (single place) - ensures elements exist before calling game functions -->
-  <script>
-    (function(){
-      function $id(id){ return document.getElementById(id); }
-      function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
-
-      document.addEventListener('DOMContentLoaded', function(){
-        console.log('✅ Safe UI loaded');
-
-        safeAdd('restartBtn','click', () => { if(typeof restartGame === 'function') restartGame(); else console.warn('restartGame missing'); });
-        safeAdd('shuffleBtn','click', () => { if(typeof shuffleBoard === 'function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
-
-        // shop open/close
-        function openShop(){ var m=$id('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } else console.warn('shopModal not found'); }
-        safeAdd('openShopBtn','click', openShop);
-        safeAdd('shopBtn','click', openShop);
-        safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
-
-        // start/back buttons - if you have a home-screen flow, connect them here
-        safeAdd('backBtn','click', function(){
-          // optional: go to home page or show map
-          console.log('Back button clicked');
-        });
-
-        safeAdd('levelUpClose','click', function(){ var m=$id('levelUpModal'); if(m) m.style.display='none'; });
-      });
-    })();
-  </script>
-
-  <!-- Required game scripts: storage first (if you have one), then game.js -->
+  <!-- Core scripts: storage first, then game, then other logic -->
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/shop.js"></script>
 
-  <!-- safety: if game didn't load initGame automatically, Safe UI can call it from console with initGame() -->
+  <!-- Safe UI glue (this must run after game.js so initGame exists) -->
+  <script>
+  (function(){
+    function $id(id){ return document.getElementById(id); }
+    function safeAdd(id, evt, h){ var el=$id(id); if(!el){ console.warn('safe-ui: missing #' + id); return; } el.addEventListener(evt,h); }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      console.log('✅ Safe UI loaded');
+
+      safeAdd('openMapBtn','click', function(){ window.location.href='level-map.html'; });
+
+      safeAdd('restartBtn','click', function(){ if(typeof restartGame === 'function') restartGame(); else console.warn('restartGame missing'); });
+      safeAdd('shuffleBtn','click', function(){ if(typeof shuffleBoard === 'function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
+
+      safeAdd('openShopBtn','click', function(){
+        var m=$id('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } else console.warn('shopModal not found');
+      });
+      safeAdd('closeShop','click', function(){ var m=$id('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
+
+      safeAdd('backBtn','click', function(){ window.location.href='index.html'; });
+
+      // start game automatically if initGame present
+      if(typeof initGame === 'function'){
+        try { initGame(); }
+        catch(err){ console.error('initGame error', err); }
+      } else {
+        console.warn('initGame not found — check js/game.js');
+      }
+
+      // shop buy hooks
+      safeAdd('buyBomb','click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); });
+      safeAdd('buyShuffle','click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); });
+      safeAdd('buyMoves','click', function(){ if(typeof buyFromShop==='function') buyFromShop('moves'); });
+      safeAdd('buyRainbow','click', function(){ if(typeof buyFromShop==='function') buyFromShop('rainbow'); });
+
+    });
+  })();
+  </script>
+
+  <!-- storage/game must expose functions like: StorageAPI (getCoins/addCoins/getLevel/setLevel),
+       initGame(), restartGame(), shuffleBoard(), buyFromShop() etc. -->
 </body>
 </html>
