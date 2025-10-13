@@ -1,119 +1,62 @@
-/* css/game.css (responsive, centered board, smoother tiles) */
+/* css/game.css - board + candy styles, transitions, UI buttons */
 
-:root{
-  --board-max-width: 760px;   /* maximum board width */
-  --board-padding: 14px;
-  --cell-size: 64px; /* default; overridden by JS for small screens */
+#game-board{
+  width:100%;
+  max-width:720px;
+  margin:12px auto;
+  padding:14px;
+  border-radius:20px;
+  background:linear-gradient(180deg,#fff 0%, #fffafc 100%);
+  box-shadow: 0 8px 30px rgba(179,70,130,0.06);
+  display:grid;
+  grid-template-columns: repeat(8, 1fr); /* JS will adjust if needed */
+  grid-auto-rows: minmax(48px, 1fr);
+  gap:10px;
+  box-sizing:border-box;
 }
 
-/* topbar + stats */
-.topbar {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px;
-  background: linear-gradient(180deg,#ffdfe8,#ffeef6);
-  position:sticky;
-  top:0;
-  z-index:20;
-}
-.top-stats { display:flex; gap:18px; margin-left:auto; align-items:center; font-weight:700; }
-
-/* board container */
-.board {
-  width: calc(100% - 32px);
-  max-width: var(--board-max-width);
-  margin: 18px auto;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr); /* JS will update columns per level */
-  gap: 10px;
-  background: rgba(255,255,255,0.75);
-  padding: var(--board-padding);
-  border-radius: 16px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-  justify-items: center;
-  align-items: center;
-  box-sizing: border-box;
-  overflow: visible;
-}
-
-/* each cell */
-.cell {
-  width: var(--cell-size);
-  height: var(--cell-size);
-  border-radius: 10px;
-  background: rgba(255,255,255,0.98);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  box-shadow: 0 6px 10px rgba(0,0,0,0.04);
-  position:relative;
-  overflow:hidden;
-  transition: transform 160ms ease;
-}
-
-/* tile image */
-.tile {
-  width: calc(var(--cell-size) - 8px);
-  height: calc(var(--cell-size) - 8px);
+/* each candy image (tile) */
+.candy{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  border-radius:14px;
+  background:#fff;
+  padding:8px;
+  box-sizing:border-box;
   user-select:none;
-  -webkit-user-drag: none;
-  transition: transform 200ms cubic-bezier(.2,.9,.2,1), opacity 180ms ease;
-  will-change: transform, opacity;
+  -webkit-user-drag:none;
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
-/* selected visual */
-.cell.selected-cell {
-  outline: 3px solid rgba(255,120,150,0.35);
-  transform: translateY(-6px);
+/* small selected effect when tapped */
+.selected-cell{
+  outline: 3px solid rgba(255, 115, 172, 0.16);
+  transform: scale(0.98);
 }
 
-/* controls */
-.controls { display:flex; gap:12px; justify-content:center; margin:18px 0; }
-.controls button { padding:12px 18px; border-radius:24px; border:0; background:linear-gradient(45deg,#ff80ab,#ff4081); color:white; font-weight:700; }
-
-/* modal */
-.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:999; }
-.modal-card { background:#fff; padding:16px; border-radius:12px; width:90%; max-width:420px; box-shadow:0 8px 28px rgba(0,0,0,0.15); }
-
-/* small screens adjust */
-@media (max-width:420px){
-  :root { --board-padding: 10px; }
-  .board { gap:8px; }
-  .controls button { padding:10px 14px; font-size:14px; }
+/* UI buttons */
+.ui-btn{
+  background: linear-gradient(135deg,#ff99c7,#ff6fa8);
+  color:#fff;
+  border:0;
+  padding:12px 20px;
+  border-radius:26px;
+  font-weight:700;
+  font-size:16px;
+  box-shadow:0 8px 18px rgba(255,120,160,0.12);
+  cursor:pointer;
 }
 
-/* gear/settings button position fix (if you have one) */
-.settings-gear {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 30;
-  background: rgba(255,255,255,0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  padding: 10px;
+/* shop items */
+.shop-item{ background:#fff7; padding:8px; border-radius:8px; text-align:center; }
+
+/* levelUpModal styling (if present in DOM) */
+#levelUpModal > div { box-shadow:0 10px 30px rgba(0,0,0,0.15); }
+
+/* responsive tweaks */
+@media (max-width:600px){
+  #game-board { padding:8px; gap:8px; }
+  .candy { padding:6px; }
 }
-
-/* avoid board clipping when screen small */
-body, html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-/* ===== Level complete modal + transition styles ===== */
-#levelCompleteModal { display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.45); }
-#levelCompleteModal.show { display:flex; }
-#levelCompleteCard { transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.8,.2,1); }
-
-/* appear animation */
-#levelCompleteModal.show #levelCompleteCard { opacity:1; transform: scale(1); }
-
-/* small pulse for Next button */
-#levelNextBtn { transition: transform 160ms ease; }
-#levelNextBtn:active { transform: scale(.98); }
-
-/* optional page transition overlay (fade out game screen) */
-.page-fadeout {
-  animation: pageFadeOut 420ms ease forwards;
-}
-@keyframes pageFadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(-8px); }
-  }
