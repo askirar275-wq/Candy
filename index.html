@@ -3,27 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match — Pull Update</title>
+  <title>🍭 Candy Match Game</title>
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
-  <!-- HOME (simple) -->
+
+  <!-- 🏠 Home Screen -->
   <div id="home-screen" class="screen active">
-    <h1>🍭 Candy Match</h1>
-    <button id="openMap">Play (Map)</button>
+    <h1>🍬 Candy Match</h1>
+    <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+    <button id="openMap" class="btn">Play</button>
   </div>
 
-  <!-- LEVEL MAP -->
+  <!-- 🗺️ Level Map Screen -->
   <div id="map-screen" class="screen">
     <h2>Level Map</h2>
     <div id="levelList"></div>
-    <button id="backFromMap">Back</button>
+    <button id="backFromMap" class="btn small">← Back</button>
   </div>
 
-  <!-- GAME -->
+  <!-- 🎮 Game Screen -->
   <div id="game-screen" class="screen">
     <header class="topbar">
-      <button id="backHome">← Home</button>
+      <button id="backHome" class="btn small">← Home</button>
       <div>Score: <span id="score">0</span></div>
       <div>Coins: <span id="coins">0</span></div>
       <div>Level: <span id="currentLevel">1</span></div>
@@ -31,7 +33,7 @@
 
     <main class="game-shell">
       <div class="board-card">
-        <div id="game-board" class="game-board" aria-live="polite"></div>
+        <div id="game-board" class="game-board"></div>
       </div>
 
       <div class="controls">
@@ -42,21 +44,28 @@
     </main>
   </div>
 
-  <!-- Level up modal -->
+  <!-- 🏅 Level Complete Popup -->
   <div id="levelUpModal" class="modal" style="display:none;">
     <div class="modal-card">
-      <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <h2 id="levelUpTitle">Level Complete!</h2>
+      <p id="levelUpText">आपने लक्ष्य पूरा कर लिया 🎉</p>
       <button id="levelUpClose" class="btn">Continue</button>
     </div>
   </div>
 
-  <!-- Eruda loader for mobile debugging -->
-  <script>(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/eruda';s.onload=function(){try{eruda.init();console.log('Eruda loaded')}catch(e){console.warn(e)}};document.body.appendChild(s);})();</script>
+  <!-- 📱 Eruda Debug Console -->
+  <script>
+    (function(){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/eruda';
+      s.onload=function(){eruda.init();console.log('Eruda Console चालू हो गया ✅');};
+      document.body.appendChild(s);
+    })();
+  </script>
 
-  <!-- safe ui, storage, game (order matters) -->
+  <!-- JS Files -->
   <script src="js/safe-ui.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/game.js"></script>
 </body>
-                                                                     </html>
+</html>
