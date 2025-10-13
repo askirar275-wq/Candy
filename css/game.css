@@ -97,3 +97,23 @@
 
 /* avoid board clipping when screen small */
 body, html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+/* ===== Level complete modal + transition styles ===== */
+#levelCompleteModal { display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.45); }
+#levelCompleteModal.show { display:flex; }
+#levelCompleteCard { transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.8,.2,1); }
+
+/* appear animation */
+#levelCompleteModal.show #levelCompleteCard { opacity:1; transform: scale(1); }
+
+/* small pulse for Next button */
+#levelNextBtn { transition: transform 160ms ease; }
+#levelNextBtn:active { transform: scale(.98); }
+
+/* optional page transition overlay (fade out game screen) */
+.page-fadeout {
+  animation: pageFadeOut 420ms ease forwards;
+}
+@keyframes pageFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+  }
