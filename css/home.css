@@ -1,8 +1,112 @@
-body{font-family:Inter, system-ui, Arial; margin:0; background:#ffeef6}
-.screen{display:none;padding:28px}
-.screen.active{display:block}
-#home-screen h1{font-size:48px;margin:6px}
-#home-screen p{color:#6b5b5b}
-button{cursor:pointer}
-.primary{background:linear-gradient(90deg,#ff80ab,#ff4d94);color:#fff;padding:12px 22px;border-radius:28px;border:0;font-size:18px}
-.ghost{background:#fff;border:1px solid #ffd5e6;padding:10px;border-radius:20px}
+/* ====== HOME SCREEN (Candy Style) ====== */
+
+/* 🩷 Background gradient + animated floating candies */
+body {
+  margin: 0;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  background: linear-gradient(180deg, #ffe2f1 0%, #fff1fa 100%);
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* 🍭 Animated floating candies background */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("../images/candy-bg.png"); /* optional background image */
+  background-repeat: repeat;
+  background-size: 280px;
+  opacity: 0.07;
+  animation: float-bg 30s linear infinite;
+}
+@keyframes float-bg {
+  from { background-position: 0 0; }
+  to { background-position: 0 -800px; }
+}
+
+/* 🍬 Home Screen Container */
+#home-screen {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 38px 26px;
+  border-radius: 26px;
+  box-shadow: 0 20px 50px rgba(255, 111, 179, 0.2);
+  width: 90%;
+  max-width: 420px;
+  z-index: 2;
+  backdrop-filter: blur(12px);
+}
+
+/* 🍭 Title */
+#home-screen h1 {
+  font-size: 50px;
+  margin: 0 0 10px;
+  color: #ff5b8a;
+  text-shadow: 0 3px 6px rgba(255, 105, 155, 0.3);
+  font-weight: 800;
+}
+
+/* ✨ Subtitle */
+#home-screen p {
+  color: #6b5b5b;
+  font-size: 16px;
+  margin-bottom: 28px;
+  letter-spacing: 0.5px;
+}
+
+/* 🎮 Buttons */
+#home-screen button {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 14px 18px;
+  border-radius: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(90deg, #ff8fc1, #ff5b8a);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(255, 111, 179, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+/* 🖱️ Button Hover & Click Animation */
+#home-screen button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(255, 111, 179, 0.35);
+}
+#home-screen button:active {
+  transform: translateY(2px);
+  box-shadow: 0 4px 10px rgba(255, 111, 179, 0.25);
+}
+
+/* 🌈 Footer */
+footer {
+  text-align: center;
+  color: #8f7d84;
+  font-size: 14px;
+  margin-top: 18px;
+}
+
+/* 📱 Responsive */
+@media (max-width: 480px) {
+  #home-screen {
+    padding: 26px 18px;
+    max-width: 360px;
+  }
+  #home-screen h1 {
+    font-size: 38px;
+  }
+  #home-screen p {
+    font-size: 14px;
+  }
+  #home-screen button {
+    font-size: 16px;
+  }
+  }
