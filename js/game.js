@@ -1,222 +1,150 @@
-// js/game.js (V4 — full swipe + gravity + match)
-console.log('Loaded: game.js (V4)');
-
+// game.js - simple match-3 core (6 candies), swipe support, gravity, refill, levels
 (function(){
-  const CANDIES = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png'];
-  const IMAGE_PATH = 'images/';
+  const IMAGES = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png']; // place in images/
+  const LEVELS = [null, {id:1,goal:100,reward:50,size:8}, {id:2,goal:220,reward:120,size:8}, {id:3,goal:500,reward:250,size:8}];
+  let state = { level:1, score:0, size:8 };
 
-  const LEVELS = [
-    null,
-    { id:1, boardSize:7, goal:200, reward:50 },
-    { id:2, boardSize:8, goal:600, reward:150 },
-    { id:3, boardSize:8, goal:1200, reward:300 },
-  ];
+  const $ = id=>document.getElementById(id);
+  function log(){ if(window.console) console.log.apply(console,arguments); }
 
-  let grid=[], cells=[], selected=null;
-  let boardSize=7, score=0, currentLevel=1;
-  const boardEl=document.getElementById('gameBoard');
-  const scoreEl=document.getElementById('score');
-  const coinsEl=document.getElementById('coins');
-  const levelEl=document.getElementById('currentLevel');
+  function randImg(){ return 'images/' + IMAGES[Math.floor(Math.random()*IMAGES.length)]; }
 
-  function randCandy(){ return IMAGE_PATH + CANDIES[Math.floor(Math.random()*CANDIES.length)]; }
+  // storage helpers
+  function updateCoinDisplay(){ const el=$('coins'); if(el) el.textContent = StorageAPI.getCoins(); const sc=$('currentLevel'); if(sc) sc.textContent = state.level; }
 
-  function setScore(n){ score=n; scoreEl.textContent=n; }
-  function updateCoins(){ coinsEl.textContent=StorageAPI.getCoins(); }
+  // grid data (2D array of image src or null)
+  let grid = [];
 
-  function buildGrid(){
-    const info=LEVELS[currentLevel]||LEVELS[1];
-    boardSize=info.boardSize;
-    grid=Array.from({length:boardSize},()=>Array(boardSize).fill(null));
-    for(let r=0;r<boardSize;r++){
-      for(let c=0;c<boardSize;c++){
-        do{ grid[r][c]=randCandy(); }while(createsImmediateMatch(r,c));
-      }
-    }
-  }
+  function initGrid(){ grid = []; for(let r=0;r<state.size;r++){ const row=[]; for(let c=0;c<state.size;c++){ row.push(randImg()); } grid.push(row); } }
 
-  function createsImmediateMatch(r,c){
-    const val=grid[r][c];
-    if(c>=2 && grid[r][c-1]===val && grid[r][c-2]===val) return true;
-    if(r>=2 && grid[r-1][c]===val && grid[r-2][c]===val) return true;
-    return false;
-  }
-
-  function renderBoard(){
-    boardEl.innerHTML='';
-    boardEl.style.gridTemplateColumns=`repeat(${boardSize},1fr)`;
-    cells=[];
-    for(let r=0;r<boardSize;r++){
-      for(let c=0;c<boardSize;c++){
-        const cell=document.createElement('div');
-        cell.className='cell';
-        cell.dataset.r=r; cell.dataset.c=c;
-        const img=document.createElement('img');
-        img.className='tile';
-        img.src=grid[r][c];
+  // render grid
+  function renderGrid(){ const board = $('game-board'); if(!board) return; board.innerHTML=''; board.style.gridTemplateColumns = `repeat(${state.size}, 1fr)`;
+    for(let r=0;r<state.size;r++){
+      for(let c=0;c<state.size;c++){
+        const cell = document.createElement('div'); cell.className='cell'; cell.dataset.r=r; cell.dataset.c=c;
+        const img = document.createElement('img'); img.className='tile'; img.draggable=false; img.alt=''; img.src = grid[r][c] || '';
         cell.appendChild(img);
-        boardEl.appendChild(cell);
-        cells.push(cell);
-        cell.addEventListener('click',onCellClick);
-        addSwipeSupport(cell);
+        attachPointerHandlers(cell);
+        board.appendChild(cell);
       }
     }
   }
 
-  function onCellClick(e){
-    const el=e.currentTarget;
-    const r=+el.dataset.r, c=+el.dataset.c;
-    if(!selected){ selected={r,c}; el.classList.add('selected'); return; }
-    const prev=document.querySelector('.cell.selected');
-    if(prev) prev.classList.remove('selected');
-    const pr=selected.r, pc=selected.c;
-    if(pr===r && pc===c){ selected=null; return; }
-    if(Math.abs(pr-r)+Math.abs(pc-c)===1){ swapAndProcess(pr,pc,r,c); }
-    selected=null;
+  // utilities
+  function inBounds(r,c){ return r>=0 && c>=0 && r<state.size && c<state.size }
+  function swapCells(r1,c1,r2,c2){ const t = grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=t }
+
+  // match detection - returns array of coordinates to clear
+  function detectMatches(){ const toClear = Array.from({length:state.size},()=>Array(state.size).fill(false));
+    // rows
+    for(let r=0;r<state.size;r++){
+      let runStart=0;
+      for(let c=1;c<=state.size;c++){
+        if(c<state.size && grid[r][c]===grid[r][runStart]) continue;
+        const runLen = c-runStart;
+        if(runLen>=3){ for(let k=runStart;k<c;k++) toClear[r][k]=true }
+        runStart=c;
+      }
+    }
+    // cols
+    for(let c=0;c<state.size;c++){
+      let runStart=0;
+      for(let r=1;r<=state.size;r++){
+        if(r<state.size && grid[r][c]===grid[runStart][c]) continue;
+        const runLen = r-runStart;
+        if(runLen>=3){ for(let k=runStart;k<r;k++) toClear[k][c]=true }
+        runStart=r;
+      }
+    }
+    // collect list
+    const list=[];
+    for(let r=0;r<state.size;r++) for(let c=0;c<state.size;c++) if(toClear[r][c]) list.push([r,c]);
+    return list;
   }
 
-  // 🟢 ADD: Swipe detection in all 4 directions
-  function addSwipeSupport(cell){
-    let sx=0, sy=0, ex=0, ey=0;
-    cell.addEventListener('touchstart',ev=>{
-      const t=ev.touches[0]; sx=t.clientX; sy=t.clientY;
-    },{passive:true});
-    cell.addEventListener('touchend',ev=>{
-      const t=ev.changedTouches[0]; ex=t.clientX; ey=t.clientY;
-      const dx=ex-sx, dy=ey-sy;
-      if(Math.abs(dx)<20 && Math.abs(dy)<20){ cell.click(); return; } // small tap
-      const r=+cell.dataset.r, c=+cell.dataset.c;
-      let nr=r, nc=c;
-      if(Math.abs(dx)>Math.abs(dy)){
-        nc=dx>0?c+1:c-1;
-      } else {
-        nr=dy>0?r+1:r-1;
-      }
-      if(nr<0||nr>=boardSize||nc<0||nc>=boardSize) return;
-      swapAndProcess(r,c,nr,nc);
-    },{passive:true});
+  // remove matched tiles, award score, apply gravity and refill
+  function collapseAndRefill(matched){ if(!matched || matched.length===0) return 0; const points = matched.length*20; state.score += points; // update score
+    // set matched to null
+    matched.forEach(([r,c])=>{ grid[r][c]=null });
+    // gravity: for each column, pull items down
+    for(let c=0;c<state.size;c++){
+      let write = state.size-1;
+      for(let r=state.size-1;r>=0;r--){ if(grid[r][c]!==null){ grid[write][c]=grid[r][c]; write--; } }
+      while(write>=0){ grid[write][c]=randImg(); write--; }
+    }
+    return points;
+  }
 
-    // optional mouse drag for desktop
-    let md=false,mx,my;
-    cell.addEventListener('mousedown',ev=>{md=true;mx=ev.clientX;my=ev.clientY;});
-    document.addEventListener('mouseup',ev=>{
-      if(!md) return; md=false;
-      const dx=ev.clientX-mx, dy=ev.clientY-my;
-      if(Math.abs(dx)<20&&Math.abs(dy)<20) return;
-      const r=+cell.dataset.r, c=+cell.dataset.c;
-      let nr=r, nc=c;
-      if(Math.abs(dx)>Math.abs(dy)){ nc=dx>0?c+1:c-1; } else { nr=dy>0?r+1:r-1; }
-      if(nr<0||nr>=boardSize||nc<0||nc>=boardSize) return;
-      swapAndProcess(r,c,nr,nc);
+  // repeatedly detect-match -> collapse until no more auto matches
+  function resolveBoard(){ let totalPoints=0; while(true){ const m = detectMatches(); if(m.length===0) break; const pts = collapseAndRefill(m); totalPoints+=pts; renderGrid(); }
+    updateScoreUI(); return totalPoints;
+  }
+
+  function updateScoreUI(){ const s=$('score'); if(s) s.textContent=state.score }
+
+  // swipe support: we use pointer/touch events
+  let pointer = {down:false, startX:0, startY:0, cellR:null, cellC:null};
+  function attachPointerHandlers(cell){
+    cell.addEventListener('pointerdown', (e)=>{
+      cell.setPointerCapture(e.pointerId);
+      pointer.down=true; pointer.startX=e.clientX; pointer.startY=e.clientY; pointer.cellR=Number(cell.dataset.r); pointer.cellC=Number(cell.dataset.c);
+      cell.classList.add('selected');
+    });
+    cell.addEventListener('pointerup', (e)=>{
+      try{ e.target.releasePointerCapture(e.pointerId); }catch(e){}
+      pointer.down=false; const sel = document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected');
+    });
+    cell.addEventListener('pointercancel', ()=>{ pointer.down=false; const sel=document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected'); });
+    cell.addEventListener('pointermove', (e)=>{
+      if(!pointer.down) return; const dx = e.clientX - pointer.startX; const dy = e.clientY - pointer.startY; const absX = Math.abs(dx); const absY = Math.abs(dy);
+      const threshold = 20; // minimal swipe distance
+      if(Math.max(absX,absY) < threshold) return;
+      // determine direction
+      let dr=0, dc=0;
+      if(absX>absY){ dc = dx<0 ? -1 : 1; } else { dr = dy<0 ? -1 : 1; }
+      const r1 = pointer.cellR, c1 = pointer.cellC; const r2 = r1+dr, c2 = c1+dc;
+      if(!inBounds(r2,c2)) return;
+      // perform swap, check for match, if not swap back
+      swapCells(r1,c1,r2,c2); renderGrid(); const matches = detectMatches(); if(matches.length>0){ const pts = collapseAndRefill(matches); updateScoreUI(); // resolve chain
+        setTimeout(()=>{ resolveBoard(); },120);
+      } else { // revert
+        setTimeout(()=>{ swapCells(r1,c1,r2,c2); renderGrid(); },120);
+      }
+      // reset pointer down so one swipe per drag
+      pointer.down=false; const sel=document.querySelector('.cell.selected'); if(sel) sel.classList.remove('selected');
     });
   }
 
-  function swapAndProcess(r1,c1,r2,c2){
-    const tmp=grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=tmp;
-    updateCell(r1,c1); updateCell(r2,c2);
-    const matches=findMatches();
-    if(matches.length===0){
-      setTimeout(()=>{ const t=grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=t; updateCell(r1,c1); updateCell(r2,c2); },180);
-    } else handleMatches();
-  }
+  // shuffle board
+  window.shuffleBoard = function(){ for(let r=0;r<state.size;r++) for(let c=0;c<state.size;c++) grid[r][c]=randImg(); renderGrid(); log('Board shuffled'); };
+  window.restartGame = function(){ state.score=0; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game restarted'); };
 
-  function updateCell(r,c){
-    const idx=r*boardSize+c; const cell=cells[idx]; if(!cell) return;
-    cell.querySelector('.tile').src=grid[r][c]||'';
-  }
+  // level map render
+  window.renderLevelMap = function(){ const list = $('levelList'); if(!list) return; list.innerHTML=''; for(let i=1;i<LEVELS.length;i++){ const li=document.createElement('div'); li.style.padding='8px'; li.style.margin='6px'; li.style.border='1px solid #f0d'; li.style.display='inline-block'; li.style.borderRadius='10px'; li.style.cursor='pointer'; li.textContent = 'Level ' + i + '  — goal ' + LEVELS[i].goal; li.dataset.level = i; li.addEventListener('click',()=>{ StorageAPI.setLevel(i); startLevel(i); document.getElementById('map-screen').classList.remove('active'); document.getElementById('game-screen').classList.add('active'); }); list.appendChild(li); } };
 
-  function findMatches(){
-    const rmv=new Set();
-    // horizontal
-    for(let r=0;r<boardSize;r++){
-      let run=1;
-      for(let c=1;c<=boardSize;c++){
-        const cur=grid[r][c],prev=grid[r][c-1];
-        if(c<boardSize && cur===prev){run++;}
-        else{ if(run>=3){ for(let k=0;k<run;k++) rmv.add(`${r},${c-1-k}`); } run=1; }
-      }
-    }
-    // vertical
-    for(let c=0;c<boardSize;c++){
-      let run=1;
-      for(let r=1;r<=boardSize;r++){
-        const cur=r<boardSize?grid[r][c]:null,prev=r>0?grid[r-1][c]:null;
-        if(cur===prev){run++;}
-        else{ if(run>=3){ for(let k=0;k<run;k++) rmv.add(`${r-1-k},${c}`); } run=1; }
-      }
-    }
-    return [...rmv].map(s=>s.split(',').map(Number));
-  }
+  function startLevel(l){ state.level = Number(l||StorageAPI.getLevel()||1); state.size = LEVELS[state.level].size || 8; state.score = 0; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game initialized at level', state.level); }
 
-  function handleMatches(){
-    const matches=findMatches();
-    if(matches.length===0) return;
-    matches.forEach(([r,c])=>{
-      const idx=r*boardSize+c;
-      const cell=cells[idx];
-      if(cell) cell.classList.add('pop');
-      grid[r][c]=null;
-    });
-    setScore(score+matches.length*10);
-    StorageAPI.addCoins(Math.floor(matches.length/3));
-    updateCoins();
-    setTimeout(()=>{ collapseAndFill(); },250);
-  }
-
-  function collapseAndFill(){
-    for(let c=0;c<boardSize;c++){
-      let write=boardSize-1;
-      for(let r=boardSize-1;r>=0;r--){
-        if(grid[r][c]){
-          grid[write][c]=grid[r][c];
-          write--;
-        }
-      }
-      for(let r=write;r>=0;r--){ grid[r][c]=randCandy(); }
-    }
-    for(let r=0;r<boardSize;r++){ for(let c=0;c<boardSize;c++) updateCell(r,c); }
-    setTimeout(()=>{ if(findMatches().length>0) handleMatches(); else checkLevel(); },180);
-  }
-
-  function checkLevel(){
-    const info=LEVELS[currentLevel]||LEVELS[1];
-    if(score>=info.goal){
-      const next=currentLevel+1;
-      const reward=info.reward||0;
-      StorageAPI.addCoins(reward);
-      if(LEVELS[next]) StorageAPI.setLevel(next);
-      showLevelModal(next,reward);
+  // level completion check
+  function checkLevelComplete(){ const goal = (LEVELS[state.level] && LEVELS[state.level].goal) || Infinity; if(state.score >= goal){ // give reward & unlock
+      const reward = LEVELS[state.level] ? LEVELS[state.level].reward : 0; if(reward) StorageAPI.addCoins(reward); const next = state.level+1; if(LEVELS[next]) StorageAPI.setLevel(next); // show modal
+      const modal = $('levelUpModal'); if(modal){ $('levelUpTitle').textContent='Level Up!'; $('levelUpText').textContent = 'You reached the goal. Reward: ' + reward + ' coins.'; modal.style.display='flex'; }
+      updateCoinDisplay();
     }
   }
 
-  function showLevelModal(next,reward){
-    const modal=document.getElementById('levelUpModal');
-    const title=document.getElementById('levelUpTitle');
-    const msg=document.getElementById('levelUpMsg');
-    modal.style.display='flex';
-    title.textContent='Level Complete!';
-    msg.textContent=`Level ${next-1} done! Reward: ${reward} coins.`;
-    document.getElementById('levelUpClose').onclick=()=>{
-      modal.style.display='none';
-      StorageAPI.setPlayLevel(next);
-      currentLevel=next;
-      initGame();
-    };
-  }
+  // expose update functions for safe-ui
+  window.initGame = function(){ try{ state.level = StorageAPI.getLevel() || 1; state.size = LEVELS[state.level].size || 8; initGrid(); renderGrid(); updateScoreUI(); updateCoinDisplay(); log('Game initialized at level', state.level); } catch(e){ console.error('initGame error', e); } };
 
-  function initGame(){
-    currentLevel=StorageAPI.getPlayLevel()||StorageAPI.getLevel()||1;
-    if(levelEl) levelEl.textContent=currentLevel;
-    setScore(0);
-    buildGrid();
-    renderBoard();
-    updateCoins();
-    console.log('Game init level',currentLevel);
-  }
+  // quick add coins (console)
+  window.addCoins = function(n){ StorageAPI.addCoins(Number(n||0)); updateCoinDisplay(); };
 
-  window.shuffleBoard=function(){ buildGrid(); renderBoard(); };
-  window.restartGame=function(){ initGame(); };
-  window.initGame=initGame;
+  // basic auto-resolve every few seconds to clear accidental auto-matches on start
+  setTimeout(()=>{ if(typeof initGame==='function'){ initGame(); } },200);
 
-  document.addEventListener('DOMContentLoaded',()=>{ initGame(); });
+  // after every grid change, check level completion (simple hook)
+  const scoreObserver = new MutationObserver(()=>{ checkLevelComplete(); });
+  const scoreNode = $('score'); if(scoreNode) scoreObserver.observe(scoreNode,{childList:true});
+
+  // save modules loaded
+  try{ console.log('Loaded: js/game.js'); }catch(e){}
 })();
