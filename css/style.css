@@ -1,86 +1,74 @@
-/* Basic layout */
 body {
-  margin:0;
+  margin: 0;
   font-family: "Poppins", sans-serif;
-  background:#ffeef6;
-  color:#222;
-  -webkit-font-smoothing:antialiased;
+  background: linear-gradient(180deg, #ffe6f2, #fff0f8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
-.screen { display:none; padding:18px; }
-.screen.active { display:block; }
-
-h1 { font-size:34px; margin:6px 0; }
-h2 { font-size:26px; margin:6px 0 12px; }
-
-.btn {
-  background: linear-gradient(45deg,#ff80ab,#ff4081);
-  color:#fff;
-  border:none;
-  padding:10px 18px;
-  border-radius:24px;
-  font-size:16px;
-  cursor:pointer;
-  margin:8px;
-}
-.btn.small { padding:8px 12px; font-size:14px; }
-.btn.back { background:#ffb6c1; color:#000; }
-
-/* Level map list */
-.level-list { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
-
-/* Top bar in game */
-.topbar {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:space-between;
-  background:#ffdce5;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:12px;
+.screen {
+  display: none;
+  text-align: center;
 }
 
-/* Board */
-.board {
-  display:grid;
-  gap:8px;
-  justify-content:center;
-  margin: 8px auto;
-  background: #fff;
-  padding: 14px;
-  border-radius:18px;
-  max-width: 720px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+.active {
+  display: block;
 }
 
-/* Cells */
-.cell {
-  width:56px;
-  height:56px;
-  border-radius:12px;
-  background: #fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition: transform 140ms ease, box-shadow 140ms ease;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-  user-select:none;
-  -webkit-user-drag: none;
-}
-.cell img { width:78%; height:auto; pointer-events:none; }
-
-.cell.selected {
-  transform: scale(1.15);
-  box-shadow: 0 10px 18px rgba(0,0,0,0.12);
+#home-screen h1 {
+  color: #ff5a8d;
+  font-size: 40px;
+  margin-bottom: 10px;
 }
 
-/* Controls */
-.controls { margin-top:12px; display:flex; justify-content:center; gap:22px; }
+#home-screen button {
+  background: linear-gradient(90deg, #ff7eb3, #ff5a8d);
+  border: none;
+  padding: 14px 24px;
+  border-radius: 20px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(255, 90, 141, 0.3);
+}
 
-/* Responsive */
-@media (max-width:420px){
-  .cell { width:48px; height:48px; }
-  .btn { padding:10px 14px; font-size:15px; }
-  .board { padding:10px; gap:6px; }
-  }
+#game-screen {
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+}
+
+#topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  font-size: 18px;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  justify-items: center;
+  padding: 10px;
+}
+
+.cell div {
+  font-size: 40px;
+  transition: transform 0.2s ease;
+}
+
+.cell div:active {
+  transform: scale(0.9);
+}
+
+button#back {
+  background: #ff5a8d;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 8px 14px;
+}
