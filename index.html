@@ -3,18 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match — Home</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Candy Match — Pull Update</title>
+  <link rel="stylesheet" href="css/game.css">
 </head>
-<body class="center-screen">
-  <div class="home-card">
-    <img src="images/candy1.png" class="logo" alt="Candy">
-    <h1>🍬 Candy Match</h1>
-    <p>स्वीट गेम खेलो और लेवल्स अनलॉक करो!</p>
-    <button class="btn big" onclick="location.href='level-map.html'">Play</button>
-    <button class="btn secondary" onclick="StorageAPI.reset();alert('Progress reset!')">Reset</button>
+<body>
+  <!-- HOME (simple) -->
+  <div id="home-screen" class="screen active">
+    <h1>🍭 Candy Match</h1>
+    <button id="openMap">Play (Map)</button>
   </div>
-  <footer class="credit">Made with ❤️ by Arun</footer>
+
+  <!-- LEVEL MAP -->
+  <div id="map-screen" class="screen">
+    <h2>Level Map</h2>
+    <div id="levelList"></div>
+    <button id="backFromMap">Back</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen" class="screen">
+    <header class="topbar">
+      <button id="backHome">← Home</button>
+      <div>Score: <span id="score">0</span></div>
+      <div>Coins: <span id="coins">0</span></div>
+      <div>Level: <span id="currentLevel">1</span></div>
+    </header>
+
+    <main class="game-shell">
+      <div class="board-card">
+        <div id="game-board" class="game-board" aria-live="polite"></div>
+      </div>
+
+      <div class="controls">
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="shuffleBtn" class="btn">Shuffle</button>
+        <button id="openShopBtn" class="btn">Shop</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Level up modal -->
+  <div id="levelUpModal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <button id="levelUpClose" class="btn">Continue</button>
+    </div>
+  </div>
+
+  <!-- Eruda loader for mobile debugging -->
+  <script>(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/eruda';s.onload=function(){try{eruda.init();console.log('Eruda loaded')}catch(e){console.warn(e)}};document.body.appendChild(s);})();</script>
+
+  <!-- safe ui, storage, game (order matters) -->
+  <script src="js/safe-ui.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
 </body>
-</html>
+                                                                     </html>
