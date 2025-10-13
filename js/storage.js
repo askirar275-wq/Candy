@@ -1,22 +1,31 @@
-console.log("storage.js loaded");
-
+// storage.js
+console.log('Loaded: storage.js');
 window.StorageAPI = {
-  getCoins() {
-    return Number(localStorage.getItem("coins") || 0);
+  getCoins(){
+    return Number(localStorage.getItem('cm_coins') || 0);
   },
-  addCoins(amount) {
-    let coins = this.getCoins() + Number(amount || 0);
-    if (coins < 0) coins = 0;
-    localStorage.setItem("coins", coins);
-    return coins;
+  addCoins(n){
+    let c = this.getCoins() + Number(n||0);
+    if(c<0) c=0;
+    localStorage.setItem('cm_coins', c);
+    return c;
   },
-  getLevel() {
-    return Number(localStorage.getItem("level") || 1);
+  getLevel(){
+    return Number(localStorage.getItem('cm_level') || 1);
   },
-  setLevel(level) {
-    localStorage.setItem("level", level);
+  setLevel(l){
+    localStorage.setItem('cm_level', Number(l||1));
   },
-  reset() {
-    localStorage.clear();
+  reset(){
+    localStorage.removeItem('cm_coins');
+    localStorage.removeItem('cm_level');
+    localStorage.removeItem('cm_playLevel');
+    console.log('Storage reset');
   },
+  setPlayLevel(l){
+    localStorage.setItem('cm_playLevel', Number(l||1));
+  },
+  getPlayLevel(){
+    return Number(localStorage.getItem('cm_playLevel') || this.getLevel() || 1);
+  }
 };
