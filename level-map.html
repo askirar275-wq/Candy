@@ -3,23 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Candy Match - Home</title>
+<title>Level Map</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="home">
-  <div class="container">
-    <h1 class="title">🍬 Candy Match</h1>
-    <button class="btn" onclick="location.href='level-map.html'">Play</button>
-    <button class="btn" onclick="resetGame()">Reset Progress</button>
-    <p class="footer">© 2025 Candy Match</p>
-  </div>
+<body class="map">
+  <button class="back" onclick="location.href='index.html'">🏠 Home</button>
+  <h2 class="heading">Select Level</h2>
+  <div id="map" class="map-grid"></div>
 
   <script src="js/storage.js"></script>
-  <script>
-    function resetGame(){
-      StorageAPI.reset();
-      alert('Progress Reset!');
-    }
-  </script>
+  <script src="js/level-map.js"></script>
 </body>
 </html>
