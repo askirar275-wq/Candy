@@ -1,14 +1,12 @@
-(function(){
-  function $id(id){return document.getElementById(id)}
-  function safeAdd(id,evt,fn){var el=$id(id); if(!el){console.warn('safe-ui: missing #' + id); return;} el.addEventListener(evt,fn)}
-  document.addEventListener('DOMContentLoaded',function(){
-    console.log('Safe UI loaded');
-    safeAdd('openMap','click',function(){ document.getElementById('home-screen').classList.remove('active'); document.getElementById('map-screen').classList.add('active'); if(typeof renderLevelMap==='function') renderLevelMap(); });
-    safeAdd('backFromMap','click',function(){ document.getElementById('map-screen').classList.remove('active'); document.getElementById('home-screen').classList.add('active'); });
-    safeAdd('backHome','click',function(){ document.getElementById('game-screen').classList.remove('active'); document.getElementById('home-screen').classList.add('active'); });
-    safeAdd('restartBtn','click',function(){ if(typeof restartGame==='function') restartGame(); else console.warn('restartGame missing'); });
-    safeAdd('shuffleBtn','click',function(){ if(typeof shuffleBoard==='function') shuffleBoard(); else console.warn('shuffleBoard missing'); });
-    safeAdd('openShopBtn','click',function(){ alert('Shop placeholder'); });
-    safeAdd('levelUpClose','click',function(){ var m=$id('levelUpModal'); if(m) m.style.display='none'; });
-  });
-})();
+document.addEventListener("DOMContentLoaded", () => {
+  const show = id => document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+
+  // स्क्रीन स्विच
+  document.getElementById("openMap").onclick = () => show("map-screen");
+  document.getElementById("backFromMap").onclick = () => show("home-screen");
+  document.getElementById("backHome").onclick = () => show("home-screen");
+
+  document.getElementById("restartBtn").onclick = () => restartGame();
+  document.getElementById("shuffleBtn").onclick = () => shuffleBoard();
+  document.getElementById("levelUpClose").onclick = () => document.getElementById("levelUpModal").style.display = "none";
+});
