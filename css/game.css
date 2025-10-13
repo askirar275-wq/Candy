@@ -1,16 +1,51 @@
 /* css/game.css */
-body{margin:0;font-family:"Poppins",sans-serif;background:linear-gradient(180deg,#fff0f4,#ffe7ee);}
-.topbar{display:flex;align-items:center;gap:12px;padding:12px;max-width:980px;margin:0 auto;}
-.topbar button{padding:8px;border-radius:8px;background:#ffdff0;border:1px solid rgba(0,0,0,0.06);}
-.score-block{font-size:24px;font-weight:700;margin-left:12px;}
-.level-block,.coins-block{margin-left:auto;background:#fff;padding:6px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);}
-.board{max-width:720px;margin:20px auto;background:rgba(255,255,255,0.9);padding:14px;border-radius:18px;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;box-shadow:0 10px 30px rgba(0,0,0,0.06);}
-.cell{background:rgba(255,255,255,0.9);border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;min-height:48px;}
-.cell .tile{width:44px;height:44px;touch-action:none;user-select:none;}
-.selected-cell{outline:3px solid rgba(255,139,173,0.6);border-radius:10px;}
-.controls{display:flex;justify-content:center;gap:12px;margin:18px 0;}
-.controls button{padding:12px 18px;border-radius:12px;border:0;background:linear-gradient(90deg,#ffb6d9,#ff8fc1);color:white;font-weight:700;}
-.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:999;}
-.modal-card{background:white;padding:16px;border-radius:12px;min-width:260px;max-width:420px;}
-.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
-.shop-item{background:#fff7fb;padding:8px;border-radius:8px;text-align:center;}
+.topbar { display:flex; align-items:center; gap:12px; padding:12px; background:linear-gradient(180deg,#ffdfe8,#ffeef6); }
+.top-stats { display:flex; gap:18px; margin-left:auto; align-items:center; }
+.stat { font-weight:700; }
+
+.board {
+  width: calc(100% - 40px);
+  max-width:720px;
+  margin:18px auto;
+  display:grid;
+  grid-template-columns: repeat(8, 1fr); /* will be adjusted by JS per level */
+  gap:10px;
+  background: rgba(255,255,255,0.7);
+  padding:14px;
+  border-radius:16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  justify-items:center;
+  align-items:center;
+}
+
+.cell {
+  width: 64px;
+  height: 64px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.9);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  box-shadow: 0 6px 10px rgba(0,0,0,0.04);
+  position:relative;
+  overflow:hidden;
+}
+
+.tile {
+  width:56px;
+  height:56px;
+  user-select:none;
+  -webkit-user-drag: none;
+  transition: transform 180ms ease, opacity 220ms ease;
+}
+
+.cell.selected-cell { outline:3px solid rgba(255,120,150,0.4); transform:translateY(-4px); }
+
+.controls { display:flex; gap:12px; justify-content:center; margin:18px 0; }
+.controls button { padding:12px 18px; border-radius:24px; border:0; background:linear-gradient(45deg,#ff80ab,#ff4081); color:white; }
+
+.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:999; }
+.modal-card { background:#fff; padding:16px; border-radius:12px; width:90%; max-width:420px; box-shadow:0 8px 28px rgba(0,0,0,0.15); }
+
+.shop-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.shop-item { padding:8px; border-radius:8px; background:#fff7fb; min-width:120px; text-align:center; }
