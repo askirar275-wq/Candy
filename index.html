@@ -114,5 +114,15 @@
   <!-- shop (optional) -->
   <script src="js/shop.js"></script>
 
-</body>
+</body><!-- Level Complete + Transition modal (paste in index.html body before storage/game script tags) -->
+<div id="levelCompleteModal" aria-hidden="true" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:9999;">
+  <div id="levelCompleteCard" style="width:92%;max-width:520px;background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,0.25);transform-origin:center;opacity:0;transform:scale(0.96);">
+    <h2 id="levelCompleteTitle" style="margin:0 0 8px;color:#ff4081;font-size:22px;">🎉 Level Complete!</h2>
+    <p id="levelCompleteMsg" style="margin:0 0 16px;color:#444;">You reached the target score. Reward: <span id="levelReward">0</span> coins</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="levelNextBtn" style="padding:10px 18px;border-radius:20px;border:0;background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;font-weight:700;">Next Level</button>
+      <button id="levelMapBtn" style="padding:10px 18px;border-radius:20px;border:1px solid #eee;background:#fff;color:#333;font-weight:700;">Open Map</button>
+    </div>
+  </div>
+</div>
 </html>
