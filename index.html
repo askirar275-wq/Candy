@@ -1,62 +1,32 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/level-map.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Candy Match - Simple</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- HOME SCREEN -->
+
+  <!-- 🏠 Home Screen -->
   <div id="home-screen" class="screen active">
     <h1>🍭 Candy Match</h1>
-    <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-    <button id="playBtn" class="primary">Play</button>
+    <p>स्वीट्स को मिलाओ और स्कोर बढ़ाओ!</p>
+    <button id="play">Play</button>
   </div>
 
-  <!-- LEVEL MAP -->
-  <div id="map-screen" class="screen">
-    <h2>Level Map</h2>
-    <div id="levelList" class="level-list"></div>
-    <button id="backFromMap" class="ghost">← Back</button>
-  </div>
-
-  <!-- GAME SCREEN -->
+  <!-- 🎮 Game Screen -->
   <div id="game-screen" class="screen">
-    <div class="topbar">
-      <button id="homeBtn">← Home</button>
-      <div class="meta">Score: <span id="score">0</span></div>
-      <div class="meta">Coins: <span id="coins">0</span></div>
-      <div class="meta">Level: <span id="currentLevel">1</span></div>
+    <div id="topbar">
+      <button id="back">⬅ Home</button>
+      <div>Score: <span id="score">0</span></div>
     </div>
-
-    <div id="boardWrap">
-      <div id="game-board" class="board" aria-live="polite"></div>
-    </div>
-
-    <div class="controls">
-      <button id="restartBtn">Restart</button>
-      <button id="shuffleBtn">Shuffle</button>
-      <button id="openMapBtn">Map</button>
-    </div>
+    <div id="board"></div>
   </div>
 
-  <!-- Level Up Modal -->
-  <div id="levelUpModal" class="modal" aria-hidden="true">
-    <div class="modal-card">
-      <h3 id="levelUpTitle">Level Up!</h3>
-      <p id="levelUpText"></p>
-      <button id="levelUpClose">Continue</button>
-    </div>
-  </div>
-
-  <!-- Scripts (order matters) -->
-  <script src="js/eruda-loader.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/level-map.js"></script>
+  <!-- JS -->
   <script src="js/game.js"></script>
-  <script src="js/safe-ui.js"></script>
 </body>
 </html>
