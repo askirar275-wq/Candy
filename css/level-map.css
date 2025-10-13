@@ -1,7 +1,7 @@
 /* css/level-map.css */
-.level-node {
-  transition: transform 0.2s ease;
-}
-.level-node:hover {
-  transform: scale(1.1);
-}}
+#levelPath { max-width:980px; margin:12px auto; background:linear-gradient(180deg,#fff5f8,#ffeef6); border-radius:12px; padding:18px; min-height:520px; display:flex; flex-direction:column; gap:12px; }
+.level-row { display:flex; gap:12px; align-items:center; justify-content:flex-start; flex-wrap:wrap; }
+.level-node { width:84px; height:84px; background:#fff; border-radius:999px; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 6px 14px rgba(0,0,0,0.06); cursor:pointer; }
+.level-node.locked { opacity:0.45; cursor:not-allowed; }
+.level-node.unlocked { border:3px solid rgba(255,140,180,0.12); }
+.level-label { font-weight:700; font-size:14px; margin-top:6px; }
