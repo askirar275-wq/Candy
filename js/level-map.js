@@ -1,45 +1,49 @@
-// ===== js/level-map.js =====
+// js/level-map.js
+(function(){
+  function $id(id){ return document.getElementById(id); }
+  var LEVELS = [
+    null,
+    { id:1, title:'Beginner', goalScore:100, boardSize:8 },
+    { id:2, title:'Explorer', goalScore:300, boardSize:8 },
+    { id:3, title:'Challenger', goalScore:700, boardSize:9 },
+    { id:4, title:'Master', goalScore:1500, boardSize:9 }
+  ];
 
-function renderLevelMap() {
-  const container = document.getElementById("levelPath");
-  if (!container) return console.warn("Level map container missing");
-  container.innerHTML = "";
-
-  const totalLevels = 20; // कितने level दिखाने हैं
-  const userLevel =
-    typeof StorageAPI !== "undefined" && StorageAPI.getLevel
-      ? StorageAPI.getLevel()
-      : 1;
-
-  for (let i = 1; i <= totalLevels; i++) {
-    const node = document.createElement("div");
-    node.className = "level-node";
-    node.textContent = i;
-    node.style.width = "60px";
-    node.style.height = "60px";
-    node.style.borderRadius = "50%";
-    node.style.display = "inline-flex";
-    node.style.alignItems = "center";
-    node.style.justifyContent = "center";
-    node.style.margin = "14px";
-    node.style.fontWeight = "700";
-    node.style.background =
-      i <= userLevel
-        ? "linear-gradient(135deg,#ff90c2,#ff60a0)"
-        : "linear-gradient(135deg,#ccc,#999)";
-    node.style.color = "#fff";
-    node.style.cursor = i <= userLevel ? "pointer" : "not-allowed";
-    node.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-    node.addEventListener("click", () => {
-      if (i <= userLevel) {
-        console.log("Level selected:", i);
-        if (typeof window.selectLevel === "function") {
-          window.selectLevel(i);
-        } else {
-          console.warn("selectLevel() missing");
-        }
+  window.renderLevelMap = function(){
+    var wrap = $id('levelPath');
+    if(!wrap){ console.warn('levelPath not found'); return; }
+    wrap.innerHTML = '';
+    var unlocked = StorageAPI.getLevel();
+    var row = document.createElement('div'); row.className = 'level-row';
+    LEVELS.forEach(function(l){
+      if(!l) return;
+      var node = document.createElement('div');
+      node.className = 'level-node ' + (l.id <= unlocked ? 'unlocked' : 'locked');
+      node.innerHTML = '<div style="font-weight:800;">' + l.id + '</div><div class="level-label">' + l.title + '</div>';
+      if(l.id <= unlocked){
+        node.addEventListener('click', function(){
+          // set level and open game
+          StorageAPI.setLevel(l.id);
+          // update currentLevel element
+          var cl = $id('currentLevel'); if(cl) cl.textContent = l.id;
+          // switch screens
+          var hs=$id('home-screen'), ms=$id('map-screen'), gs=$id('game-screen');
+          if(ms) ms.classList.remove('active');
+          if(gs) gs.classList.add('active');
+          // try initGame
+          if(typeof initGame === 'function'){ initGame(); } else console.warn('initGame not found yet');
+        });
       }
+      row.appendChild(node);
     });
-    container.appendChild(node);
-  }
-      }
+    wrap.appendChild(row);
+
+    // optionally add info row
+    var info = document.createElement('div');
+    info.className = 'note';
+    info.textContent = 'Unlocked level: ' + unlocked + '. Tap any unlocked node to start that level.';
+    wrap.appendChild(info);
+  };
+
+  console.log('Loaded: js/level-map.js');
+})();
