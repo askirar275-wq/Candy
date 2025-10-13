@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>🍭 Candy Match Game</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🍭 Candy Match</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- HOME SCREEN -->
+  <!-- HOME -->
   <div id="home" class="screen active">
     <h1>🍬 Candy Match</h1>
     <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
@@ -18,19 +18,19 @@
   <!-- LEVEL MAP -->
   <div id="map" class="screen">
     <h2>Level Map</h2>
-    <div id="levelButtons"></div>
+    <div id="levelButtons" class="level-list"></div>
     <button id="backHomeBtn" class="btn back">← Back</button>
   </div>
 
-  <!-- GAME SCREEN -->
+  <!-- GAME -->
   <div id="game" class="screen">
     <div class="topbar">
       <button id="backMapBtn" class="btn small">← Home</button>
-      <span>Score: <b id="score">0</b></span>
-      <span>Level: <b id="level">1</b></span>
+      <div>Score: <b id="score">0</b></div>
+      <div>Level: <b id="level">1</b></div>
     </div>
 
-    <div id="board" class="board"></div>
+    <div id="board" class="board" aria-live="polite"></div>
 
     <div class="controls">
       <button id="restartBtn" class="btn">Restart</button>
@@ -38,17 +38,18 @@
     </div>
   </div>
 
-  <!-- Eruda Console -->
+  <!-- Eruda (mobile console) -->
   <script>
     (function(){
       var s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/eruda';
-      s.onload=function(){eruda.init();console.log("🧠 Eruda Console चालू हो गया");};
+      s.onload=function(){ try{ eruda.init(); console.log('🧠 Eruda Console चालू हो गया'); }catch(e){console.warn('Eruda init failed',e);} };
       document.body.appendChild(s);
     })();
   </script>
 
+  <!-- App scripts (placed at end so DOM elements exist) -->
   <script src="js/ui.js"></script>
   <script src="js/game.js"></script>
 </body>
-    </html>
+</html>
