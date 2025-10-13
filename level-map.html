@@ -1,22 +1,47 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Levels — Candy Match</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Level Map — Candy</title>
+
+  <link rel="stylesheet" href="css/level-map.css">
 </head>
 <body>
-  <header class="topbar">
-    <button class="btn small" onclick="location.href='index.html'">← Home</button>
-    <h2>Level Map</h2>
+  <!-- back button और heading -->
+  <header class="lm-header">
+    <a class="back-btn" href="index.html">← Back</a>
+    <h1>Level Map</h1>
   </header>
 
-  <main class="center-screen">
-    <div id="mapGrid" class="level-grid"></div>
+  <main class="map-container" id="mapContainer" aria-live="polite">
+    <div id="mapCanvas" class="map-canvas">
+      <div class="loading" id="mapLoading">Loading map…</div>
+    </div>
   </main>
 
-  <script src="js/storage.js"></script>
+  <!-- level-up modal (reuseable) -->
+  <div id="levelUpModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <h2 id="levelUpTitle">Level Unlocked!</h2>
+      <p id="levelUpText">You unlocked a level.</p>
+      <div><button id="levelUpClose">Continue</button></div>
+    </div>
+  </div>
+
+  <!-- Eruda mobile console (optional, helps debug on phone) -->
+  <script>
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function () {
+        try { eruda.init(); console.log('Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
+      };
+      document.body.appendChild(s);
+    })();
+  </script>
+
+  <!-- map behaviour -->
   <script src="js/level-map.js"></script>
 </body>
 </html>
