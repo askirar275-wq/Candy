@@ -1,18 +1,41 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Candy Level Map</title>
-  <link rel="stylesheet" href="css/level-map.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Level Map 🍬</title>
+
+  <link rel="stylesheet" href="css/level-map.css" />
+
+  <style>
+    body { margin:0; font-family:"Poppins", sans-serif; background:#ffeef5; overflow-x:hidden; }
+  </style>
 </head>
 <body>
-  <div id="levelPath"></div>
+  <div class="map-container">
+    <h2 class="map-title">🍭 Candy Adventure Map</h2>
+    <p class="map-note">अपना level चुनो — नीचे scroll करो और unlocked level पर tap करो!</p>
 
-  <script src="js/storage.js"></script>
+    <div id="mapCanvas" class="map-canvas">
+      <img src="images/map-bg.png" alt="Candy Map" class="map-bg" />
+      <!-- Level nodes dynamic होंगे JS से -->
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button id="backHome" class="map-btn">🏠 Home</button>
+    </div>
+  </div>
+
+  <!-- Eruda Console -->
+  <script>
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function () { try { eruda.init(); console.log('🐞 Eruda loaded'); }catch(e){} };
+      document.body.appendChild(s);
+    })();
+  </script>
+
   <script src="js/level-map.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init(); console.log("Eruda Console Loaded");</script>
 </body>
 </html>
