@@ -397,3 +397,112 @@ function checkLevelCompletion() {
 }
 
 // Call this inside processMatches() after updating score})();
+/* --- Level Complete + Map transition logic --- */
+(function(){
+  // helper
+  function $id(id){ return document.getElementById(id); }
+
+  // show modal with reward info
+  function showLevelComplete(level, rewardCoins){
+    const modal = $id('levelCompleteModal');
+    const card = $id('levelCompleteCard');
+    if(!modal || !card) return;
+    const txt = $id('levelCompleteMsg');
+    const rewardEl = $id('levelReward');
+    if(rewardEl) rewardEl.textContent = rewardCoins || 0;
+    if(txt) txt.textContent = `Level ${level} completed — Reward: ${rewardCoins || 0} coins`;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+
+    // small animate in
+    setTimeout(()=> card.style.opacity = '1', 10);
+    setTimeout(()=> card.style.transform = 'scale(1)', 10);
+  }
+
+  // hide modal
+  function hideLevelComplete(){
+    const modal = $id('levelCompleteModal');
+    if(!modal) return;
+    const card = $id('levelCompleteCard');
+    if(card){
+      card.style.transform = 'scale(0.96)';
+      card.style.opacity = '0';
+    }
+    setTimeout(()=> {
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden','true');
+    }, 260);
+  }
+
+  // called when progress to next level
+  function goToNextLevelFromModal(){
+    try {
+      hideLevelComplete();
+      // next level index
+      const next = (state.level < LEVELS.length-1) ? state.level + 1 : 1;
+      state.level = next;
+      state.score = 0;
+      // persist if StorageAPI available
+      if(typeof StorageAPI !== 'undefined' && StorageAPI.setLevel) StorageAPI.setLevel(next);
+      updateLevelUI && updateLevelUI();
+      updateScoreUI && updateScoreUI();
+      createBoard && createBoard();
+      updateCoinDisplay && updateCoinDisplay();
+      console.log('Transitioned to next level', next);
+    } catch(e){ console.error('goToNextLevelFromModal error', e); }
+  }
+
+  // transition to map page (fade out, then navigate)
+  function transitionToMap(){
+    // fade out main game area for nice effect
+    const gs = $id('game-screen') || document.querySelector('.screen.active');
+    if(gs) gs.classList.add('page-fadeout');
+    // small delay to allow fade then navigate
+    setTimeout(()=> {
+      // navigate to map page - if you have level-map.html:
+      if(window.location.origin && window.location.pathname){
+        window.location.href = 'level-map.html';
+      } else {
+        // fallback: just hide modal and show home
+        hideLevelComplete();
+      }
+    }, 420);
+  }
+
+  // attach modal buttons (safe add)
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const nextBtn = $id('levelNextBtn');
+    const mapBtn  = $id('levelMapBtn');
+    const modal   = $id('levelCompleteModal');
+
+    if(nextBtn) nextBtn.addEventListener('click', goToNextLevelFromModal);
+    if(mapBtn) mapBtn.addEventListener('click', transitionToMap);
+
+    // close modal if clicking outside card
+    if(modal) modal.addEventListener('click', (ev)=>{
+      const card = $id('levelCompleteCard');
+      if(card && !card.contains(ev.target)) hideLevelComplete();
+    });
+  });
+
+  // check for completion — call this after you update score
+  window.checkLevelCompletion = function(){
+    try {
+      const levelInfo = (LEVELS && LEVELS[state.level]) ? LEVELS[state.level] : null;
+      const goal = levelInfo ? (levelInfo.goalScore || Infinity) : Infinity;
+      if(state.score >= goal){
+        // reward coins (store)
+        const reward = levelInfo ? (levelInfo.rewardCoins || 0) : 0;
+        if(typeof StorageAPI !== 'undefined' && StorageAPI.addCoins) {
+          StorageAPI.addCoins(reward);
+          updateCoinDisplay && updateCoinDisplay();
+        }
+        // show modal
+        showLevelComplete(state.level, reward);
+      }
+    } catch(e){ console.error('checkLevelCompletion error', e); }
+  };
+
+  // make sure this debug message appears
+  console.log('LevelComplete module loaded');
+})();
