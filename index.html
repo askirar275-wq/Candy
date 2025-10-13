@@ -3,23 +3,442 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Home</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Candy Match — Swipe (Single file)</title>
+
+  <style>
+    :root{
+      --bg:#ffeef6;
+      --pink:#ffd7e6;
+      --board-bg:#fff;
+      --tile-size:56px; /* change to make candy bigger/smaller */
+      --tile-gap:8px;   /* change to reduce gap */
+    }
+    html,body{height:100%;margin:0;font-family:Inter, Poppins, sans-serif;background:linear-gradient(180deg,var(--bg),#fff);-webkit-font-smoothing:antialiased}
+    header.appbar{
+      display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(180deg,#ffdfe8,#ffd7e6);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .home-btn{padding:8px 12px;border-radius:10px;background:#fff7;border:0;cursor:pointer}
+    .score-row{display:flex;gap:18px;align-items:center;margin-left:12px;font-weight:700}
+    .score-row div{background:transparent;padding:6px 10px;border-radius:8px}
+    .container{max-width:920px;margin:18px auto;padding:12px}
+    /* board block (rounded card) */
+    .board-wrap{
+      background:var(--board-bg); border-radius:18px; padding:18px;
+      box-shadow: 0 8px 28px rgba(255,180,220,0.14);
+      width:fit-content; margin:0 auto;
+      display:flex; flex-direction:column; align-items:center;
+    }
+
+    /* grid */
+    #gameBoard{
+      display:grid;
+      grid-template-columns: repeat(7, var(--tile-size));
+      grid-auto-rows: var(--tile-size);
+      gap: var(--tile-gap);
+      background: transparent;
+      padding: 8px;
+      border-radius:12px;
+    }
+
+    .cell{width:var(--tile-size);height:var(--tile-size);display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#fff,#fff7);
+      border-radius:12px; box-shadow: 0 6px 12px rgba(0,0,0,0.04);
+      overflow:hidden; touch-action:none;
+      position:relative;
+      transition: transform 0.18s ease;
+    }
+    .cell.selected{outline:3px solid rgba(255,120,180,0.18); transform:scale(0.98);}
+    .cell.pop{opacity:0; transform:scale(0.6); transition: all 0.25s ease; }
+
+    .tile{width: calc(var(--tile-size) * 0.86); height: calc(var(--tile-size) * 0.86); object-fit:contain; user-select:none; pointer-events:none; }
+
+    /* control buttons */
+    .controls{display:flex;gap:18px; margin-top:18px;}
+    .btn{background:linear-gradient(45deg,#ff88b8,#ff65a3); color:#fff; padding:12px 28px;border-radius:28px;border:0; font-weight:700; cursor:pointer; box-shadow: 0 6px 18px rgba(255,120,170,0.15);}
+    .btn.secondary{background:linear-gradient(45deg,#ffe2f0,#ffd7e6); color:#7b3b4a; box-shadow:none;}
+
+    /* level modal (simple) */
+    #levelUpModal{display:none; position:fixed; inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35); z-index:9999}
+    #levelUpModal .card{background:#fff;padding:18px;border-radius:14px; width:90%; max-width:360px; text-align:center}
+
+    /* responsive tweaks */
+    @media (min-width:900px){
+      :root{--tile-size:64px; --tile-gap:10px}
+      #gameBoard{grid-template-columns: repeat(8, var(--tile-size));}
+    }
+    @media (max-width:420px){
+      :root{--tile-size:48px; --tile-gap:6px}
+      header.appbar{padding:10px}
+    }
+  </style>
 </head>
 <body>
-  <main class="home-center">
-    <img src="images/candy1.png" alt="" class="home-logo">
-    <h1>🍬 Candy Match</h1>
-    <p class="sub">स्वीट गेम — खेलो और levels अनलॉक करो</p>
 
-    <div class="home-actions">
-      <button class="btn big" onclick="location.href='level-map.html'">Play</button>
-      <button class="btn" onclick="StorageAPI.reset(); alert('Progress reset');">Reset Progress</button>
+  <header class="appbar">
+    <button class="home-btn" id="backHome">← Home</button>
+    <div class="score-row">
+      <div>Score: <span id="score">0</span></div>
+      <div>Coins: <span id="coins">0</span></div>
+      <div>Level: <span id="currentLevel">1</span></div>
     </div>
+  </header>
 
-    <footer class="made">Made with ❤️ — Arun App Studio</footer>
+  <main class="container">
+    <div class="board-wrap" role="application" aria-label="Candy board">
+      <div id="gameBoard" aria-live="polite" ></div>
+
+      <div class="controls">
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="shuffleBtn">Shuffle</button>
+        <button class="btn secondary" id="shopBtn">Shop</button>
+      </div>
+    </div>
   </main>
 
-  <script src="js/storage.js"></script>
+  <!-- level modal -->
+  <div id="levelUpModal">
+    <div class="card">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpMsg">Congrats</p>
+      <div style="margin-top:12px;">
+        <button class="btn" id="levelUpClose">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Eruda mobile console loader -->
+  <script>
+    (function(){
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function(){
+        try { eruda.init(); console.log('🪲 Eruda console loaded'); } catch(e){ console.warn('Eruda load failed', e); }
+      };
+      document.body.appendChild(s);
+    })();
+  </script>
+
+  <!-- StorageAPI (simple localStorage wrapper) -->
+  <script>
+    window.StorageAPI = (function(){
+      const keyCoins = 'candy_coins_v1';
+      const keyLevel = 'candy_level_v1';
+      const keyPlayLevel = 'candy_playlevel_v1';
+      return {
+        getCoins(){ return Number(localStorage.getItem(keyCoins) || 0); },
+        addCoins(n){ const v = this.getCoins() + Number(n||0); localStorage.setItem(keyCoins, Math.max(0,v)); return this.getCoins(); },
+        setCoins(n){ localStorage.setItem(keyCoins, Number(n||0)); },
+        getLevel(){ return Number(localStorage.getItem(keyLevel) || 1); },
+        setLevel(l){ localStorage.setItem(keyLevel, Number(l||1)); },
+        getPlayLevel(){ return Number(localStorage.getItem(keyPlayLevel) || this.getLevel() || 1); },
+        setPlayLevel(l){ localStorage.setItem(keyPlayLevel, Number(l||1)); }
+      };
+    })();
+  </script>
+
+  <!-- Game logic with swipe (all 4 directions), gravity, match -->
+  <script>
+  (function(){
+    console.log('Game core loading...');
+    const CANDIES = ['candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png'];
+    const IMGPATH = 'images/';
+    const LEVELS = [ null,
+      {id:1,board:7,goal:200,reward:50},
+      {id:2,board:7,goal:600,reward:150},
+      {id:3,board:8,goal:1200,reward:300},
+    ];
+
+    // DOM
+    const boardEl = document.getElementById('gameBoard');
+    const scoreEl = document.getElementById('score');
+    const coinsEl = document.getElementById('coins');
+    const levelEl = document.getElementById('currentLevel');
+    const modal = document.getElementById('levelUpModal');
+    const modalTitle = document.getElementById('levelUpTitle');
+    const modalMsg = document.getElementById('levelUpMsg');
+    const modalClose = document.getElementById('levelUpClose');
+
+    let boardSize = 7;
+    let grid = [];      // 2D array of image src or null
+    let cells = [];     // DOM cells flat array
+    let score = 0;
+    let currentLevel = 1;
+
+    function randCandy(){ return IMGPATH + CANDIES[Math.floor(Math.random()*CANDIES.length)]; }
+
+    function updateScore(){ scoreEl.textContent = score; }
+    function updateCoins(){ coinsEl.textContent = StorageAPI.getCoins(); }
+
+    function initGrid(){
+      const lvl = LEVELS[currentLevel]||LEVELS[1];
+      boardSize = lvl.board || 7;
+      grid = Array.from({length:boardSize},()=>Array(boardSize).fill(null));
+      for(let r=0;r<boardSize;r++){
+        for(let c=0;c<boardSize;c++){
+          grid[r][c] = randCandy();
+          // avoid immediate matches at creation
+          if(checkImmediate(r,c)) {
+            // re-roll until no immediate
+            let attempts=0;
+            while(checkImmediate(r,c) && attempts<10){ grid[r][c]=randCandy(); attempts++; }
+          }
+        }
+      }
+    }
+
+    function checkImmediate(r,c){
+      const v = grid[r][c];
+      if(c>=2 && grid[r][c-1]===v && grid[r][c-2]===v) return true;
+      if(r>=2 && grid[r-1][c]===v && grid[r-2][c]===v) return true;
+      return false;
+    }
+
+    function buildBoard(){
+      boardEl.innerHTML=''; cells=[];
+      boardEl.style.gridTemplateColumns = `repeat(${boardSize}, var(--tile-size))`;
+      for(let r=0;r<boardSize;r++){
+        for(let c=0;c<boardSize;c++){
+          const cell = document.createElement('div');
+          cell.className='cell';
+          cell.dataset.r=r; cell.dataset.c=c;
+          const img = document.createElement('img');
+          img.className='tile';
+          img.draggable = false;
+          img.src = grid[r][c] || '';
+          cell.appendChild(img);
+          boardEl.appendChild(cell);
+          cells.push(cell);
+          attachEvents(cell);
+        }
+      }
+    }
+
+    // attach click + swipe + mouse drag
+    function attachEvents(cell){
+      cell.addEventListener('click', onCellClick);
+      addSwipe(cell);
+    }
+
+    let selected = null;
+    function onCellClick(e){
+      const el = e.currentTarget; const r=+el.dataset.r, c=+el.dataset.c;
+      if(selected && selected.r===r && selected.c===c){
+        el.classList.remove('selected'); selected=null; return;
+      }
+      if(!selected){
+        selected={r,c}; el.classList.add('selected'); return;
+      }
+      const pr=selected.r, pc=selected.c;
+      const manhattan = Math.abs(pr-r)+Math.abs(pc-c);
+      // only adjacent allowed
+      if(manhattan===1){
+        swapAndResolve(pr,pc,r,c);
+      }
+      // clear selected
+      const prev = document.querySelector('.cell.selected');
+      if(prev) prev.classList.remove('selected');
+      selected=null;
+    }
+
+    function addSwipe(cell){
+      // touch
+      let sx=0, sy=0;
+      cell.addEventListener('touchstart', ev => {
+        const t = ev.touches[0]; sx=t.clientX; sy=t.clientY;
+      }, {passive:true});
+      cell.addEventListener('touchend', ev => {
+        const t = ev.changedTouches[0]; const ex=t.clientX, ey=t.clientY;
+        const dx = ex - sx, dy = ey - sy;
+        if(Math.abs(dx)<20 && Math.abs(dy)<20){ cell.click(); return; }
+        const r = +cell.dataset.r, c=+cell.dataset.c;
+        let nr=r, nc=c;
+        if(Math.abs(dx) > Math.abs(dy)){
+          nc = dx>0 ? c+1 : c-1;
+        } else {
+          nr = dy>0 ? r+1 : r-1;
+        }
+        if(nr<0||nr>=boardSize||nc<0||nc>=boardSize) return;
+        swapAndResolve(r,c,nr,nc);
+      }, {passive:true});
+
+      // mouse drag (desktop)
+      let md=false,mx=0,my=0;
+      cell.addEventListener('mousedown', ev=>{
+        md=true; mx=ev.clientX; my=ev.clientY;
+      });
+      document.addEventListener('mouseup', ev=>{
+        if(!md) return; md=false;
+        const dx = ev.clientX-mx, dy = ev.clientY-my;
+        if(Math.abs(dx)<20 && Math.abs(dy)<20) return;
+        const r=+cell.dataset.r, c=+cell.dataset.c;
+        let nr=r, nc=c;
+        if(Math.abs(dx)>Math.abs(dy)) nc = dx>0?c+1:c-1;
+        else nr = dy>0? r+1:r-1;
+        if(nr<0||nr>=boardSize||nc<0||nc>=boardSize) return;
+        swapAndResolve(r,c,nr,nc);
+      });
+    }
+
+    // swap and then check matches; if no match revert
+    function swapAndResolve(r1,c1,r2,c2){
+      // swap in grid
+      const tmp = grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=tmp;
+      renderCell(r1,c1); renderCell(r2,c2);
+      const matches = findMatches();
+      if(matches.length===0){
+        // no match -> revert after short animation time
+        setTimeout(()=>{ const t=grid[r1][c1]; grid[r1][c1]=grid[r2][c2]; grid[r2][c2]=t; renderCell(r1,c1); renderCell(r2,c2); }, 160);
+      } else {
+        handleMatches();
+      }
+    }
+
+    function renderCell(r,c){
+      const idx = r*boardSize + c;
+      const cell = cells[idx];
+      if(!cell) return;
+      const img = cell.querySelector('.tile');
+      if(img) img.src = grid[r][c] || '';
+    }
+
+    // detect matches: returns array of [r,c] to remove
+    function findMatches(){
+      const toRemove = new Set();
+      // horizontal
+      for(let r=0;r<boardSize;r++){
+        let runStart=0;
+        for(let c=1;c<=boardSize;c++){
+          const cur = (c<boardSize)? grid[r][c] : null;
+          const prev = grid[r][c-1];
+          if(c<boardSize && cur === prev) continue;
+          const runLen = c - runStart;
+          if(runLen >= 3){
+            for(let k=runStart;k<c;k++) toRemove.add(`${r},${k}`);
+          }
+          runStart = c;
+        }
+      }
+      // vertical
+      for(let c=0;c<boardSize;c++){
+        let runStart=0;
+        for(let r=1;r<=boardSize;r++){
+          const cur = (r<boardSize)? grid[r][c] : null;
+          const prev = grid[r-1] ? grid[r-1][c] : null;
+          if(r<boardSize && cur === prev) continue;
+          const runLen = r - runStart;
+          if(runLen >= 3){
+            for(let k=runStart;k<r;k++) toRemove.add(`${k},${c}`);
+          }
+          runStart=r;
+        }
+      }
+      return Array.from(toRemove).map(s => s.split(',').map(Number));
+    }
+
+    // remove matches, give score/coins, then collapse and refill
+    function handleMatches(){
+      const matches = findMatches();
+      if(matches.length===0) return;
+      // mark and animate
+      matches.forEach(([r,c])=>{
+        const idx=r*boardSize+c;
+        const cell = cells[idx];
+        if(cell) cell.classList.add('pop');
+        grid[r][c] = null;
+      });
+      // scoring
+      score += matches.length * 10;
+      updateScore();
+      // coins for player
+      const coinsGain = Math.floor(matches.length / 3);
+      if(coinsGain>0) StorageAPI.addCoins(coinsGain);
+      updateCoins();
+      // after animation, collapse
+      setTimeout(()=>{ collapseAndFill(); }, 220);
+    }
+
+    function collapseAndFill(){
+      for(let c=0;c<boardSize;c++){
+        let write = boardSize-1;
+        for(let r=boardSize-1;r>=0;r--){
+          if(grid[r][c]){
+            grid[write][c] = grid[r][c];
+            write--;
+          }
+        }
+        for(let r=write;r>=0;r--) grid[r][c] = randCandy();
+      }
+      // re-render all
+      for(let r=0;r<boardSize;r++) for(let c=0;c<boardSize;c++) renderCell(r,c);
+      // clear pop classes
+      cells.forEach(cell => cell.classList.remove('pop','selected'));
+      // if new matches appear, keep resolving
+      setTimeout(()=>{ if(findMatches().length>0) handleMatches(); else checkLevelComplete(); }, 160);
+    }
+
+    function checkLevelComplete(){
+      const lvl = LEVELS[currentLevel] || LEVELS[1];
+      if(score >= (lvl.goal||Infinity)){
+        // award coins
+        StorageAPI.addCoins(lvl.reward || 0);
+        updateCoins();
+        // level up if exists
+        const next = currentLevel+1;
+        if(LEVELS[next]) StorageAPI.setLevel(next);
+        showLevelModal(next, lvl.reward || 0);
+      }
+    }
+
+    function showLevelModal(next,reward){
+      if(!modal) return;
+      modalTitle.textContent = 'Level Complete!';
+      modalMsg.textContent = `Reward: ${reward} coins. Next Level: ${next}`;
+      modal.style.display = 'flex';
+      modalClose.onclick = ()=>{
+        modal.style.display = 'none';
+        currentLevel = StorageAPI.getPlayLevel() || StorageAPI.getLevel() || 1;
+        // set playlevel to next if available
+        if(LEVELS[next]) { StorageAPI.setPlayLevel(next); currentLevel = next; }
+        initGame();
+      };
+    }
+
+    // API: initGame, restart, shuffle
+    function initGame(){
+      try {
+        currentLevel = StorageAPI.getPlayLevel() || StorageAPI.getLevel() || 1;
+        levelEl.textContent = currentLevel;
+        score = 0; updateScore();
+        updateCoins();
+        initGrid();
+        buildBoard();
+        // resolve any accidental pre-existing matches (rare)
+        setTimeout(()=>{ if(findMatches().length>0) handleMatches(); }, 120);
+        console.log('Game initialized level', currentLevel);
+      } catch(e){
+        console.error('initGame error', e);
+      }
+    }
+    window.initGame = initGame;
+    window.restartGame = function(){ initGame(); };
+    window.shuffleBoard = function(){ initGrid(); buildBoard(); };
+
+    // UI bindings
+    document.getElementById('restartBtn').addEventListener('click', ()=>{ window.restartGame(); });
+    document.getElementById('shuffleBtn').addEventListener('click', ()=>{ window.shuffleBoard(); });
+    document.getElementById('backHome').addEventListener('click', ()=>{ alert('Home clicked — implement your navigation'); });
+
+    // when DOM ready
+    document.addEventListener('DOMContentLoaded', function(){
+      // safety logs
+      console.log('Safe UI loaded');
+      // if StorageAPI missing, create fallback (should be present)
+      if(!window.StorageAPI) console.warn('StorageAPI missing — create fallback');
+      // init
+      initGame();
+    });
+  })();
+  </script>
 </body>
-</html>
+                    </html>
