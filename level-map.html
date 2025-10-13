@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Levels — Candy Match</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar small">
-    <button class="back" onclick="location.href='index.html'">← Home</button>
+  <header class="topbar">
+    <button class="btn small" onclick="location.href='index.html'">← Home</button>
     <h2>Level Map</h2>
   </header>
 
-  <section class="map-wrap">
-    <div id="mapGrid" class="map-grid" aria-live="polite"></div>
-  </section>
+  <main class="center-screen">
+    <div id="mapGrid" class="level-grid"></div>
+  </main>
 
   <script src="js/storage.js"></script>
   <script src="js/level-map.js"></script>
