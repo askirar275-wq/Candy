@@ -1,60 +1,75 @@
-// game.js — सरल Candy Match logic demo
+const candies = [
+  "images/candy1.png",
+  "images/candy2.png",
+  "images/candy3.png",
+  "images/candy4.png",
+  "images/candy5.png",
+  "images/candy6.png"
+];
 
-document.addEventListener("DOMContentLoaded", () => {
-  const board = document.createElement("div");
-  board.id = "board";
-  document.body.appendChild(board);
+let board = [];
+const size = 8;
+let selected = null;
 
-  const candies = ["c1.png", "c2.png", "c3.png", "c4.png", "c5.png", "c6.png"];
-  const rows = 7, cols = 7;
-  const grid = [];
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
 
-  function createBoard() {
-    board.style.display = "grid";
-    board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    board.style.maxWidth = "420px";
-    board.style.margin = "20px auto";
-    board.style.gap = "6px";
+document.getElementById("startGameBtn").onclick = () => showScreen("map-screen");
+document.getElementById("homeBtn").onclick = () => showScreen("home-screen");
+document.getElementById("mapBtn").onclick = () => showScreen("map-screen");
+document.getElementById("shopBtn").onclick = () => document.getElementById("shopModal").classList.add("show");
 
-    for (let i = 0; i < rows * cols; i++) {
+function initGame() {
+  const boardEl = document.getElementById("board");
+  boardEl.innerHTML = "";
+  board = [];
+
+  for (let r = 0; r < size; r++) {
+    board[r] = [];
+    for (let c = 0; c < size; c++) {
       const img = document.createElement("img");
-      img.src = `images/${candies[Math.floor(Math.random() * candies.length)]}`;
-      img.style.width = "54px";
-      img.style.height = "54px";
-      img.draggable = true;
-      img.dataset.index = i;
+      img.src = candies[Math.floor(Math.random() * candies.length)];
 
-      img.addEventListener("dragstart", dragStart);
-      img.addEventListener("dragover", dragOver);
-      img.addEventListener("drop", drop);
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.appendChild(img);
+      boardEl.appendChild(cell);
 
-      board.appendChild(img);
-      grid.push(img);
+      cell.onclick = () => selectCell(r, c, cell);
+      board[r][c] = img.src;
     }
   }
+}
 
-  let draggedCandy = null;
+function selectCell(r, c, el) {
+  if (!selected) {
+    selected = { r, c, el };
+    el.classList.add("selected");
+  } else {
+    const { r: r2, c: c2, el: el2 } = selected;
+    el2.classList.remove("selected");
 
-  function dragStart(e) {
-    draggedCandy = this;
+    if (Math.abs(r - r2) + Math.abs(c - c2) === 1) {
+      swapCandies(r, c, r2, c2);
+    }
+
+    selected = null;
   }
+}
 
-  function dragOver(e) {
-    e.preventDefault();
-  }
+function swapCandies(r1, c1, r2, c2) {
+  const temp = board[r1][c1];
+  board[r1][c1] = board[r2][c2];
+  board[r2][c2] = temp;
 
-  function drop(e) {
-    const target = this;
-    const temp = draggedCandy.src;
-    draggedCandy.src = target.src;
-    target.src = temp;
-  }
+  const boardEl = document.getElementById("board").children;
+  const i1 = r1 * size + c1;
+  const i2 = r2 * size + c2;
 
-  window.initGame = function () {
-    document.body.innerHTML = "";
-    document.body.style.background = "#fff0f6";
-    document.title = "Candy Match - Game";
-    createBoard();
-    console.log("Game started!");
-  };
-});
+  const img1 = boardEl[i1].querySelector("img");
+  const img2 = boardEl[i2].querySelector("img");
+
+  [img1.src, img2.src] = [img2.src, img1.src];
+                     }
