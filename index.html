@@ -1,73 +1,62 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <!-- Debug + safe fallback loader for inventory.js -->
-<script>
-(function(){
-  // small safe stub fallback (used if real inventory.js fails to load/parse)
-  function setInventoryFallback(){
-    window.Inventory = {
-      getCoins: function(){ return (window.StorageAPI && typeof StorageAPI.getCoins === 'function') ? Number(StorageAPI.getCoins()) : 0; },
-      addCoins: function(n){ try{ if(window.StorageAPI && typeof StorageAPI.addCoins === 'function') StorageAPI.addCoins(Number(n||0)); }catch(e){} },
-      buyItem: function(item, price){ var coins = this.getCoins(); if(coins >= (price||0)){ this.addCoins(-price||0); return true; } return false; }
-    };
-    console.warn('inventory: fallback installed');
-  }
-
-  // Try to load real file normally, but if it fails (onerror) use fallback.
-  try{
-    var s = document.createElement('script');
-    s.src = 'js/inventory.js';
-    s.async = false;
-    s.onload = function(){ console.log('inventory.js loaded'); };
-    s.onerror = function(ev){
-      console.error('inventory.js failed to load or has parse error', ev);
-      setInventoryFallback();
-    };
-    document.head.appendChild(s);
-    // also set a timeout as extra fallback (in case onerror not fired quickly)
-    setTimeout(function(){
-      if(typeof window.Inventory === 'undefined'){
-        console.warn('inventory: timeout fallback triggered');
-        setInventoryFallback();
-      }
-    }, 1200);
-  }catch(e){
-    console.error('inventory loader error', e);
-    setInventoryFallback();
-  }
-})();
-</script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Home</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candy Match</title>
   <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero-card">
-      <img src="images/logo-candy.png" alt="Candy logo" class="logo">
-      <h1>Candy Match</h1>
-      <p class="lead">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-      <div class="btn-row">
-        <button id="startBtn" class="big-btn">🎮 Start</button>
-        <button id="shopBtn" class="big-btn alt">🛒 Shop</button>
-        <button id="settingsBtn" class="big-btn alt2">⚙️ Settings</button>
-      </div>
-
-      <div class="footer">Made with ❤️ — Arun App Studio</div>
+  <!-- 🏠 Home Screen -->
+  <div id="home-screen" class="screen active">
+    <div class="home-card">
+      <img src="images/candy1.png" class="hero" alt="Candy">
+      <h1>🍬 Candy Match</h1>
+      <p>स्वीट्स को मिलाओ और मज़ा लो!</p>
+      <button id="startGameBtn">🎮 खेल शुरू करें</button>
+      <button id="mapBtn">🗺️ लेवल मैप</button>
+      <button id="shopBtn">🛒 शॉप</button>
     </div>
   </div>
 
-  <div class="float-gear" id="openGear">⚙️</div>
+  <!-- 🗺️ Level Map -->
+  <div id="map-screen" class="screen">
+    <button id="backHome" class="back">⬅ होम</button>
+    <h2>Level Map</h2>
+    <div id="levelMap"></div>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>
-    eruda.init();
-    console.log("🧠 Eruda चालू हो गया");
-  </script>
+  <!-- 🎮 Game Screen -->
+  <div id="game-screen" class="screen">
+    <div class="topbar">
+      <button id="homeBtn" class="back">⬅ होम</button>
+      <div>स्कोर: <span id="score">0</span></div>
+      <div>कॉइन्स: <span id="coins">0</span></div>
+      <div>लेवल: <span id="level">1</span></div>
+    </div>
 
-  <script src="js/safe-ui.js"></script>
+    <div id="board" class="board"></div>
+
+    <div class="controls">
+      <button id="restart">Restart</button>
+      <button id="shuffle">Shuffle</button>
+    </div>
+  </div>
+
+  <!-- 🛍️ Shop Modal -->
+  <div id="shopModal" class="modal">
+    <div class="modal-box">
+      <h3>Shop</h3>
+      <button id="buyShuffle">🔄 Shuffle (100)</button>
+      <button id="closeShop">Close</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/level-map.js"></script>
+  <script src="js/game.js"></script>
 </body>
-</html>
+  </html>
