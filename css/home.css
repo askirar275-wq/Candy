@@ -4,22 +4,25 @@ body {
   margin: 0;
   text-align: center;
   color: #333;
+  overflow-x: hidden;
 }
 
-.screen { display: none; }
+/* 🔸 Screen visibility */
+.screen { display: none; min-height: 100vh; }
 .screen.active { display: block; }
 
+/* 🏠 Home Card */
 .home-card {
   background: white;
   border-radius: 20px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
   padding: 30px;
-  width: 80%;
-  max-width: 400px;
-  margin: 80px auto;
+  width: 90%;
+  max-width: 420px;
+  margin: 60px auto;
 }
 
-.hero { width: 100px; height: 100px; }
+.hero { width: 90px; height: 90px; }
 
 button {
   background: #ff4081;
@@ -32,30 +35,80 @@ button {
   cursor: pointer;
   transition: 0.3s;
 }
-
 button:hover { background: #e91e63; }
+
+.back {
+  background: #ffc1d6;
+  color: #444;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  margin: 10px;
+}
+
+/* 🔸 Game Board Responsive */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 208, 225, 0.9);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, 50px);
-  gap: 6px;
   justify-content: center;
-  padding: 20px;
+  align-content: center;
+  margin: 20px auto;
+  width: 95vw;
+  max-width: 440px;
+  aspect-ratio: 1;
+  background: rgba(255,255,255,0.9);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  gap: 4px;
 }
 
+/* 🔹 Each Candy Cell */
 .cell {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
   background: white;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-.cell img { width: 45px; height: 45px; }
+.cell img {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+.cell.selected img {
+  transform: scale(1.15);
+}
 
+/* 🔸 Controls at bottom */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.controls button {
+  padding: 10px 22px;
+  font-size: 15px;
+}
+
+/* 🔸 Shop Modal */
 .modal {
   position: fixed;
   inset: 0;
@@ -63,12 +116,41 @@ button:hover { background: #e91e63; }
   display: none;
   justify-content: center;
   align-items: center;
+  z-index: 99;
 }
 
 .modal-box {
   background: white;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 320px;
+  text-align: center;
 }
 
-.modal.show { display: flex; }
+.modal.show {
+  display: flex;
+}
+
+/* 📱 Small screen fix */
+@media (max-width: 480px) {
+  .board {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .cell img {
+    width: 80%;
+  }
+
+  .topbar {
+    font-size: 13px;
+    gap: 5px;
+  }
+
+  .controls button {
+    font-size: 14px;
+    padding: 8px 18px;
+  }
+  }
