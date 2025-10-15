@@ -1,62 +1,205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Candy Match</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Home</title>
+
+  <!-- =========================
+       YOUR CSS FILES
+       (यदि कोई फाइल मिस है तो fallback inline भी है)
+       ========================= -->
   <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/inventory.css">
+
+  <!-- safety inline styles (fallback) -->
+  <style>
+    .screen { display:none; }
+    .screen.active { display:block; }
+    /* minimal fallback board layout if css missing */
+    #game-board { display:grid; grid-template-columns: repeat(8,1fr); gap:10px; max-width:520px; margin:12px auto; padding:12px; }
+    .cell{ background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;height:56px; }
+  </style>
 </head>
 <body>
+  <!-- ================= HOME SCREEN ================= -->
+  <div id="home-screen" class="screen active" style="text-align:center;padding:28px 12px;">
+    <img src="images/candy1.png" alt="logo" style="width:110px;height:110px;display:block;margin:6px auto;">
+    <h1 style="margin:10px 0;font-size:32px;color:#d44a8c;">🍭 Candy Match</h1>
+    <p style="color:#666;margin:0;">स्वीट गेम एडवेंचर — मोबाइल फ्रेंडली</p>
 
-  <!-- 🏠 Home Screen -->
-  <div id="home-screen" class="screen active">
-    <div class="home-card">
-      <img src="images/candy1.png" class="hero" alt="Candy">
-      <h1>🍬 Candy Match</h1>
-      <p>स्वीट्स को मिलाओ और मज़ा लो!</p>
-      <button id="startGameBtn">🎮 खेल शुरू करें</button>
-      <button id="mapBtn">🗺️ लेवल मैप</button>
-      <button id="shopBtn">🛒 शॉप</button>
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:20px;">
+      <button id="startBtn" style="width:80%;padding:14px;border-radius:12px;background:linear-gradient(90deg,#ff80ab,#ff4d9e);color:#fff;border:0;font-weight:800;">🎮 Start</button>
+      <button id="shopBtn" style="width:80%;padding:12px;border-radius:12px;background:linear-gradient(90deg,#56ccff,#2a9df4);color:#fff;border:0;font-weight:700;">🛒 Shop</button>
+      <button id="settingsBtn" style="width:80%;padding:12px;border-radius:12px;background:linear-gradient(90deg,#ffd86b,#ff9a3c);color:#fff;border:0;font-weight:700;">⚙️ Settings</button>
+    </div>
+
+    <div style="margin-top:18px;color:#777;font-size:14px;">Made with ❤️ — Arun App Studio</div>
+  </div>
+
+  <!-- ================= GAME SCREEN ================= -->
+  <div id="game-screen" class="screen" style="padding:8px 12px;">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;">
+      <button id="backBtn" style="padding:8px 10px;border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,0.06);">⬅️ Home</button>
+      <h2 style="margin:0;font-size:20px;">Score: <span id="score">0</span></h2>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div id="levelBadge" style="background:rgba(255,255,255,0.9);padding:6px 10px;border-radius:12px;font-weight:700">Level: <span id="currentLevel">1</span></div>
+        <div style="background:#fff;padding:6px 10px;border-radius:999px;font-weight:800">Coins: <span id="coins">0</span></div>
+      </div>
+    </div>
+
+    <!-- game board element (game.js uses #game-board) -->
+    <div id="game-board" class="board" aria-live="polite"></div>
+
+    <div style="display:flex;justify-content:center;gap:10px;margin:14px 0;">
+      <button id="restartBtn" style="padding:8px 12px;border-radius:10px;">Restart</button>
+      <button id="shuffleBtn" style="padding:8px 12px;border-radius:10px;">Shuffle</button>
+      <button id="openShopBtn" style="padding:8px 12px;border-radius:10px;">Open Shop</button>
     </div>
   </div>
 
-  <!-- 🗺️ Level Map -->
-  <div id="map-screen" class="screen">
-    <button id="backHome" class="back">⬅ होम</button>
-    <h2>Level Map</h2>
-    <div id="levelMap"></div>
+  <!-- ================= SHOP MODAL ================= -->
+  <div id="shopModal" class="shop-modal" role="dialog" aria-hidden="true" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:9999;">
+    <div class="shop-card" style="background:#fff;border-radius:14px;padding:14px;width:92%;max-width:520px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h3 style="margin:0">🛒 Shop</h3><div style="color:#666;font-size:13px">Coins से power-ups खरीदें</div></div>
+        <div style="text-align:right"><div style="font-size:12px;color:#666">Your Coins</div><div style="background:#fff;padding:6px 10px;border-radius:999px;font-weight:800" id="shopCoins">0</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div style="background:#fff7fb;padding:10px;border-radius:10px;text-align:center;">
+          <div style="font-size:20px">💣 Bomb</div><div style="font-weight:800">₹ 200</div>
+          <button id="buyBomb" style="margin-top:8px;padding:8px 10px;border-radius:8px;">Buy</button>
+        </div>
+        <div style="background:#fff7fb;padding:10px;border-radius:10px;text-align:center;">
+          <div style="font-size:20px">🔀 Shuffle</div><div style="font-weight:800">₹ 100</div>
+          <button id="buyShuffle" style="margin-top:8px;padding:8px 10px;border-radius:8px;">Buy</button>
+        </div>
+        <div style="background:#fff7fb;padding:10px;border-radius:10px;text-align:center;">
+          <div style="font-size:20px">➕ Extra Moves</div><div style="font-weight:800">₹ 80</div>
+          <button id="buyMoves" style="margin-top:8px;padding:8px 10px;border-radius:8px;">Buy</button>
+        </div>
+        <div style="background:#fff7fb;padding:10px;border-radius:10px;text-align:center;">
+          <div style="font-size:20px">✨ Rainbow Candy</div><div style="font-weight:800">₹ 350</div>
+          <button id="buyRainbow" style="margin-top:8px;padding:8px 10px;border-radius:8px;">Buy</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button id="closeShop" style="padding:8px 12px;border-radius:8px;">Close</button>
+      </div>
+    </div>
   </div>
 
-  <!-- 🎮 Game Screen -->
-  <div id="game-screen" class="screen">
-    <div class="topbar">
-      <button id="homeBtn" class="back">⬅ होम</button>
-      <div>स्कोर: <span id="score">0</span></div>
-      <div>कॉइन्स: <span id="coins">0</span></div>
-      <div>लेवल: <span id="level">1</span></div>
-    </div>
-
-    <div id="board" class="board"></div>
-
-    <div class="controls">
-      <button id="restart">Restart</button>
-      <button id="shuffle">Shuffle</button>
+  <!-- ================= Level Up Modal ================= -->
+  <div id="levelUpModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:99999;">
+    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:420px;text-align:center;">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <div style="margin-top:12px;"><button id="levelUpClose" style="padding:10px 14px;border-radius:10px;">Continue</button></div>
     </div>
   </div>
 
-  <!-- 🛍️ Shop Modal -->
-  <div id="shopModal" class="modal">
-    <div class="modal-box">
-      <h3>Shop</h3>
-      <button id="buyShuffle">🔄 Shuffle (100)</button>
-      <button id="closeShop">Close</button>
-    </div>
-  </div>
+  <!-- ================= STORAGE API (simple wrapper) ================= -->
+  <script>
+    window.StorageAPI = (function(){
+      return {
+        getCoins: function(){ return Number(localStorage.getItem('candy_coins') || 250); },
+        addCoins: function(n){ const v = this.getCoins() + Number(n||0); localStorage.setItem('candy_coins', String(v)); return v; },
+        setCoins: function(n){ localStorage.setItem('candy_coins', String(n||0)); return n; },
+        getLevel: function(){ return Number(localStorage.getItem('candy_level') || 1); },
+        setLevel: function(l){ localStorage.setItem('candy_level', String(l)); return l; }
+      };
+    })();
+  </script>
 
-  <!-- Scripts -->
-  <script src="js/storage.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/level-map.js"></script>
-  <script src="js/game.js"></script>
+  <!-- ================= Safe UI glue (Hindi comments) ================= -->
+  <script>
+    (function(){
+      // Eruda loader flag (also available in game.js)
+      const ERUDA = true;
+
+      // Eruda - mobile console for debugging
+      if(ERUDA){
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+        s.onload = function(){ try{ eruda.init(); console.log('Eruda loaded'); }catch(e){console.warn(e);} };
+        document.body.appendChild(s);
+      }
+
+      function $id(id){ return document.getElementById(id); }
+      function safeAdd(id, evt, fn){
+        const el = $id(id);
+        if(!el) { console.warn('safe-ui: missing #' + id); return; }
+        el.addEventListener(evt, fn);
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        // Start button - show game screen and call initGame (defined in js/game.js)
+        safeAdd('startBtn','click', function(){
+          const hs = $id('home-screen'), gs = $id('game-screen');
+          if(hs) hs.classList.remove('active');
+          if(gs) gs.classList.add('active');
+          if(typeof initGame === 'function') {
+            try { initGame({ boardSize: StorageAPI.getLevel() >= 3 ? 9 : 8 }); } catch(e){ console.error('initGame error', e); alert('Game start error — console में देखें'); }
+          } else console.warn('initGame not found');
+        });
+
+        // Back button -> home
+        safeAdd('backBtn','click', function(){
+          const hs = $id('home-screen'), gs = $id('game-screen'); if(gs) gs.classList.remove('active'); if(hs) hs.classList.add('active');
+        });
+
+        // Shop open/close
+        function openShop(){
+          const m = $id('shopModal'); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } else console.warn('shopModal missing');
+          // update coins display
+          const sc = $id('shopCoins'); if(sc) sc.textContent = StorageAPI.getCoins();
+        }
+        safeAdd('shopBtn','click', openShop);
+        safeAdd('openShopBtn','click', openShop);
+        safeAdd('closeShop','click', function(){ const m=$id('shopModal'); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
+        safeAdd('openShopBtn','click', openShop);
+
+        // buys (call buyFromShop in game.js if exists)
+        safeAdd('buyBomb','click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); else alert('Buy logic not available'); });
+        safeAdd('buyShuffle','click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); else alert('Buy logic not available'); });
+        safeAdd('buyMoves','click', function(){ if(typeof buyFromShop==='function') buyFromShop('moves'); else alert('Buy logic not available'); });
+        safeAdd('buyRainbow','click', function(){ if(typeof buyFromShop==='function') buyFromShop('rainbow'); else alert('Buy logic not available'); });
+
+        // Restart / Shuffle
+        safeAdd('restartBtn','click', function(){ if(typeof restartGame==='function') restartGame(); else if(typeof initGame==='function') initGame(); else alert('Restart not available'); });
+        safeAdd('shuffleBtn','click', function(){ if(typeof shuffleBoard==='function') shuffleBoard(); else alert('Shuffle not available'); });
+
+        // Level up modal close
+        safeAdd('levelUpClose','click', function(){ const m = $id('levelUpModal'); if(m) m.style.display='none'; });
+
+        // show initial HUD values (coins / level)
+        const coinsEl = $id('coins'); if(coinsEl) coinsEl.textContent = StorageAPI.getCoins();
+        const shopCoins = $id('shopCoins'); if(shopCoins) shopCoins.textContent = StorageAPI.getCoins();
+        const curLevel = $id('currentLevel'); if(curLevel) curLevel.textContent = StorageAPI.getLevel();
+
+        // small console note
+        console.log('Safe UI loaded — buttons bound (Hindi)');
+      });
+    })();
+  </script>
+
+  <!-- ================= your core scripts ================= -->
+  <!-- keep order: optional helpers -> game core -->
+  <script src="js/boot.js"></script>        <!-- optional -->
+  <script src="js/storage.js"></script>     <!-- optional if you have extra storage helpers -->
+  <script src="js/game.js"></script>        <!-- IMPORTANT: your game logic (replace with provided file) -->
+  <script src="js/shop.js"></script>        <!-- optional shop module (if you made one) -->
+  <script src="js/inventory.js"></script>   <!-- optional inventory module -->
+
+  <!-- small safety: if any required DOM elements missing, warn (console) -->
+  <script>
+    (function(){
+      const required = ['startBtn','game-board','shopModal','coins','score'];
+      required.forEach(id => { if(!document.getElementById(id)) console.warn('index.html: missing element #' + id); });
+    })();
+  </script>
 </body>
-  </html>
+        </html>
