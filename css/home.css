@@ -1,24 +1,12 @@
-body {
-  background: url('../images/bg-gradient.png') center/cover no-repeat fixed;
-  font-family: "Poppins", sans-serif;
-  text-align: center;
-  margin: 0;
-  color: #fff;
-}
-
-.title {
-  color: #ffebf5;
-  text-shadow: 0 0 8px #ff69b4;
-}
-
-.main-btn {
-  background: linear-gradient(45deg,#ff66b2,#ff3385);
-  border: none;
-  color: white;
-  padding: 12px 18px;
-  margin: 10px auto;
-  font-size: 18px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
+/* css/home.css */
+:root{--pink:#ffdfee;--accent:#ff5fa8}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#ffeef6,#fff);margin:0}
+.screen{display:none;padding:18px}
+.screen.active{display:block}
+.hero{display:flex;align-items:center;justify-content:center;min-height:70vh}
+.hero-card{background:#fff;padding:28px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.08);text-align:center}
+.hero-card h1{font-size:36px;margin:6px 0}
+.hero-card p{color:#555;margin-bottom:14px}
+.btn-primary{background:linear-gradient(45deg,#ff80ab,#ff4081);color:#fff;padding:12px 22px;border-radius:28px;border:0;font-size:18px;cursor:pointer}
+.btn-light{background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #eee;cursor:pointer}
