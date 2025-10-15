@@ -1,135 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Candy Match 🍬</title>
-
-  <!-- CSS Files -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match</title>
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
-  <link rel="stylesheet" href="css/inventory.css">
-
-  <style>
-    body {
-      margin: 0;
-      font-family: "Poppins", sans-serif;
-      background: url('images/bg-gradient.png') center/cover no-repeat fixed;
-    }
-
-    .screen {
-      display: none;
-    }
-
-    .screen.active {
-      display: block;
-    }
-
-    .title {
-      text-align: center;
-      color: #ff4081;
-      text-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-
-    .main-btn {
-      display: block;
-      width: 200px;
-      margin: 15px auto;
-      padding: 12px;
-      background: linear-gradient(45deg, #ff66b2, #ff3385);
-      border: none;
-      color: white;
-      border-radius: 12px;
-      font-size: 18px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-    }
-
-    .main-btn:hover {
-      transform: scale(1.05);
-    }
-  </style>
 </head>
-
 <body>
-
-  <!-- 🏠 HOME SCREEN -->
+  <!-- Home screen -->
   <div id="home-screen" class="screen active">
-    <img src="images/candy1.png" alt="Candy" style="width:100px; display:block; margin:40px auto 20px;">
-    <h1 class="title">🍭 Candy Match</h1>
-    <p style="text-align:center;">स्वीट्स को मिलाओ और मज़ा लो!</p>
-    <button id="startBtn" class="main-btn">🎮 खेल शुरू करें</button>
-    <button id="shopBtn" class="main-btn">🛒 शॉप</button>
-  </div>
-
-  <!-- 🗺️ LEVEL MAP -->
-  <div id="levelMap" class="screen">
-    <h2 class="title">🗺️ Level Map</h2>
-    <p style="text-align:center;">Choose your level!</p>
-    <div id="map-container" style="text-align:center;"></div>
-    <button id="backHome" class="main-btn">⬅️ Back to Home</button>
-  </div>
-
-  <!-- 🎮 GAME SCREEN -->
-  <div id="game-screen" class="screen">
-    <div class="topbar" style="background:#ff80ab; color:white; padding:10px; display:flex; justify-content:space-around; align-items:center;">
-      <button id="backBtn" style="font-size:18px;">⬅️</button>
-      <div>⭐ Level <span id="currentLevelDisplay">1</span></div>
-      <div>💖 Score: <span id="score">0</span></div>
-      <div>💰 Coins: <span id="coins">0</span></div>
-    </div>
-
-    <div id="game-board" style="display:grid; grid-template-columns:repeat(8,1fr); gap:5px; padding:10px;"></div>
-
-    <div class="bottom-bar" style="text-align:center;">
-      <button id="restartBtn" class="main-btn">🔁 Restart</button>
-      <button id="shuffleBtn" class="main-btn">🔀 Shuffle</button>
-      <button id="openShopBtn" class="main-btn">🛒 Shop</button>
-    </div>
-  </div>
-
-  <!-- 🛒 SHOP MODAL -->
-  <div id="shopModal" class="shop-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center;">
-    <div class="shop-card" style="background:white; padding:20px; border-radius:15px; text-align:center;">
-      <h3>🛒 Shop</h3>
-      <p>Use your coins to buy items!</p>
-      <div id="shopCoins">Coins: 0</div>
-      <div class="shop-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-        <button id="buyBomb" class="main-btn">💣 Bomb (200)</button>
-        <button id="buyShuffle" class="main-btn">🔀 Shuffle (100)</button>
-        <button id="buyMoves" class="main-btn">➕ Moves (80)</button>
-        <button id="buyRainbow" class="main-btn">🌈 Rainbow (350)</button>
+    <div class="hero">
+      <img src="images/bg-gradient.png" alt="" class="hero-bg">
+      <div class="hero-card">
+        <div class="logo">🍭</div>
+        <h1>Candy Match</h1>
+        <p>स्वीट्स को मिलाओ और मज़ा करो!</p>
+        <button id="startBtn" class="btn-primary">🎮 खेल शुरू करें</button>
       </div>
-      <button id="closeShop" class="main-btn" style="background:#aaa;">❌ Close</button>
     </div>
   </div>
 
-  <!-- 🎉 LEVEL COMPLETE MODAL -->
-  <div id="levelUpModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center;">
-    <div class="modal-content" style="background:white; padding:25px; border-radius:12px; text-align:center;">
-      <h2 id="levelUpTitle">🎉 Level Complete!</h2>
-      <p id="levelUpText">आपने यह लेवल पूरा कर लिया! 👏</p>
-      <button id="levelUpClose" class="main-btn">👉 Next Level</button>
+  <!-- Level map screen -->
+  <div id="map-screen" class="screen">
+    <div class="map-header">
+      <button id="backFromMap" class="btn-light">← Back</button>
+      <h2>Level Map</h2>
+    </div>
+    <div id="levelPath" class="level-path">
+      Loading map...
     </div>
   </div>
 
-  <!-- 🧠 DEBUG CONSOLE -->
-  <script>
-    (function(){
-      var s=document.createElement('script');
-      s.src="https://cdn.jsdelivr.net/npm/eruda";
-      s.onload=function(){eruda.init(); console.log("🐞 Eruda started");};
-      document.body.appendChild(s);
-    })();
-  </script>
+  <!-- Game screen -->
+  <div id="game-screen" class="screen">
+    <header class="topbar">
+      <button id="backBtn" class="btn-light">← Home</button>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Level: <span id="currentLevel">1</span></span>
+        <span>Coins: <span id="coins">0</span></span>
+      </div>
+    </header>
 
-  <!-- ✅ SCRIPTS AT END (safe + ordered) -->
+    <main class="game-area">
+      <div id="boardWrap">
+        <div id="game-board" class="board"></div>
+      </div>
+
+      <div class="controls">
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="shuffleBtn" class="btn">Shuffle</button>
+        <button id="shopBtn" class="btn">Shop</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Level Up modal -->
+  <div id="levelUpModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999;">
+    <div style="background:#fff;padding:22px;border-radius:14px;min-width:260px;text-align:center;">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats — next level unlocked.</p>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
+        <button id="levelReplay" class="btn">🔁 Replay</button>
+        <button id="levelNext" class="btn-primary">👉 Next Level</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- optional shop modal basic (stub) -->
+  <div id="shopModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9998;">
+    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:420px;">
+      <h3>Shop</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button id="buyBomb" class="btn">Bomb (200)</button>
+        <button id="buyShuffle" class="btn">Shuffle (100)</button>
+        <button id="buyMoves" class="btn">Extra Moves (80)</button>
+      </div>
+      <div style="margin-top:12px;text-align:center;"><button id="closeShop" class="btn-light">Close</button></div>
+    </div>
+  </div>
+
+  <!-- scripts (defer order matters) -->
   <script defer src="js/storage.js"></script>
-  <script defer src="js/shop.js"></script>
-  <script defer src="js/level-map.js"></script>
-  <script defer src="js/game.js"></script>
   <script defer src="js/safe-ui.js"></script>
-
+  <script defer src="js/level-map.js"></script>
+  <script defer src="js/shop.js"></script>
+  <script defer src="js/game.js"></script>
+  <script defer src="js/level-modal.js"></script>
 </body>
-  </html>
+        </html>
