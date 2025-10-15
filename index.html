@@ -1,169 +1,94 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
+  <title>Candy Match 🍬</title>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/inventory.css">
 
+  <style>
+    .screen { display:none; }
+    .screen.active { display:block; }
+  </style>
 </head>
 <body>
-  <!-- Eruda loader (mobile console) -->
-  <script>
-    (function(){
-      var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; s.onload=function(){ try{eruda.init(); console.log('Eruda Console चालू');}catch(e){} }; document.body.appendChild(s);
-    })();
-  </script>
 
-  <!-- HOME SCREEN -->
-  <main id="home-screen" class="screen active">
-    <div class="home-card">
-      <img src="images/candy1.png" class="home-logo" alt="Candy">
-      <h1>🍭 Candy Match</h1>
-      <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+  <!-- 🏠 HOME SCREEN -->
+  <div id="home-screen" class="screen active">
+    <img src="images/candy1.png" style="width:100px;margin:20px auto;display:block;">
+    <h1 class="title">Candy Match 🍭</h1>
+    <button id="startBtn" class="main-btn">🎮 Start Game</button>
+    <button id="shopBtn" class="main-btn">🛒 Shop</button>
+  </div>
 
-      <div class="home-buttons">
-        <button id="startBtn" class="btn primary">🎮 खेल शुरू करें</button>
-        <button id="openMapBtn" class="btn">🗺️ Level Map</button>
-        <button id="openShopBtnHome" class="btn">🛒 Shop</button>
-      </div>
+  <!-- 🗺️ LEVEL MAP -->
+  <div id="levelMap" class="screen">
+    <h2 class="title">Select Level</h2>
+    <div id="map-container"></div>
+    <button id="backHome" class="main-btn">🏠 Back</button>
+  </div>
 
-      <footer class="home-foot">Made with ❤️ — Arun App Studio</footer>
-    </div>
-  </main>
-
-  <!-- LEVEL MAP SCREEN -->
-  <section id="map-screen" class="screen">
+  <!-- 🎮 GAME SCREEN -->
+  <div id="game-screen" class="screen">
     <div class="topbar">
-      <button id="mapBack" class="small-btn">← Back</button>
-      <h2>Level Map</h2>
-    </div>
-    <div id="levelPath" class="map-inner">
-      <div class="loading">Loading map…</div>
-    </div>
-  </section>
-
-  <!-- GAME SCREEN -->
-  <section id="game-screen" class="screen">
-    <div class="topbar">
-      <button id="backBtn" class="small-btn">← Home</button>
-
-      <div class="hud">
-        <div>Score: <span id="score">0</span></div>
-        <div>Level: <span id="currentLevel">1</span></div>
-        <div>Coins: <span id="coins">0</span></div>
-      </div>
+      <button id="backBtn">⬅️</button>
+      <h3>Level <span id="currentLevelDisplay">1</span></h3>
+      <div>⭐ Score: <span id="score">0</span></div>
+      <div>💰 Coins: <span id="coins">0</span></div>
     </div>
 
-    <div id="board-wrap">
-      <div id="game-board" aria-live="polite"></div>
-    </div>
+    <div id="game-board"></div>
 
-    <div class="controls">
-      <button id="restartBtn" class="btn">Restart</button>
-      <button id="shuffleBtn" class="btn">Shuffle</button>
-      <button id="openShopBtn" class="btn">Shop</button>
+    <div class="bottom-bar">
+      <button id="restartBtn">Restart</button>
+      <button id="shuffleBtn">Shuffle</button>
+      <button id="openShopBtn">Shop</button>
     </div>
-  </section>
+  </div>
 
-  <!-- SHOP MODAL -->
-  <div id="shopModal" class="modal" aria-hidden="true">
-    <div class="modal-card">
-      <h3>Shop</h3>
+  <!-- 🛒 SHOP MODAL -->
+  <div id="shopModal" class="shop-modal" style="display:none;">
+    <div class="shop-card">
+      <h3>🛒 Shop</h3>
+      <p>Use your coins to buy items!</p>
+      <div id="shopCoins">Coins: 0</div>
       <div class="shop-grid">
-        <div class="shop-item">
-          <div>🔀 Shuffle</div><div>Price: 100</div>
-          <button id="buyShuffle" class="btn small">Buy</button>
-        </div>
-        <div class="shop-item">
-          <div>💣 Bomb</div><div>Price: 200</div>
-          <button id="buyBomb" class="btn small">Buy</button>
-        </div>
+        <div><button id="buyBomb">💣 Bomb (200)</button></div>
+        <div><button id="buyShuffle">🔀 Shuffle (100)</button></div>
+        <div><button id="buyMoves">➕ Moves (80)</button></div>
+        <div><button id="buyRainbow">🌈 Rainbow (350)</button></div>
       </div>
-      <div style="text-align:right;margin-top:8px;">
-        <button id="closeShop" class="btn small">Close</button>
-      </div>
+      <button id="closeShop">Close</button>
     </div>
   </div>
 
-  <!-- LEVEL UP MODAL -->
-  <div id="levelUpModal" class="modal" aria-hidden="true">
-    <div class="modal-card">
-      <h3 id="levelUpTitle">Level Up!</h3>
-      <p id="levelUpText">Congrats — next level unlocked.</p>
-      <div style="text-align:center"><button id="levelUpClose" class="btn">Continue</button></div>
+  <!-- 🎉 LEVEL COMPLETE MODAL -->
+  <div id="levelUpModal" style="display:none;" class="modal">
+    <div class="modal-content">
+      <h2 id="levelUpTitle">Level Up!</h2>
+      <p id="levelUpText">Congrats! Next Level Unlocked 🎉</p>
+      <button id="levelUpClose">Continue</button>
     </div>
   </div>
 
-  <!-- Storage API (simple wrapper) -->
-  <script>
-    window.StorageAPI = {
-      getCoins(){ return Number(localStorage.getItem('candy_coins') || 300); },
-      setCoins(v){ localStorage.setItem('candy_coins', String(v)); return v; },
-      addCoins(n){ const v=this.getCoins()+Number(n||0); return this.setCoins(v); },
-      getLevel(){ return Number(localStorage.getItem('candy_level') || 1); },
-      setLevel(l){ localStorage.setItem('candy_level', String(l)); return l; }
-    };
-  </script>
+  <!-- ⚙️ Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/level-map.js"></script>
+  <script src="js/safe-ui.js"></script>
 
-  <!-- Safe UI bindings -->
+  <!-- 🐞 Eruda Console -->
   <script>
     (function(){
-      function $id(id){ return document.getElementById(id); }
-      document.addEventListener('DOMContentLoaded', function(){
-        // screen buttons
-        $id('startBtn').addEventListener('click', function(){
-          document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-          $id('game-screen').classList.add('active');
-          if(typeof initGame==='function') initGame();
-          else console.warn('initGame not found');
-        });
-
-        $id('openMapBtn').addEventListener('click', function(){
-          document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-          $id('map-screen').classList.add('active');
-          if(typeof initLevelMap==='function') initLevelMap();
-        });
-
-        $id('backBtn').addEventListener('click', function(){
-          document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-          $id('home-screen').classList.add('active');
-        });
-
-        $id('mapBack').addEventListener('click', function(){
-          document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-          $id('home-screen').classList.add('active');
-        });
-
-        $id('openShopBtn').addEventListener('click', openShop);
-        $id('openShopBtnHome').addEventListener('click', openShop);
-        $id('closeShop').addEventListener('click', closeShop);
-
-        $id('restartBtn').addEventListener('click', function(){ if(typeof restartGame==='function') restartGame(); });
-        $id('shuffleBtn').addEventListener('click', function(){ if(typeof shuffleBoard==='function') shuffleBoard(); });
-
-        // shop buttons (forward to game)
-        $id('buyShuffle').addEventListener('click', function(){ if(typeof buyFromShop==='function') buyFromShop('shuffle'); });
-        $id('buyBomb').addEventListener('click', function(){ if(typeof buyFromShop==='function') buyFromShop('bomb'); });
-        $id('levelUpClose').addEventListener('click', function(){ $id('levelUpModal').style.display='none'; });
-
-        // helper open/close
-        function openShop(){ $id('shopModal').style.display='flex'; $id('shopModal').setAttribute('aria-hidden','false'); }
-        function closeShop(){ $id('shopModal').style.display='none'; $id('shopModal').setAttribute('aria-hidden','true'); }
-
-        // set HUD
-        $id('coins').textContent = StorageAPI.getCoins();
-        $id('currentLevel').textContent = StorageAPI.getLevel();
-      });
+      var s=document.createElement('script');
+      s.src="https://cdn.jsdelivr.net/npm/eruda";
+      s.onload=function(){eruda.init(); console.log("Eruda started 🐞");};
+      document.body.appendChild(s);
     })();
   </script>
-
-  <!-- Game core and map scripts -->
-  <script src="js/level-map.js"></script>
-  <script src="js/game.js"></script>
-
 </body>
 </html>
