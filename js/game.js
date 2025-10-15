@@ -1,429 +1,296 @@
-/* js/game.js
-   Complete game core:
-   - preload images
-   - board model (state.board, state.boardSize)
-   - render grid
-   - pointer (tap/drag) swap + swapWithAnimation
-   - match detection, handleMatches, applyGravity (chain)
-   - coins, save/load
-   - Hindi comments for help
-*/
+// js/game.js
+(function(){
+  const CANDIES = [
+    'images/candy1.png','images/candy2.png','images/candy3.png',
+    'images/candy4.png','images/candy5.png','images/candy6.png'
+  ];
 
-/* ========== CONFIG ========== */
-const CONFIG = {
-  TILE_IMAGES: [
-    'candy1.png','candy2.png','candy3.png','candy4.png','candy5.png','candy6.png'
-  ], // **6 candies** as requested
-  IMAGE_BASE: 'images/',
-  BOARD_SIZE_DEFAULT: 8,
-  START_MOVES: 40,
-  COIN_PER_TILE: 5, // coins per removed tile
-  ERUDA: true // set false to disable mobile console autoload
-};
+  // state
+  let state = {
+    size: 8,
+    board: [], // flat array length size*size of {img,index}
+    score: 0,
+    level: 1,
+    running: false,
+    selectedIndex: null
+  };
 
-/* ========== STATE ========== */
-const state = {
-  boardSize: CONFIG.BOARD_SIZE_DEFAULT,
-  board: [],          // length = boardSize*boardSize, each {id,src}
-  nextId: 1,
-  score: 0,
-  moves: CONFIG.START_MOVES,
-  combo: 1,
-  coins: Number(localStorage.getItem('candy_coins') || 250),
-  inv: JSON.parse(localStorage.getItem('candy_inv') || '{"bomb":0,"shuffle":0}')
-};
+  const $ = id => document.getElementById(id);
 
-let pool = []; // preloaded image URLs
+  // utility
+  function randCandy(){ return CANDIES[Math.floor(Math.random()*CANDIES.length)]; }
 
-/* ========== UTIL: preload images ========== */
-async function preloadImages(){
-  const promises = CONFIG.TILE_IMAGES.map(name => {
-    const url = CONFIG.IMAGE_BASE + name;
-    return new Promise(res => {
-      const img = new Image();
-      img.onload = () => res(url);
-      img.onerror = () => {
-        console.warn('image failed', url);
-        res('');
-      };
-      img.src = url;
+  function updateHUD(){
+    const s = $('score'); if(s) s.textContent = state.score;
+    const c = $('coins'); if(c) c.textContent = StorageAPI.getCoins();
+    const lv = $('currentLevel'); if(lv){ lv.textContent = state.level; }
+  }
+
+  // create fresh board
+  function createBoard(){
+    const size = state.size;
+    state.board = new Array(size*size).fill(null).map((_,i)=>({ img: randCandy(), idx:i }));
+    // render DOM
+    renderBoard();
+    // ensure no instant matches at start (very basic)
+    removeAllMatches(true);
+  }
+
+  // render DOM cells
+  function renderBoard(){
+    const boardEl = $('game-board');
+    if(!boardEl) return;
+    boardEl.innerHTML = '';
+    boardEl.style.gridTemplateColumns = `repeat(${state.size},1fr)`;
+    state.board.forEach((cell, index) => {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.dataset.index = index;
+      if(!cell || !cell.img){ div.style.visibility='hidden'; } // empty
+      const img = document.createElement('img');
+      img.className = 'tile';
+      img.draggable = false;
+      img.src = (cell && cell.img) ? cell.img : '';
+      div.appendChild(img);
+      // click select for desktop fallback
+      div.addEventListener('click', onCellClick);
+      // touch handlers for swipe
+      addTouchHandlers(div);
+      boardEl.appendChild(div);
     });
-  });
-  pool = (await Promise.all(promises)).filter(Boolean);
-  if(pool.length === 0){
-    // fallback: use emoji-data URIs if no images
-    pool = CONFIG.TILE_IMAGES.slice(0,4).map(()=> 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="120">🍭</text></svg>');
   }
-  // ensure bomb image key if present
-  // pool.bomb = CONFIG.IMAGE_BASE + 'bomb.png'; // optional
-  console.log('images preloaded:', pool.length);
-}
 
-/* ========== BOARD helpers ========== */
-function makeTile(src){
-  return { id: state.nextId++, src: src || pool[Math.floor(Math.random()*pool.length)] };
-}
-
-function initBoard(size){
-  state.boardSize = size || state.boardSize;
-  const N = state.boardSize * state.boardSize;
-  state.board = new Array(N).fill(null).map(()=> makeTile());
-  // prevent immediate matches by reshuffling a few times if needed
-  let tries = 0;
-  while(findMatches().length > 0 && tries++ < 800){
-    state.board = new Array(N).fill(null).map(()=> makeTile());
-  }
-}
-
-/* ========== RENDER ========== */
-function render(dropMap){
-  const boardEl = document.getElementById('game-board');
-  if(!boardEl) return;
-  // set CSS grid columns/rows according to boardSize
-  boardEl.style.gridTemplateColumns = `repeat(${state.boardSize}, 1fr)`;
-  boardEl.style.gridTemplateRows = `repeat(${state.boardSize}, 1fr)`;
-  boardEl.innerHTML = '';
-  for(let i=0;i<state.board.length;i++){
-    const tile = state.board[i];
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.dataset.index = i;
-    const img = document.createElement('img');
-    img.className = 'tile';
-    img.draggable = false;
-    img.alt = 'candy';
-    if(tile) img.src = tile.src;
-    cell.appendChild(img);
-    boardEl.appendChild(cell);
-  }
-  updateHUD();
-}
-
-/* ========== HUD ========== */
-function updateHUD(){
-  const scoreEl = document.getElementById('score');
-  const coinsEl = document.getElementById('coins');
-  if(scoreEl) scoreEl.textContent = state.score;
-  if(coinsEl) coinsEl.textContent = state.coins;
-  const shopCoins = document.getElementById('shopCoins');
-  if(shopCoins) shopCoins.textContent = state.coins;
-}
-
-/* ========== MATCH detection (by src) ========== */
-function findMatches(){
-  const N = state.boardSize, matchesSet = new Set();
-  const bd = state.board;
-  // horizontal
-  for(let r=0;r<N;r++){
-    for(let c=0;c<N-2;c++){
-      const i = r*N + c;
-      if(bd[i] && bd[i+1] && bd[i+2] &&
-         bd[i].src === bd[i+1].src && bd[i].src === bd[i+2].src){
-        let k = c;
-        while(k < N && bd[r*N + k] && bd[r*N + k].src === bd[i].src){ matchesSet.add(r*N + k); k++; }
-      }
+  function onCellClick(e){
+    const idx = Number(e.currentTarget.dataset.index);
+    if(state.selectedIndex === null){ selectIndex(idx); }
+    else if(state.selectedIndex === idx){ deselect(); }
+    else {
+      // try swap
+      trySwap(state.selectedIndex, idx);
     }
   }
-  // vertical
-  for(let c=0;c<N;c++){
-    for(let r=0;r<N-2;r++){
-      const i = r*N + c;
-      if(bd[i] && bd[i+N] && bd[i+2*N] &&
-         bd[i].src === bd[i+N].src && bd[i].src === bd[i+2*N].src){
-        let k = r;
-        while(k < N && bd[k*N + c] && bd[k*N + c].src === bd[i].src){ matchesSet.add(k*N + c); k++; }
-      }
-    }
+
+  function selectIndex(i){
+    state.selectedIndex = i;
+    const prev = document.querySelector('.cell.selected');
+    if(prev) prev.classList.remove('selected');
+    const el = document.querySelector(`.cell[data-index="${i}"]`);
+    if(el) el.classList.add('selected');
   }
-  return Array.from(matchesSet).sort((a,b)=>a-b);
-}
-
-/* ========== Swap animation (cloned tiles) ========== */
-function tileEl(index){
-  return document.querySelector(`.cell[data-index="${index}"] .tile`);
-}
-
-function swapWithAnimation(aIndex, bIndex){
-  return new Promise(resolve => {
-    const aTile = tileEl(aIndex), bTile = tileEl(bIndex);
-    if(!aTile || !bTile){
-      [state.board[aIndex], state.board[bIndex]] = [state.board[bIndex], state.board[aIndex]];
-      render();
-      return resolve(true);
-    }
-
-    const aRect = aTile.getBoundingClientRect(), bRect = bTile.getBoundingClientRect();
-    const dx = bRect.left - aRect.left, dy = bRect.top - aRect.top;
-
-    const aClone = aTile.cloneNode(true), bClone = bTile.cloneNode(true);
-    [aClone, bClone].forEach((cl, idx) => {
-      cl.classList.add('swap-moving');
-      cl.style.position = 'absolute';
-      cl.style.left = (idx===0 ? aRect.left : bRect.left) + 'px';
-      cl.style.top = (idx===0 ? aRect.top  : bRect.top)  + 'px';
-      cl.style.width = aRect.width + 'px';
-      cl.style.height = aRect.height + 'px';
-      cl.style.margin = 0;
-      cl.style.zIndex = 9999;
-      document.body.appendChild(cl);
-    });
-
-    aTile.style.visibility = 'hidden'; bTile.style.visibility = 'hidden';
-
-    requestAnimationFrame(()=> {
-      aClone.style.transform = `translate(${dx}px, ${dy}px)`;
-      bClone.style.transform = `translate(${-dx}px, ${-dy}px)`;
-    });
-
-    const cleanup = ()=>{
-      try{ aClone.remove(); bClone.remove(); }catch(e){}
-      aTile.style.visibility = ''; bTile.style.visibility = '';
-      [state.board[aIndex], state.board[bIndex]] = [state.board[bIndex], state.board[aIndex]];
-      render();
-      resolve(true);
-    };
-
-    setTimeout(cleanup, 340);
-  });
-}
-
-/* ========== Handle matches: animate pop, particles, coins ========== */
-function createSparkles(cellEl){
-  if(!cellEl) return;
-  const sp = document.createElement('div'); sp.className = 'sparkle';
-  cellEl.appendChild(sp);
-  setTimeout(()=> sp.remove(), 700);
-}
-function createPopParticles(cx, cy, amt=6){
-  for(let i=0;i<amt;i++){
-    const p = document.createElement('div'); p.className='pop-dot';
-    document.body.appendChild(p);
-    p.style.left = (cx - 5) + 'px';
-    p.style.top  = (cy - 5) + 'px';
-    const a = Math.random()*Math.PI*2, d = 12 + Math.random()*36;
-    const nx = Math.cos(a)*d, ny = Math.sin(a)*d;
-    p.animate([{transform:'translate(0,0) scale(1)', opacity:1},{transform:`translate(${nx}px, ${ny}px) scale(.3)`, opacity:0}],{duration:420+Math.random()*240, easing:'cubic-bezier(.2,.8,.2,1)'});
-    setTimeout(()=> p.remove(), 900);
+  function deselect(){
+    state.selectedIndex = null;
+    const prev = document.querySelector('.cell.selected');
+    if(prev) prev.classList.remove('selected');
   }
-}
-function showCoinPopup(amount, x=window.innerWidth/2, y=window.innerHeight/2){
-  const el = document.createElement('div'); el.className = 'coin-popup'; el.textContent = `+${amount} 💰`;
-  el.style.left = x + 'px'; el.style.top = y + 'px';
-  document.body.appendChild(el); setTimeout(()=> el.remove(), 1300);
-}
 
-function handleMatches(matches){
-  if(!matches || matches.length===0) return;
-  const removedCount = matches.length;
-  // scoring
-  state.score += removedCount * 10 * (state.combo || 1);
-  state.combo = (state.combo || 1) + 1;
-  // compute center for particles
-  let cx=0, cy=0, cnt=0;
-  matches.forEach(i=>{
-    const cell = document.querySelector(`.cell[data-index="${i}"]`);
-    const img = cell ? cell.querySelector('.tile') : null;
-    if(cell && img){
-      const rc = cell.getBoundingClientRect();
-      cx += rc.left + rc.width/2; cy += rc.top + rc.height/2; cnt++;
-      img.classList.add('pop');
-      createSparkles(cell);
-    }
-    state.board[i] = null;
-  });
-  if(cnt>0) createPopParticles(Math.round(cx/cnt), Math.round(cy/cnt), Math.min(18, 4+cnt));
-  // reward coins
-  const coinsEarned = removedCount * CONFIG.COIN_PER_TILE;
-  state.coins += coinsEarned;
-  saveState();
-  showCoinPopup(coinsEarned, Math.round(cx/cnt), Math.round(cy/cnt));
-  // after short delay, gravity
-  setTimeout(()=> applyGravity(), 360);
-  updateHUD();
-}
-
-/* ========== Gravity + refill (chain) ========== */
-function applyGravity(){
-  const N = state.boardSize;
-  const oldBoard = state.board.slice();
-  // for each column, compress and refill
-  for(let c=0;c<N;c++){
-    const col = [];
-    for(let r=N-1;r>=0;r--){
-      const idx = r*N + c;
-      if(state.board[idx]) col.push(state.board[idx]);
-    }
-    while(col.length < N) col.push(makeTile());
-    for(let r=N-1,i=0;r>=0;r--,i++){
-      state.board[r*N + c] = col[i];
-    }
+  // check adjacency
+  function isAdjacent(a,b){
+    const size = state.size;
+    if(a<0||b<0) return false;
+    const ax=a%size, ay=Math.floor(a/size);
+    const bx=b%size, by=Math.floor(b/size);
+    const dx=Math.abs(ax-bx), dy=Math.abs(ay-by);
+    return (dx+dy)===1;
   }
-  render();
-  // animate fall per tile (staggered)
-  const cells = document.querySelectorAll('#game-board .cell');
-  cells.forEach((cell, idx)=>{
-    const tile = cell.querySelector('.tile');
-    if(!tile) return;
-    const row = Math.floor(idx / state.boardSize);
-    const delay = (state.boardSize - row) * 30;
-    tile.style.animation = `tileFall 360ms cubic-bezier(.2,.9,.2,1) ${delay}ms both`;
-    setTimeout(()=> tile.style.animation = '', 600 + delay);
-  });
 
-  // chain detection
-  setTimeout(()=>{
-    const next = findMatches();
-    if(next.length>0) {
-      setTimeout(()=> handleMatches(next), 180);
+  // swap & validate
+  function trySwap(a,b){
+    if(!isAdjacent(a,b)) { deselect(); return; }
+    swap(a,b);
+    // check match
+    const matches = findMatches();
+    if(matches.length){
+      // good, remove and collapse
+      removeAllMatches();
+      deselect();
     } else {
-      state.combo = 1;
+      // revert swap
+      swap(a,b);
+      deselect();
     }
-    state.isLocked = false;
-    updateHUD();
-  }, 420);
-}
-
-/* ========== Input: selection / swipe support ========== */
-let dragging=false, pointerId=null, startIndex=null;
-
-function onPointerDown(e){
-  if(state.isLocked) return;
-  const el = e.currentTarget;
-  el.setPointerCapture && el.setPointerCapture(e.pointerId);
-  dragging = true; pointerId = e.pointerId; startIndex = Number(el.dataset.index);
-  document.addEventListener('pointermove', onPointerMove);
-  document.addEventListener('pointerup', onPointerUp);
-}
-function onPointerMove(e){
-  if(!dragging || e.pointerId !== pointerId) return;
-  const target = document.elementFromPoint(e.clientX, e.clientY);
-  if(!target) return;
-  const cell = target.closest && target.closest('.cell') ? target.closest('.cell') : null;
-  if(!cell) return;
-  const idx = Number(cell.dataset.index);
-  if(Number.isNaN(idx)) return;
-  if(isAdjacent(startIndex, idx) && idx !== startIndex){
-    // attempt swap
-    state.isLocked = true;
-    swapWithAnimation(startIndex, idx).then(()=>{
-      const matches = findMatches();
-      if(matches.length>0){ handleMatches(matches); }
-      else {
-        // swap-back
-        swapWithAnimation(startIndex, idx).then(()=> { state.isLocked = false; updateHUD(); });
-      }
-    });
-    state.moves = Math.max(0, state.moves - 1);
-    updateHUD();
-    // allow further drags to continue from new index
-    startIndex = idx;
   }
-}
-function onPointerUp(e){
-  dragging=false; pointerId=null; startIndex=null;
-  document.removeEventListener('pointermove', onPointerMove);
-  document.removeEventListener('pointerup', onPointerUp);
-}
 
-function isAdjacent(a,b){
-  if(a==null||b==null) return false;
-  const r1 = Math.floor(a/state.boardSize), c1 = a%state.boardSize;
-  const r2 = Math.floor(b/state.boardSize), c2 = b%state.boardSize;
-  return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
-}
+  function swap(a,b){
+    const t = state.board[a]; state.board[a]=state.board[b]; state.board[b]=t;
+    renderBoard();
+  }
 
-/* helper to attach pointer handlers to cells */
-function attachCellHandlers(){
-  const cells = document.querySelectorAll('#game-board .cell');
-  cells.forEach(c => {
-    c.removeEventListener('pointerdown', onPointerDown);
-    c.addEventListener('pointerdown', onPointerDown);
-    // also click selection fallback
-    c.onclick = (ev)=>{
-      if(state.isLocked) return;
-      const idx = Number(c.dataset.index);
-      // selection logic: if none selected, mark; if same, unmark; else if adjacent swap
-      if(state._selected == null){
-        state._selected = idx;
-        c.classList.add('selected-cell');
-      } else {
-        const prev = state._selected;
-        const prevEl = document.querySelector(`.cell[data-index="${prev}"]`);
-        if(prevEl) prevEl.classList.remove('selected-cell');
-        if(isAdjacent(prev, idx) && prev !== idx){
-          state.isLocked = true;
-          swapWithAnimation(prev, idx).then(()=>{
-            const matches = findMatches();
-            if(matches.length>0) handleMatches(matches);
-            else swapWithAnimation(prev, idx).then(()=> state.isLocked=false);
-          });
-          state.moves = Math.max(0, state.moves - 1);
-          updateHUD();
+  // find matches (rows/cols of 3+)
+  function findMatches(){
+    const size = state.size;
+    const matches = [];
+    const visited = new Set();
+
+    // rows
+    for(let r=0;r<size;r++){
+      let runStart=0;
+      for(let c=1;c<=size;c++){
+        const prevIdx = r*size + (c-1);
+        const curIdx = r*size + c;
+        const prev = state.board[prevIdx];
+        const cur = state.board[curIdx];
+        if(c<size && prev && cur && prev.img===cur.img) {
+          // continue run
+        } else {
+          const runLen = c - runStart;
+          if(runLen>=3){
+            for(let k=runStart;k<runStart+runLen;k++) matches.push(r*size + k);
+          }
+          runStart = c;
         }
-        state._selected = null;
       }
-    };
-  });
-}
+    }
+    // cols
+    for(let c=0;c<size;c++){
+      let runStart=0;
+      for(let r=1;r<=size;r++){
+        const prevIdx = (r-1)*size + c;
+        const curIdx = r*size + c;
+        const prev = state.board[prevIdx];
+        const cur = state.board[curIdx];
+        if(r<size && prev && cur && prev.img===cur.img){
+          // continue
+        } else {
+          const runLen = r - runStart;
+          if(runLen>=3){
+            for(let k=runStart;k<runStart+runLen;k++) matches.push(k*size + c);
+          }
+          runStart = r;
+        }
+      }
+    }
 
-/* ========== Shuffle ========== */
-function shuffleBoard(){
-  const srcs = state.board.map(t => t ? t.src : pool[Math.floor(Math.random()*pool.length)]);
-  for(let i=srcs.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [srcs[i], srcs[j]] = [srcs[j], srcs[i]];
+    // unique
+    return Array.from(new Set(matches));
   }
-  state.board = srcs.map(s=> ({ id: state.nextId++, src: s }));
-  render();
-  attachCellHandlers();
-}
 
-/* ========== Save / Load state ========== */
-function saveState(){
-  try{
-    localStorage.setItem('candy_coins', String(state.coins));
-    localStorage.setItem('candy_inv', JSON.stringify(state.inv));
-  }catch(e){}
-}
-
-/* ========== Game init / API ========== */
-window.initGame = async function(opts){
-  // opts: { boardSize }
-  if(opts && opts.boardSize) state.boardSize = opts.boardSize;
-  state.score = 0; state.moves = CONFIG.START_MOVES; state.combo = 1; state.isLocked = false; state._selected = null;
-  if(pool.length === 0) await preloadImages();
-  initBoard(state.boardSize);
-  render();
-  attachCellHandlers();
-  updateHUD();
-};
-
-window.restartGame = function(){ initBoard(state.boardSize); render(); attachCellHandlers(); state.score=0; state.combo=1; updateHUD(); };
-window.shuffleBoard = shuffleBoard;
-window.addCoins = function(n){ state.coins += Number(n||0); saveState(); updateHUD(); };
-
-/* shop buy hook (used by shop UI) */
-window.buyFromShop = function(item){
-  const prices = { bomb:200, shuffle:100, moves:80, rainbow:350 };
-  const p = prices[item] || 0;
-  if(state.coins >= p){ state.coins -= p; state.inv[item] = (state.inv[item]||0) + 1; saveState(); updateHUD(); alert('खरीदारी सफल: ' + item); 
-    if(item === 'shuffle') shuffleBoard();
-  } else alert('कॉइन्स कम हैं');
-};
-
-/* ========== Start on load (preload images for snappier experience) ========== */
-window.addEventListener('load', async ()=>{
-  if(CONFIG.ERUDA){
-    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-    s.onload = ()=> { try{ eruda.init(); console.log('Eruda loaded'); }catch(e){} };
-    document.body.appendChild(s);
+  // remove matches, score, gravity, refill. if initial:true avoid animation
+  function removeAllMatches(initial){
+    let matches = findMatches();
+    if(matches.length===0) return false;
+    // mark removed
+    matches.forEach(i => state.board[i]=null);
+    // update score/coins
+    const gained = matches.length * 20;
+    state.score += gained;
+    StorageAPI.addCoins(Math.floor(gained/10));
+    updateHUD();
+    // collapse columns
+    collapseBoard();
+    // refill
+    refillBoard();
+    // after refill, chain reaction
+    setTimeout(()=> {
+      if(findMatches().length) removeAllMatches();
+    }, initial ? 0 : 180);
+    renderBoard();
+    return true;
   }
-  await preloadImages();
-  // don't auto init — init on Start button click (index.html glue calls initGame)
-  console.log('game.js loaded, images:', pool.length);
-});
 
-/* Expose some helpers for debugging */
-window._gameState = state;
-window._render = render;
-window._findMatches = findMatches;
+  function collapseBoard(){
+    const size = state.size;
+    for(let c=0;c<size;c++){
+      let write = size-1;
+      for(let r=size-1;r>=0;r--){
+        const idx = r*size + c;
+        if(state.board[idx]){
+          if(write !== r){
+            state.board[write] = state.board[idx];
+            state.board[write].idx = write;
+            state.board[idx]=null;
+          }
+          write--;
+        }
+      }
+      // above write positions become null (already)
+    }
+  }
+
+  function refillBoard(){
+    const size = state.size;
+    for(let i=0;i<size*size;i++){
+      if(!state.board[i]){
+        state.board[i] = { img: randCandy(), idx:i };
+      }
+    }
+  }
+
+  // shuffle board randomize all candies
+  window.shuffleBoard = function(){
+    state.board.forEach((cell,i) => { state.board[i] = { img: randCandy(), idx:i }; });
+    renderBoard();
+    console.log('Board shuffled');
+  };
+
+  // restart
+  window.restartGame = function(){
+    state.score = 0;
+    StorageAPI.setCoins( StorageAPI.getCoins() ); // keep
+    createBoard();
+    updateHUD();
+    console.log('Game restarted');
+  };
+
+  // buy from shop (simple)
+  window.buyFromShop = function(item){
+    const coins = StorageAPI.getCoins();
+    const prices = { shuffle:100, bomb:200 };
+    const p = prices[item] || 0;
+    if(coins>=p){ StorageAPI.addCoins(-p); if(item==='shuffle') shuffleBoard(); updateHUD(); console.log('bought',item); }
+    else alert('Not enough coins');
+  };
+
+  // touch / swipe helpers
+  function addTouchHandlers(div){
+    let startX=0,startY=0, startIdx=null;
+    div.addEventListener('touchstart', (e)=>{
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      startIdx = Number(div.dataset.index);
+    }, {passive:true});
+
+    div.addEventListener('touchend', (e)=>{
+      if(startIdx===null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      const threshold = 18; // min swipe
+      let targetIdx = null;
+      if(absX>absY && absX>threshold){
+        // horizontal
+        if(dx>0) targetIdx = startIdx+1; else targetIdx = startIdx-1;
+      } else if(absY>absX && absY>threshold){
+        // vertical
+        if(dy>0) targetIdx = startIdx + state.size; else targetIdx = startIdx - state.size;
+      }
+      if(targetIdx!==null && isAdjacent(startIdx,targetIdx)){
+        trySwap(startIdx, targetIdx);
+      }
+      startIdx = null;
+    }, {passive:true});
+  }
+
+  // init game
+  window.initGame = function(opts){
+    try{
+      state.level = StorageAPI.getLevel() || 1;
+      state.size = (opts && opts.boardSize) ? opts.boardSize : (state.level>=3 ? 9 : 8);
+      state.score = 0;
+      state.running = true;
+      // create board
+      createBoard();
+      updateHUD();
+      console.log('Game initialized at level', state.level);
+    }catch(e){ console.error('Error: initGame', e); }
+  };
+
+  // expose small debug helpers
+  window.addCoins = function(n){ StorageAPI.addCoins(Number(n||0)); updateHUD(); };
+  window.setGameLevel = function(l){ StorageAPI.setLevel(l); state.level = l; updateHUD(); };
+
+  // initial HUD update
+  document.addEventListener('DOMContentLoaded', updateHUD);
+
+  console.log('Loaded: js/game.js');
+})();
