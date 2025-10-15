@@ -1,131 +1,56 @@
-/* css/game.css
-   Candy Match — visuals, animations, responsive tiles
-*/
-
-/* ===== variables ===== */
+/* game board and common */
 :root{
-  --tile-size: 56px;    /* base tile size - small screens override */
-  --tile-gap: 8px;
-  --card-bg: linear-gradient(180deg,#fffafc,#fff7f8);
-  --accent: #ff6fb3;
-  --text-color: #3b2a24;
+  --bg:#fde9f0;
+  --card:#fff;
+  --accent:#ff80ab;
 }
+body{ margin:0;font-family:Inter,Segoe UI,Helvetica,Arial;background:var(--bg);color:#222; }
+.screen{ display:none; }
+.screen.active{ display:block; }
 
-/* ===== page / board container ===== */
-body{
-  margin:0;
-  padding:0;
-  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-  color:var(--text-color);
-  background: linear-gradient(180deg,#fff3f8 0%, #f7fff8 100%), url('images/bg-gradient.png') center/cover no-repeat;
-  background-attachment: fixed;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-}
+/* home card */
+.home-card{ max-width:720px;margin:40px auto;padding:28px;background:linear-gradient(180deg,#fff,#ffeef6);border-radius:18px;box-shadow:0 8px 18px rgba(0,0,0,0.08);text-align:center; }
+.home-logo{ width:96px;height:96px;object-fit:contain; }
 
-/* card that holds board */
-.board {
-  margin: 14px auto;
-  padding: 14px;
-  max-width: 620px;
+/* topbar/hud */
+.topbar{ display:flex;align-items:center;gap:14px;padding:12px;max-width:1100px;margin:12px auto; }
+.small-btn{ background:#fff;padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06); }
+.hud{ margin-left:auto; display:flex; gap:12px; align-items:center; }
+
+/* board wrap */
+#board-wrap{ display:flex;justify-content:center;padding:8px 12px 20px; }
+#game-board{
+  width: min(92vw, 520px);
+  aspect-ratio: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
   border-radius: 18px;
-  background: var(--card-bg);
-  box-shadow: 0 18px 48px rgba(30,20,40,0.06);
-  display: grid; /* JS sets grid-template-columns */
-  gap: var(--tile-gap);
-  transform: translateZ(0);
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  display:grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap:10px;
+  overflow:hidden;
 }
 
-/* each cell */
-.cell {
-  width: var(--tile-size);
-  height: var(--tile-size);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: linear-gradient(180deg,#fff,#fff8fb);
+/* cell */
+.cell{
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(30,20,40,0.06);
-  position:relative;
-  overflow:visible;
-  transition: transform 140ms ease, box-shadow 140ms ease;
-  cursor: pointer;
-}
-.cell:active { transform: scale(.98); }
-
-/* tile image */
-.tile {
-  width: calc(var(--tile-size) * 0.9);
-  height: calc(var(--tile-size) * 0.9);
-  object-fit: contain;
+  display:flex;align-items:center;justify-content:center;
+  padding:8px; box-shadow: 0 6px 12px rgba(255,0,140,0.02);
+  transition: transform .18s, box-shadow .18s;
   user-select:none;
-  -webkit-user-drag:none;
-  transition: transform 160ms cubic-bezier(.2,.9,.2,1), opacity 160ms;
-  z-index:2;
 }
+.cell.selected{ transform: scale(1.05); box-shadow: 0 10px 22px rgba(0,0,0,0.12); }
 
-/* selection */
-.selected-cell { outline: 3px solid rgba(255,111,179,0.12); transform: scale(1.03); }
-.tile.selected { transform: scale(1.06); }
+/* tile images */
+.tile{ width:64%; height:64%; object-fit:contain; pointer-events:none; }
 
-/* pop animation */
-.tile.pop {
-  transform: scale(0.2) rotate(-20deg);
-  opacity: 0;
-  transition: transform 300ms ease, opacity 300ms ease;
-}
+/* controls */
+.controls{ display:flex; gap:14px; justify-content:center; padding-bottom:28px; }
 
-/* falling animation */
-@keyframes tileFall {
-  0% { transform: translateY(-120%) scale(1.05); opacity: 0; }
-  60% { transform: translateY(8%) scale(1.02); opacity: 1; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-/* swap-moving clone style */
-.swap-moving { transition: transform 260ms cubic-bezier(.2,.9,.2,1); position:absolute; border-radius:10px; box-shadow:0 18px 40px rgba(30,20,40,0.12); }
-
-/* sparkle overlay (subtle) */
-.sparkle {
-  position:absolute; inset:8px; border-radius:10px; pointer-events:none;
-  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95) 0%, rgba(255,210,240,0.08) 30%, rgba(255,130,190,0) 60%);
-  z-index:12; opacity:0.95;
-  animation: sparkle 520ms cubic-bezier(.2,.9,.2,1);
-}
-@keyframes sparkle{
-  0% { transform: scale(.7) rotate(0); opacity:0; filter: blur(2px); }
-  40% { transform: scale(1.05) rotate(8deg); opacity:1; filter: blur(0); }
-  100% { transform: scale(1.35) rotate(28deg); opacity:0; filter: blur(4px); }
-}
-
-/* coin popup */
-.coin-popup {
-  position: fixed;
-  left: 50%; top: 40%;
-  transform: translate(-50%,-50%);
-  font-weight: 900; color:#ff2d7a; text-shadow: 0 6px 20px rgba(0,0,0,0.12);
-  z-index:9999; pointer-events:none;
-  animation: coinRise 1.2s ease-out forwards;
-}
-@keyframes coinRise {
-  0% { transform: translate(-50%,-50%) scale(1); opacity:1; }
-  50% { transform: translate(-50%,-68%) scale(1.14); opacity:1; }
-  100% { transform: translate(-50%,-120%) scale(.9); opacity:0; }
-}
-
-/* pop particle */
-.pop-dot {
-  position:absolute; width:10px; height:10px; border-radius:50%;
-  background: radial-gradient(circle,#fff 0%, #ff6fb3 60%);
-  pointer-events:none; z-index:30;
-}
-
-/* small responsive */
-@media (max-width:420px){
-  :root{ --tile-size: 44px; --tile-gap:6px; }
-  .board { padding:10px; max-width:360px; border-radius:14px; }
-}
-@media (min-width:420px) and (max-width:760px){
-  :root{ --tile-size: 50px; --tile-gap:8px; }
-  .board { max-width:460px; }
-    }
+/* modal */
+.modal{ display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:9999; }
+.modal .modal-card{ background:#fff;padding:12px;border-radius:12px; min-width:280px; max-width:440px; }
+.btn{ background:linear-gradient(90deg,#ff80ab,#ff4d9e); color:#fff; border:0; padding:10px 14px; border-radius:18px; font-weight:700; cursor:pointer; }
+.btn.small{ padding:6px 8px; border-radius:8px; font-weight:600; }
