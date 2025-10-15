@@ -1,18 +1,131 @@
-body{margin:0;font-family:Inter, Arial}
-.topbar{display:flex;gap:12px;align-items:center;padding:12px;background:linear-gradient(180deg,#ffdfea,#ffdfe8)}
-.meta{margin-left:auto;font-weight:700}
-#boardWrap{padding:18px;display:flex;justify-content:center}
-.board{background:rgba(255,255,255,0.9);border-radius:18px;padding:16px;display:grid;grid-template-columns:repeat(8,56px);grid-auto-rows:56px;gap:12px;max-width:calc(56px*8 + 12px*7 + 32px);}
-.cell{background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 12px rgba(255,160,185,0.18);position:relative;overflow:hidden}
-.tile{width:44px;height:44px;user-select:none;touch-action:none;transition:transform .18s ease}
-.cell.selected{outline:3px solid rgba(255,90,150,0.3)}
-.controls{display:flex;gap:18px;justify-content:center;padding:18px}
-button{padding:12px 24px;border-radius:30px;border:0;background:linear-gradient(90deg,#ff8fb0,#ff5b8a);color:#fff}
-.modal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.4)}
-.modal-card{background:#fff;padding:18px;border-radius:12px}
+/* css/game.css
+   Candy Match — visuals, animations, responsive tiles
+*/
 
-/* responsive: reduce cell sizes on small screens */
-@media(max-width:420px){
-  .board{grid-template-columns:repeat(8,44px);grid-auto-rows:44px;gap:10px}
-  .tile{width:36px;height:36px}
+/* ===== variables ===== */
+:root{
+  --tile-size: 56px;    /* base tile size - small screens override */
+  --tile-gap: 8px;
+  --card-bg: linear-gradient(180deg,#fffafc,#fff7f8);
+  --accent: #ff6fb3;
+  --text-color: #3b2a24;
 }
+
+/* ===== page / board container ===== */
+body{
+  margin:0;
+  padding:0;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  color:var(--text-color);
+  background: linear-gradient(180deg,#fff3f8 0%, #f7fff8 100%), url('images/bg-gradient.png') center/cover no-repeat;
+  background-attachment: fixed;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* card that holds board */
+.board {
+  margin: 14px auto;
+  padding: 14px;
+  max-width: 620px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  box-shadow: 0 18px 48px rgba(30,20,40,0.06);
+  display: grid; /* JS sets grid-template-columns */
+  gap: var(--tile-gap);
+  transform: translateZ(0);
+}
+
+/* each cell */
+.cell {
+  width: var(--tile-size);
+  height: var(--tile-size);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(180deg,#fff,#fff8fb);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(30,20,40,0.06);
+  position:relative;
+  overflow:visible;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+  cursor: pointer;
+}
+.cell:active { transform: scale(.98); }
+
+/* tile image */
+.tile {
+  width: calc(var(--tile-size) * 0.9);
+  height: calc(var(--tile-size) * 0.9);
+  object-fit: contain;
+  user-select:none;
+  -webkit-user-drag:none;
+  transition: transform 160ms cubic-bezier(.2,.9,.2,1), opacity 160ms;
+  z-index:2;
+}
+
+/* selection */
+.selected-cell { outline: 3px solid rgba(255,111,179,0.12); transform: scale(1.03); }
+.tile.selected { transform: scale(1.06); }
+
+/* pop animation */
+.tile.pop {
+  transform: scale(0.2) rotate(-20deg);
+  opacity: 0;
+  transition: transform 300ms ease, opacity 300ms ease;
+}
+
+/* falling animation */
+@keyframes tileFall {
+  0% { transform: translateY(-120%) scale(1.05); opacity: 0; }
+  60% { transform: translateY(8%) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* swap-moving clone style */
+.swap-moving { transition: transform 260ms cubic-bezier(.2,.9,.2,1); position:absolute; border-radius:10px; box-shadow:0 18px 40px rgba(30,20,40,0.12); }
+
+/* sparkle overlay (subtle) */
+.sparkle {
+  position:absolute; inset:8px; border-radius:10px; pointer-events:none;
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95) 0%, rgba(255,210,240,0.08) 30%, rgba(255,130,190,0) 60%);
+  z-index:12; opacity:0.95;
+  animation: sparkle 520ms cubic-bezier(.2,.9,.2,1);
+}
+@keyframes sparkle{
+  0% { transform: scale(.7) rotate(0); opacity:0; filter: blur(2px); }
+  40% { transform: scale(1.05) rotate(8deg); opacity:1; filter: blur(0); }
+  100% { transform: scale(1.35) rotate(28deg); opacity:0; filter: blur(4px); }
+}
+
+/* coin popup */
+.coin-popup {
+  position: fixed;
+  left: 50%; top: 40%;
+  transform: translate(-50%,-50%);
+  font-weight: 900; color:#ff2d7a; text-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  z-index:9999; pointer-events:none;
+  animation: coinRise 1.2s ease-out forwards;
+}
+@keyframes coinRise {
+  0% { transform: translate(-50%,-50%) scale(1); opacity:1; }
+  50% { transform: translate(-50%,-68%) scale(1.14); opacity:1; }
+  100% { transform: translate(-50%,-120%) scale(.9); opacity:0; }
+}
+
+/* pop particle */
+.pop-dot {
+  position:absolute; width:10px; height:10px; border-radius:50%;
+  background: radial-gradient(circle,#fff 0%, #ff6fb3 60%);
+  pointer-events:none; z-index:30;
+}
+
+/* small responsive */
+@media (max-width:420px){
+  :root{ --tile-size: 44px; --tile-gap:6px; }
+  .board { padding:10px; max-width:360px; border-radius:14px; }
+}
+@media (min-width:420px) and (max-width:760px){
+  :root{ --tile-size: 50px; --tile-gap:8px; }
+  .board { max-width:460px; }
+    }
