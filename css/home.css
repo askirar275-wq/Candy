@@ -1,4 +1,24 @@
-/* small specific styles to keep home pretty */
-.home-buttons{ display:flex; flex-direction:column; gap:10px; margin-top:16px; align-items:center; }
-.btn{ width:70%; box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
-.home-foot{ margin-top:18px;color:#8a6b7b; font-size:13px; }
+body {
+  background: url('../images/bg-gradient.png') center/cover no-repeat fixed;
+  font-family: "Poppins", sans-serif;
+  text-align: center;
+  margin: 0;
+  color: #fff;
+}
+
+.title {
+  color: #ffebf5;
+  text-shadow: 0 0 8px #ff69b4;
+}
+
+.main-btn {
+  background: linear-gradient(45deg,#ff66b2,#ff3385);
+  border: none;
+  color: white;
+  padding: 12px 18px;
+  margin: 10px auto;
+  font-size: 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
