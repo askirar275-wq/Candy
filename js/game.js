@@ -1,4 +1,4 @@
-// js/game.js — Pull Update Version (multi-level Candy Crush mode)
+// js/game.js — Pull Update v2 (Candy Crush Advanced System)
 (function(){
   const CANDY_SETS = {
     1: ['images/candy1.png','images/candy2.png','images/candy3.png'],
@@ -8,16 +8,16 @@
   };
 
   const LEVELS = [
-    { id:1, size:6, target:500, name:"Beginner" },
-    { id:2, size:7, target:1200, name:"Explorer" },
-    { id:3, size:8, target:2000, name:"Challenger" },
-    { id:4, size:8, target:3500, name:"Sweet Master" },
-    { id:5, size:9, target:5000, name:"Candy Legend" },
+    { id:1, size:6, target:500, moves:15, unlocked:true },
+    { id:2, size:7, target:1200, moves:18, unlocked:false },
+    { id:3, size:8, target:2000, moves:20, unlocked:false },
+    { id:4, size:8, target:3500, moves:22, unlocked:false },
+    { id:5, size:9, target:5000, moves:25, unlocked:false },
   ];
 
   let state = {
     board: [], size:8, score:0, target:1000,
-    level:1, running:false, selected:null
+    level:1, movesLeft:15, running:false, selected:null
   };
 
   const $ = id=>document.getElementById(id);
@@ -31,15 +31,20 @@
   function initGame(){
     const lv = StorageAPI.getLevel();
     const levelData = LEVELS.find(l=>l.id===lv) || LEVELS[0];
+    if(!levelData.unlocked){
+      alert('यह level अभी लॉक है 🔒 — पहले पिछला level पूरा करो!');
+      window.showPage('levelMap');
+      return;
+    }
     state.level = levelData.id;
     state.size = levelData.size;
     state.target = levelData.target;
+    state.movesLeft = levelData.moves;
     state.score = 0;
     state.board = Array.from({length:state.size**2}, ()=>({img:randCandy()}));
     renderBoard();
     removeMatches(true);
     updateHUD();
-    console.log("🎯 Level", state.level, "started, Target:", state.target);
   }
 
   function renderBoard(){
@@ -82,12 +87,16 @@
   }
 
   function swapTry(a,b){
-    if(!adjacent(a,b)){ deselect(); return; }
+    if(!adjacent(a,b) || state.movesLeft<=0){ deselect(); return; }
     swap(a,b);
     const m=findMatches();
-    if(m.length){ removeMatches(); } 
+    if(m.length){ 
+      removeMatches(); 
+      state.movesLeft--;
+    } 
     else { swap(a,b); }
     deselect();
+    updateHUD();
   }
 
   function swap(a,b){
@@ -160,7 +169,7 @@
       if(!state.board[i]) state.board[i]={img:randCandy()};
     }
     renderBoard();
-    checkLevelComplete();
+    checkStatus();
   }
 
   function updateHUD(){
@@ -170,18 +179,36 @@
     $('currentLevelDisplay').textContent=state.level;
   }
 
-  function checkLevelComplete(){
+  function checkStatus(){
     if(state.score>=state.target){
-      StorageAPI.setLevel(state.level+1);
-      const modal=$('levelUpModal');
-      $('levelUpTitle').textContent=`Level ${state.level} Complete!`;
-      $('levelUpText').textContent=`Target ${state.target} points reached! Next level unlocked.`;
-      modal.style.display='flex';
-      $('levelUpClose').onclick=function(){
-        modal.style.display='none';
-        initGame();
-      };
+      nextLevelUnlock();
+    } else if(state.movesLeft<=0){
+      showModal('Level Failed 💔', 'Moves खत्म हो गए। फिर से कोशिश करो!');
     }
+  }
+
+  function nextLevelUnlock(){
+    const modal=$('levelUpModal');
+    $('levelUpTitle').textContent=`🎉 Level ${state.level} Complete!`;
+    $('levelUpText').textContent=`Target ${state.target} पूरा हुआ!`;
+    modal.style.display='flex';
+    LEVELS[state.level]?.unlocked && (LEVELS[state.level+1].unlocked=true);
+    StorageAPI.setLevel(state.level+1);
+    $('levelUpClose').onclick=function(){
+      modal.style.display='none';
+      initGame();
+    };
+  }
+
+  function showModal(title,msg){
+    const modal=$('levelUpModal');
+    $('levelUpTitle').textContent=title;
+    $('levelUpText').textContent=msg;
+    modal.style.display='flex';
+    $('levelUpClose').onclick=function(){
+      modal.style.display='none';
+      initGame();
+    };
   }
 
   function restart(){
@@ -197,7 +224,6 @@
     renderBoard();
   }
 
-  // swipe handlers (mobile)
   function addSwipe(el){
     let sx,sy,si;
     el.addEventListener('touchstart',e=>{
@@ -218,11 +244,7 @@
     },{passive:true});
   }
 
-  // public bindings
   window.initGame=initGame;
-  window.restartGame=restart;
-  window.shuffleBoard=shuffle;
-
   document.addEventListener('DOMContentLoaded',()=>{
     $('restartBtn').onclick=restart;
     $('shuffleBtn').onclick=shuffle;
