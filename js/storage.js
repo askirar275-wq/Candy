@@ -1,21 +1,12 @@
-// Local Storage system
-const StorageAPI = {
-  data: { coins: 0, level: 1 },
-
-  load() {
-    const d = localStorage.getItem("CandyData");
-    if (d) this.data = JSON.parse(d);
-  },
-
-  save() {
-    localStorage.setItem("CandyData", JSON.stringify(this.data));
-  },
-
-  getCoins() { return this.data.coins; },
-  addCoins(n) { this.data.coins += n; this.save(); },
-
-  getLevel() { return this.data.level; },
-  setLevel(n) { this.data.level = n; this.save(); }
-};
-
-StorageAPI.load();
+// js/storage.js
+// Simple Storage API wrapper
+window.StorageAPI = (function(){
+  const KEY_LEVEL = 'candy_level';
+  const KEY_COINS = 'candy_coins';
+  function getLevel(){ return Number(localStorage.getItem(KEY_LEVEL) || 1); }
+  function setLevel(n){ localStorage.setItem(KEY_LEVEL, Number(n)); }
+  function getCoins(){ return Number(localStorage.getItem(KEY_COINS) || 0); }
+  function addCoins(n){ localStorage.setItem(KEY_COINS, getCoins() + Number(n || 0)); }
+  return { getLevel, setLevel, getCoins, addCoins };
+})();
+console.log('Loaded: js/storage.js');
