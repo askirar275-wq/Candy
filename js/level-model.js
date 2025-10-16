@@ -1,34 +1,49 @@
 // js/level-modal.js
 (function(){
   const $ = id => document.getElementById(id);
+  window.showStartOverlay = function(levelInfo){
+    let overlay = document.getElementById('startOverlay');
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'startOverlay';
+      overlay.className = 'start-overlay';
+      overlay.innerHTML = `<div class="start-card" id="startCard">
+        <h2>Level ${levelInfo.id}</h2>
+        <p>Goal: ${levelInfo.goal} points • Moves: ${levelInfo.moves}</p>
+        <button class="bigbtn" id="startNowBtn">Start Level</button>
+      </div>`;
+      document.body.appendChild(overlay);
+    } else {
+      overlay.querySelector('#startCard h2').textContent = `Level ${levelInfo.id}`;
+      overlay.querySelector('#startCard p').textContent = `Goal: ${levelInfo.goal} points • Moves: ${levelInfo.moves}`;
+    }
+    overlay.style.display = 'flex';
+    setTimeout(()=> overlay.querySelector('.start-card').classList.add('show'), 30);
+    document.getElementById('startNowBtn').onclick = () => {
+      overlay.querySelector('.start-card').classList.remove('show');
+      setTimeout(()=> overlay.style.display = 'none', 260);
+      if(window.startLevel) window.startLevel(levelInfo.id);
+    };
+  };
 
-  function nextLevel(){
-    try {
-      const cur = StorageAPI.getLevel();
-      StorageAPI.setLevel(cur + 1);
-      // hide modal
-      const m = $('levelUpModal'); if(m) m.style.display = 'none';
-      if(typeof initGame === 'function') initGame();
-    } catch(e){ console.error(e); }
-  }
+  window.showLevelUpModal = function(level, reward){
+    const modal = document.getElementById('levelUpModal');
+    if(!modal) return;
+    const title = modal.querySelector('.title');
+    const text = modal.querySelector('.text');
+    title.textContent = `Level ${level} Complete!`;
+    text.textContent = `Reward: ${reward} coins`;
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+  };
+  // close handler
+  document.addEventListener('click', (e)=>{
+    const modal = document.getElementById('levelUpModal');
+    if(modal && e.target.matches('.level-up-close')) {
+      modal.classList.remove('show');
+      setTimeout(()=> modal.style.display='none', 220);
+    }
+  });
 
-  function replayLevel(){
-    try {
-      // just restart
-      const m = $('levelUpModal'); if(m) m.style.display = 'none';
-      if(typeof restartGame === 'function') restartGame();
-      else if(typeof initGame === 'function') initGame();
-    } catch(e){ console.error(e); }
-  }
-
-  function attach(){
-    const n = $('levelNext'), r = $('levelReplay'), m = $('levelUpModal');
-    if(!n || !r || !m){ setTimeout(attach, 200); return; }
-    n.addEventListener('click', nextLevel);
-    r.addEventListener('click', replayLevel);
-    m.addEventListener('click', (e)=>{ if(e.target===m) nextLevel(); });
-    console.log('Level modal attached');
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', attach); else attach();
+  console.log('Loaded: js/level-modal.js');
 })();
-console.log('Loaded: js/level-modal.js');
