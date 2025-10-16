@@ -1,15 +1,65 @@
-/* css/game.css */
-body{margin:0}
-.topbar{display:flex;align-items:center;gap:16px;padding:12px;background:rgba(255,235,245,0.9);position:sticky;top:0;z-index:2}
-.stats{display:flex;gap:18px;font-weight:600}
-.game-area{padding:16px}
-#boardWrap{display:flex;justify-content:center}
-.board{background:rgba(255,255,255,0.9);padding:18px;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,0.06)}
-.board .cell{width:56px;height:56px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;margin:8px;box-shadow:0 6px 14px rgba(0,0,0,0.04);float:left}
-.board img{max-width:44px;max-height:44px;user-select:none;-webkit-user-drag:none}
-.controls{display:flex;gap:18px;justify-content:center;margin-top:16px}
-.btn{background:#ffb6d0;border:0;padding:12px 22px;border-radius:28px;color:#fff;cursor:pointer}
-@media (max-width:420px){
-  .board .cell{width:44px;height:44px;margin:6px}
-  .board img{max-width:34px;max-height:34px}
+/* css/game.css (updated responsive grid + mobile friendly) */
+:root{
+  --bg: #fff6fb;
+  --panel: rgba(255,255,255,0.95);
+  --accent: linear-gradient(45deg,#ff80ab,#ff4081);
+  --cell-size-desktop: 64px;
+  --cell-size-mobile: 48px;
 }
+
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,Helvetica;background:linear-gradient(180deg,#ffeef6,#fff);color:#222}
+
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:12px 16px;background:rgba(255,235,245,0.9);position:sticky;top:0;z-index:20;backdrop-filter: blur(4px);
+}
+.topbar .btn-light{background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #f0e6ee;cursor:pointer}
+.stats{display:flex;gap:18px;font-weight:700;align-items:center}
+
+.game-area{padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px}
+
+/* board wrapper: give it a fixed max-width so grid wraps nicely on mobile */
+#boardWrap{width:100%;display:flex;justify-content:center}
+.board{
+  background:var(--panel);
+  padding:18px;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.06);
+  /* center grid */
+  display:grid;
+  gap:10px;
+  /* width will adjust by cell size * columns */
+  max-width:calc(var(--cell-size-desktop) * 9 + 10px * 10 + 40px); /* max for 9 cols */
+  overflow:visible;
+}
+
+/* cell sizing is controlled by CSS variables based on viewport */
+.cell{
+  width:var(--cell-size-desktop);
+  height:var(--cell-size-desktop);
+  background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 18px rgba(0,0,0,0.06);user-select:none;
+  transition:transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  position:relative;
+}
+.cell.selected{outline:3px solid rgba(255,100,150,0.18);transform:scale(1.05)}
+.board img{max-width:76%;max-height:76%;pointer-events:none;display:block}
+
+/* controls */
+.controls{display:flex;gap:18px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.btn{background:#ffb6d0;border:0;padding:12px 20px;border-radius:28px;color:#fff;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff;padding:12px 20px;border-radius:24px;border:0}
+
+/* modal small fixes */
+#levelUpModal .btn{padding:10px 14px}
+
+/* responsiveness */
+@media (max-width:520px){
+  :root{--cell-size-desktop:var(--cell-size-mobile)}
+  .board{padding:14px;gap:8px;max-width:calc(var(--cell-size-desktop) * 8 + 8px * 9 + 28px);}
+  .cell{width:var(--cell-size-mobile);height:var(--cell-size-mobile);border-radius:10px}
+  .topbar{padding:10px}
+}
+
+/* ensure board centered vertical spacing */
+#game-screen .game-area{padding-bottom:36px}
