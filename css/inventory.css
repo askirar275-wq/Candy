@@ -1,0 +1,4 @@
+/* inventory.css */
+#inv-toolbar .inv-btn{ background:linear-gradient(180deg,#ffd6ec,#ff7fb7); color:#fff; border:0; padding:6px 10px; border-radius:10px; box-shadow:0 8px 18px rgba(255,111,179,0.12); font-weight:700; }
+.coin-popup{ font-weight:800; border-radius:12px; }
+#game-board.use-mode{ outline:4px dashed rgba(255,111,179,0.12); }
