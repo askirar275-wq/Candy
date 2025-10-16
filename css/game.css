@@ -1,65 +1,52 @@
-/* css/game.css (updated responsive grid + mobile friendly) */
+/* css/game.css - add to your css folder and include in index.html */
 :root{
-  --bg: #fff6fb;
-  --panel: rgba(255,255,255,0.95);
-  --accent: linear-gradient(45deg,#ff80ab,#ff4081);
-  --cell-size-desktop: 64px;
-  --cell-size-mobile: 48px;
+  --bg:#ffeef6;
+  --card:#fff;
+  --accent:#ff6fa8;
+  --tile-size:calc(10vmin); /* adjust responsive size */
 }
 
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,Arial,Helvetica;background:linear-gradient(180deg,#ffeef6,#fff);color:#222}
+/* basic page */
+body{background:var(--bg); font-family: Poppins, sans-serif; margin:0; padding:0; color:#222;}
+.header-bar{display:flex;align-items:center;gap:18px;padding:14px;background:linear-gradient(180deg,#ffd6e6,#ffdfe9);box-shadow:0 2px 6px rgba(0,0,0,0.05);}
+.header-item{background:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);}
 
-.topbar{
-  display:flex;align-items:center;gap:16px;padding:12px 16px;background:rgba(255,235,245,0.9);position:sticky;top:0;z-index:20;backdrop-filter: blur(4px);
+/* game board container */
+.board-wrap{max-width:720px;margin:18px auto;padding:18px;}
+.board-card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,0.06);}
+
+/* grid */
+#game-board{display:grid;gap:10px;justify-items:center;align-items:center; width:100%; user-select:none;}
+.cell{width:var(--tile-size); height:var(--tile-size); background:#fff7; border-radius:12px; display:flex;align-items:center;justify-content:center; box-shadow:0 6px 12px rgba(0,0,0,0.04); overflow:hidden; position:relative;}
+.cell img.tile{max-width:80%; max-height:80%; transition: transform 200ms ease, opacity 250ms ease; pointer-events:none;}
+
+/* selected */
+.selected-cell{outline:3px solid rgba(255,111,138,0.18); transform:scale(1.03);}
+
+/* animation for remove */
+.tile-removing{transform:scale(0);opacity:0; transition:transform 260ms ease, opacity 260ms ease;}
+
+/* buttons */
+.controls{display:flex;gap:16px;justify-content:center;margin-top:18px;}
+.btn{background:linear-gradient(90deg,#ff8ab5,#ff4d9a); color:#fff; padding:12px 22px; border-radius:28px; border:0; box-shadow:0 10px 20px rgba(255,77,154,0.16); cursor:pointer;}
+
+/* modal for level complete */
+#levelUpModal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999;}
+#levelUpModal .card{background:#fff;padding:20px;border-radius:14px;min-width:280px;text-align:center; transform:translateY(20px); opacity:0; transition:all 260ms ease;}
+#levelUpModal.show .card{transform:translateY(0); opacity:1;}
+#levelUpModal .bigbtn{background:linear-gradient(90deg,#ff8ab5,#ff4d9a); color:#fff;padding:10px 18px;border-radius:12px;border:0;margin-top:12px;}
+
+/* start animation */
+.start-overlay{position:fixed;inset:0;background:linear-gradient(180deg,rgba(255,111,138,0.08),rgba(255,234,245,0.0));display:flex;align-items:center;justify-content:center;z-index:800;}
+.start-card{background:#fff;padding:24px;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,0.12);transform:scale(0.9);opacity:0;transition:all 320ms ease;}
+.start-card.show{transform:scale(1);opacity:1;}
+
+/* moves / score row */
+.top-stats{display:flex;gap:14px;align-items:center;}
+.stat{background:#fff;padding:8px 12px;border-radius:10px;}
+
+/* responsive tweaks */
+@media (max-width:420px){
+  :root{--tile-size:calc(12vmin);}
+  .board-wrap{padding:12px;}
 }
-.topbar .btn-light{background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #f0e6ee;cursor:pointer}
-.stats{display:flex;gap:18px;font-weight:700;align-items:center}
-
-.game-area{padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px}
-
-/* board wrapper: give it a fixed max-width so grid wraps nicely on mobile */
-#boardWrap{width:100%;display:flex;justify-content:center}
-.board{
-  background:var(--panel);
-  padding:18px;
-  border-radius:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.06);
-  /* center grid */
-  display:grid;
-  gap:10px;
-  /* width will adjust by cell size * columns */
-  max-width:calc(var(--cell-size-desktop) * 9 + 10px * 10 + 40px); /* max for 9 cols */
-  overflow:visible;
-}
-
-/* cell sizing is controlled by CSS variables based on viewport */
-.cell{
-  width:var(--cell-size-desktop);
-  height:var(--cell-size-desktop);
-  background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 18px rgba(0,0,0,0.06);user-select:none;
-  transition:transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
-  position:relative;
-}
-.cell.selected{outline:3px solid rgba(255,100,150,0.18);transform:scale(1.05)}
-.board img{max-width:76%;max-height:76%;pointer-events:none;display:block}
-
-/* controls */
-.controls{display:flex;gap:18px;justify-content:center;margin-top:6px;flex-wrap:wrap}
-.btn{background:#ffb6d0;border:0;padding:12px 20px;border-radius:28px;color:#fff;cursor:pointer}
-.btn-primary{background:var(--accent);color:#fff;padding:12px 20px;border-radius:24px;border:0}
-
-/* modal small fixes */
-#levelUpModal .btn{padding:10px 14px}
-
-/* responsiveness */
-@media (max-width:520px){
-  :root{--cell-size-desktop:var(--cell-size-mobile)}
-  .board{padding:14px;gap:8px;max-width:calc(var(--cell-size-desktop) * 8 + 8px * 9 + 28px);}
-  .cell{width:var(--cell-size-mobile);height:var(--cell-size-mobile);border-radius:10px}
-  .topbar{padding:10px}
-}
-
-/* ensure board centered vertical spacing */
-#game-screen .game-area{padding-bottom:36px}
