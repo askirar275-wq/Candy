@@ -1,52 +1,91 @@
-/* css/game.css - add to your css folder and include in index.html */
-:root{
-  --bg:#ffeef6;
-  --card:#fff;
-  --accent:#ff6fa8;
-  --tile-size:calc(10vmin); /* adjust responsive size */
+body {
+  font-family: Poppins, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #fff4f8;
+  color: #333;
+  text-align: center;
 }
 
-/* basic page */
-body{background:var(--bg); font-family: Poppins, sans-serif; margin:0; padding:0; color:#222;}
-.header-bar{display:flex;align-items:center;gap:18px;padding:14px;background:linear-gradient(180deg,#ffd6e6,#ffdfe9);box-shadow:0 2px 6px rgba(0,0,0,0.05);}
-.header-item{background:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+.screen { display: none; }
+.screen.active { display: block; }
 
-/* game board container */
-.board-wrap{max-width:720px;margin:18px auto;padding:18px;}
-.board-card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,0.06);}
+.btn {
+  background: linear-gradient(90deg, #ff7bb0, #ff4fa1);
+  border: none;
+  color: #fff;
+  padding: 12px 22px;
+  margin: 6px;
+  border-radius: 24px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn.small { padding: 8px 14px; font-size: 0.9rem; }
 
-/* grid */
-#game-board{display:grid;gap:10px;justify-items:center;align-items:center; width:100%; user-select:none;}
-.cell{width:var(--tile-size); height:var(--tile-size); background:#fff7; border-radius:12px; display:flex;align-items:center;justify-content:center; box-shadow:0 6px 12px rgba(0,0,0,0.04); overflow:hidden; position:relative;}
-.cell img.tile{max-width:80%; max-height:80%; transition: transform 200ms ease, opacity 250ms ease; pointer-events:none;}
+.header-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  background: #ffe3ed;
+}
 
-/* selected */
-.selected-cell{outline:3px solid rgba(255,111,138,0.18); transform:scale(1.03);}
+.header-item {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
 
-/* animation for remove */
-.tile-removing{transform:scale(0);opacity:0; transition:transform 260ms ease, opacity 260ms ease;}
+.board-wrap {
+  margin: 20px auto;
+  max-width: 420px;
+}
+.board-card {
+  background: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
 
-/* buttons */
-.controls{display:flex;gap:16px;justify-content:center;margin-top:18px;}
-.btn{background:linear-gradient(90deg,#ff8ab5,#ff4d9a); color:#fff; padding:12px 22px; border-radius:28px; border:0; box-shadow:0 10px 20px rgba(255,77,154,0.16); cursor:pointer;}
+#game-board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
 
-/* modal for level complete */
-#levelUpModal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999;}
-#levelUpModal .card{background:#fff;padding:20px;border-radius:14px;min-width:280px;text-align:center; transform:translateY(20px); opacity:0; transition:all 260ms ease;}
-#levelUpModal.show .card{transform:translateY(0); opacity:1;}
-#levelUpModal .bigbtn{background:linear-gradient(90deg,#ff8ab5,#ff4d9a); color:#fff;padding:10px 18px;border-radius:12px;border:0;margin-top:12px;}
+.cell {
+  background: #f9f9f9;
+  border-radius: 10px;
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-/* start animation */
-.start-overlay{position:fixed;inset:0;background:linear-gradient(180deg,rgba(255,111,138,0.08),rgba(255,234,245,0.0));display:flex;align-items:center;justify-content:center;z-index:800;}
-.start-card{background:#fff;padding:24px;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,0.12);transform:scale(0.9);opacity:0;transition:all 320ms ease;}
-.start-card.show{transform:scale(1);opacity:1;}
+.cell img {
+  width: 80%;
+  height: 80%;
+}
 
-/* moves / score row */
-.top-stats{display:flex;gap:14px;align-items:center;}
-.stat{background:#fff;padding:8px 12px;border-radius:10px;}
+.level-list button {
+  display: block;
+  margin: 8px auto;
+  width: 80%;
+}
 
-/* responsive tweaks */
-@media (max-width:420px){
-  :root{--tile-size:calc(12vmin);}
-  .board-wrap{padding:12px;}
+#levelUpModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+#levelUpModal .card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
 }
