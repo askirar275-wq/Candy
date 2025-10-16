@@ -1,157 +1,80 @@
 body {
   margin: 0;
-  font-family: "Poppins", sans-serif;
-  background: linear-gradient(180deg, #ffe1ec, #ffd7f3);
-  text-align: center;
+  font-family: 'Poppins', sans-serif;
   color: #333;
-}
-
-.screen {
-  display: none;
-  height: 100vh;
-  padding: 20px;
-}
-
-.screen.active {
-  display: block;
-}
-
-/* HOME */
-.home-container {
-  max-width: 400px;
-  margin: 40px auto;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  padding: 30px 20px;
-}
-
-.logo {
-  width: 100px;
-  margin-bottom: 10px;
-}
-
-.title {
-  color: #ff3c92;
-  margin: 10px 0;
-  font-size: 32px;
-}
-
-.tagline {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-.btn {
-  background: linear-gradient(180deg, #ff7ac8, #ff52b8);
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-size: 18px;
-  padding: 12px;
-  width: 90%;
-  margin: 8px auto;
-  display: block;
-  cursor: pointer;
-  box-shadow: 0 6px 12px rgba(255, 82, 184, 0.3);
-}
-
-.btn.secondary {
-  background: #ffffff;
-  color: #ff3c92;
-  border: 2px solid #ff3c92;
-}
-
-footer {
-  margin-top: 15px;
-  font-size: 12px;
-  color: #888;
-}
-
-/* LEVEL MAP */
-.levels {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 20px;
-}
-
-.levels button {
-  background: #ffb3d1;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 12px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* GAME */
-.topbar {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #fff;
+  min-height: 100vh;
+  flex-direction: column;
+  text-align: center;
+}
+
+/* Backgrounds */
+.bg-home {
+  background: url('images/bg_home.jpg') center/cover no-repeat fixed;
+}
+.bg-map {
+  background: url('images/bg_map.jpg') center/cover no-repeat fixed;
+}
+.bg-game {
+  background: url('images/bg_game.jpg') center/cover no-repeat fixed;
+}
+
+/* Buttons */
+button {
+  background: linear-gradient(135deg, #ff6fb3, #ff9a9e);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1.1em;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 5px;
+  transition: 0.2s;
+}
+button:hover {
+  transform: scale(1.05);
+}
+
+/* Containers */
+.home-container, .level-container {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.level-container button {
+  width: 80%;
+  margin: 10px auto;
+  display: block;
+}
+
+/* Game board */
+.board {
+  display: grid;
+  gap: 4px;
+  background: rgba(255,255,255,0.8);
   padding: 10px;
   border-radius: 12px;
-  margin-bottom: 10px;
+  margin: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
-
-.info {
-  font-weight: bold;
-}
-
-#board {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  justify-content: center;
-  margin: 0 auto;
-  max-width: 400px;
-}
-
-.cell {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .cell img {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
+  width: 100%;
+  border-radius: 10px;
+  user-select: none;
 }
-
-.controls {
-  margin-top: 12px;
+.selected {
+  border: 3px solid #ff66aa;
+}
+.top-bar, .bottom-bar {
+  background: rgba(255,255,255,0.7);
+  padding: 10px;
+  border-radius: 12px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 15px;
+  flex-wrap: wrap;
 }
-
-.controls button {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(180deg, #ff8ac1, #ff5ea8);
-  color: #fff;
-  cursor: pointer;
-}
-
-/* SHOP + SETTINGS */
-.shop-items button, .settings-options label {
-  display: block;
-  margin: 10px auto;
-  padding: 12px 18px;
-  border-radius: 12px;
-  background: #ffe0ef;
-  border: none;
-  cursor: pointer;
-  }
