@@ -1,4 +1,10 @@
-// js/game.js
+// js/game.js (updated responsive grid version)
+//
+// - Uses CSS Grid for layout
+// - Swipe/tap works (pointer events)
+// - 6 candies only
+// - match detection + gravity + refill
+// - safe DOM checks to avoid "null" errors
 (function(){
   const IMAGES = [
     'images/candy1.png',
@@ -8,242 +14,270 @@
     'images/candy5.png',
     'images/candy6.png'
   ];
-  const SIZE_DEFAULT = 8; // 8x8
-  let boardSize = SIZE_DEFAULT;
-  let board = []; // 2d array of indices
+
+  const DEFAULT_SIZE = 8;
+  let boardSize = DEFAULT_SIZE;
+  let board = []; // 2D array of ints or null
   let score = 0;
   let level = 1;
 
   const $ = id => document.getElementById(id);
 
+  // util
   function randIndex(){ return Math.floor(Math.random()*IMAGES.length); }
+  function inBounds(r,c){ return r>=0 && r<boardSize && c>=0 && c<boardSize; }
 
-  function createEmptyBoard(){
+  // create board ensuring initial no immediate matches
+  function createInitialBoard(){
     board = [];
     for(let r=0;r<boardSize;r++){
       board[r]=[];
-      for(let c=0;c<boardSize;c++) board[r][c]=randIndex();
+      for(let c=0;c<boardSize;c++){
+        board[r][c] = randIndex();
+      }
+    }
+    // if there are initial matches, re-roll those cells simply
+    while(findMatches().length>0){
+      for(let r=0;r<boardSize;r++){
+        for(let c=0;c<boardSize;c++){
+          if(Math.random() < 0.5) board[r][c] = randIndex();
+        }
+      }
     }
   }
 
+  // render board into CSS Grid
   function renderBoard(){
-    const b = $('game-board');
-    if(!b) return;
-    b.innerHTML = '';
-    b.style.width = ''; // auto, grid handled by float
+    const container = $('game-board');
+    if(!container) return;
+    // set grid columns dynamically
+    container.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+    container.innerHTML = '';
+    // create cells
     for(let r=0;r<boardSize;r++){
       for(let c=0;c<boardSize;c++){
         const cell = document.createElement('div');
-        cell.className='cell';
+        cell.className = 'cell';
         cell.dataset.r = r; cell.dataset.c = c;
         const img = document.createElement('img');
-        img.src = IMAGES[ board[r][c] ];
+        const val = board[r][c];
+        img.src = IMAGES[val];
+        img.alt = 'candy';
         img.draggable = false;
         cell.appendChild(img);
-        b.appendChild(cell);
+        container.appendChild(cell);
       }
     }
-    attachInput();
+    attachPointers();
   }
 
-  function attachInput(){
+  // pointer handling (tap + swipe)
+  let pointerStart = null;
+  let tapped = null;
+
+  function attachPointers(){
     const cells = document.querySelectorAll('#game-board .cell');
-    let start = null;
     cells.forEach(cell=>{
-      cell.onpointerdown = (e)=>{
-        start = { r: Number(cell.dataset.r), c: Number(cell.dataset.c), x: e.clientX, y: e.clientY };
+      cell.onpointerdown = (ev) => {
+        ev.preventDefault();
+        const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+        pointerStart = {r,c, x: ev.clientX, y: ev.clientY};
       };
-      cell.onpointerup = (e)=>{
-        if(!start) return;
-        const endR = Number(cell.dataset.r), endC = Number(cell.dataset.c);
-        const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      cell.onpointerup = (ev) => {
+        ev.preventDefault();
+        if(!pointerStart) return;
+        const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+        const dx = ev.clientX - pointerStart.x;
+        const dy = ev.clientY - pointerStart.y;
         const absX = Math.abs(dx), absY = Math.abs(dy);
-        if(absX<8 && absY<8){
-          // treat as tap: select/swap with neighbor by second tap
-          handleTap(endR,endC);
+
+        // short drag = tap
+        if(absX < 10 && absY < 10){
+          handleTap(r,c);
         } else {
-          // determine direction
-          let target = {r:start.r, c:start.c};
+          // determine direction based on dominant axis
+          let tr = pointerStart.r, tc = pointerStart.c;
           if(absX > absY){
-            // horizontal
-            target.c = dx > 0 ? start.c + 1 : start.c - 1;
+            tc = dx > 0 ? pointerStart.c + 1 : pointerStart.c - 1;
           } else {
-            // vertical
-            target.r = dy > 0 ? start.r + 1 : start.r - 1;
+            tr = dy > 0 ? pointerStart.r + 1 : pointerStart.r - 1;
           }
-          swapAndResolve(start.r,start.c,target.r,target.c);
+          swapAndProcess(pointerStart.r, pointerStart.c, tr, tc);
         }
-        start = null;
+        pointerStart = null;
       };
+      // prevent context menu
+      cell.oncontextmenu = (e)=> e.preventDefault();
     });
   }
 
-  // simple tap select mechanism
-  let lastTap = null;
+  // tap selection mechanism
   function handleTap(r,c){
-    if(!lastTap){ lastTap = {r,c}; const cell = getCellElem(r,c); if(cell) cell.style.outline='3px solid rgba(255,100,150,0.25)'; return; }
-    // swap with lastTap if neighbor
-    const dr = Math.abs(lastTap.r - r), dc = Math.abs(lastTap.c - c);
-    if((dr===1 && dc===0) || (dr===0 && dc===1)){
-      swapAndResolve(lastTap.r,lastTap.c,r,c);
+    const cellElem = document.querySelector(`#game-board .cell[data-r="${r}"][data-c="${c}"]`);
+    if(!tapped){
+      tapped = {r,c};
+      if(cellElem) cellElem.classList.add('selected');
+      return;
     }
-    // clear selection highlight
-    const prev = getCellElem(lastTap.r,lastTap.c); if(prev) prev.style.outline='none';
-    lastTap = null;
+    // if same cell tapped -> clear
+    if(tapped.r === r && tapped.c === c){
+      const prev = document.querySelector(`#game-board .cell[data-r="${tapped.r}"][data-c="${tapped.c}"]`);
+      if(prev) prev.classList.remove('selected');
+      tapped = null;
+      return;
+    }
+    // check neighbor
+    const dr = Math.abs(tapped.r - r), dc = Math.abs(tapped.c - c);
+    if((dr===1 && dc===0) || (dr===0 && dc===1)){
+      swapAndProcess(tapped.r, tapped.c, r, c);
+    }
+    // clear selected style
+    const prev = document.querySelector(`#game-board .cell[data-r="${tapped.r}"][data-c="${tapped.c}"]`);
+    if(prev) prev.classList.remove('selected');
+    tapped = null;
   }
 
-  function getCellElem(r,c){
-    return document.querySelector(`#game-board .cell[data-r="${r}"][data-c="${c}"]`);
-  }
-
-  function swapAndResolve(r1,c1,r2,c2){
+  // swap with bounds check, revert if no matches
+  function swapAndProcess(r1,c1,r2,c2){
     if(!inBounds(r1,c1) || !inBounds(r2,c2)) return;
-    // swap
+    // swap values
     const tmp = board[r1][c1]; board[r1][c1] = board[r2][c2]; board[r2][c2] = tmp;
     renderBoard();
-    // check matches; if none revert after short delay
+    // after small delay, check matches
     setTimeout(()=>{
       const matches = findMatches();
-      if(matches.length===0){
+      if(matches.length === 0){
         // revert
-        const tmp2 = board[r1][c1]; board[r1][c1] = board[r2][c2]; board[r2][c2] = tmp2;
+        const t2 = board[r1][c1]; board[r1][c1] = board[r2][c2]; board[r2][c2] = t2;
         renderBoard();
       } else {
-        // remove and apply gravity repeatedly
+        // resolved chain
         processMatches();
       }
-    },120);
+    }, 110);
   }
 
-  function inBounds(r,c){ return r>=0 && r<boardSize && c>=0 && c<boardSize; }
-
-  // find all contiguous matches (>=3) returns array of positions
+  // find matches (>=3) horizontal + vertical
   function findMatches(){
-    const matched = [];
+    const found = [];
+    const used = new Set();
     // horizontal
     for(let r=0;r<boardSize;r++){
-      let runStart=0;
+      let start = 0;
       for(let c=1;c<=boardSize;c++){
-        if(c<boardSize && board[r][c] === board[r][runStart]) continue;
-        const runLen = c - runStart;
-        if(runLen>=3){
-          for(let k=runStart;k<c;k++) matched.push([r,k]);
+        if(c<boardSize && board[r][c] === board[r][start]) continue;
+        const len = c - start;
+        if(len >= 3){
+          for(let k=start;k<c;k++){
+            const key = r + ',' + k;
+            if(!used.has(key)){ used.add(key); found.push([r,k]); }
+          }
         }
-        runStart = c;
+        start = c;
       }
     }
     // vertical
     for(let c=0;c<boardSize;c++){
-      let runStart=0;
+      let start = 0;
       for(let r=1;r<=boardSize;r++){
-        if(r<boardSize && board[r][c] === board[runStart][c]) continue;
-        const runLen = r - runStart;
-        if(runLen>=3){
-          for(let k=runStart;k<r;k++) matched.push([k,c]);
+        if(r<boardSize && board[r][c] === board[start][c]) continue;
+        const len = r - start;
+        if(len >= 3){
+          for(let k=start;k<r;k++){
+            const key = k + ',' + c;
+            if(!used.has(key)){ used.add(key); found.push([k,c]); }
+          }
         }
-        runStart = r;
+        start = r;
       }
     }
-    // unique positions
-    const keySet = new Set();
-    const uniq = [];
-    matched.forEach(([r,c])=>{
-      const key = r+','+c;
-      if(!keySet.has(key)){ keySet.add(key); uniq.push([r,c]); }
-    });
-    return uniq;
+    return found;
   }
 
+  // remove matched (set null), gravity collapse per column, refill
   function processMatches(){
     const matches = findMatches();
-    if(matches.length===0) return;
-    // remove (set to null marker)
-    matches.forEach(([r,c]) => { board[r][c] = null; });
-    // update score
-    score += matches.length * 60;
+    if(matches.length === 0) return;
+    // mark matches
+    matches.forEach(([r,c]) => board[r][c] = null);
+    // increment score
+    score += matches.length * 50;
     updateScoreUI();
-    // gravity: for each column, collapse nulls and refill top
+
+    // gravity + refill
     for(let c=0;c<boardSize;c++){
       const col = [];
       for(let r=boardSize-1;r>=0;r--){
         if(board[r][c] !== null) col.push(board[r][c]);
       }
-      // fill up to boardSize with new candies
+      // refill new random until full
       while(col.length < boardSize) col.push(randIndex());
       // write back
       for(let r=boardSize-1, i=0; r>=0; r--, i++){
         board[r][c] = col[i];
       }
     }
+    // re-render then chain-check after small delay for animation
     renderBoard();
-    // chain detection after short delay
     setTimeout(processMatches, 160);
   }
 
   function updateScoreUI(){
-    const s = $('score'); if(s) s.textContent = score;
-    const lvl = $('currentLevel'); if(lvl) lvl.textContent = level;
+    const sEl = $('score'); if(sEl) sEl.textContent = score;
+    const lvlEl = $('currentLevel'); if(lvlEl) lvlEl.textContent = level;
+    if(window.updateCoinDisplay) window.updateCoinDisplay();
   }
 
-  // shuffle function
+  // public actions
   window.shuffleBoard = function(){
-    createEmptyBoard();
+    createInitialBoard();
     renderBoard();
     console.log('Board shuffled');
   };
 
   window.restartGame = function(){
     score = 0;
-    createEmptyBoard();
+    createInitialBoard();
     renderBoard();
     updateScoreUI();
     console.log('Game restarted');
   };
 
-  // initGame (exposed)
-  window.initGame = function(){
-    try {
-      level = StorageAPI.getLevel() || 1;
-      // optionally change board size by level
-      boardSize = (level >= 4) ? 9 : 8;
-      score = 0;
-      createEmptyBoard();
-      // avoid starting with existing matches — simple re-fill until no immediate matches
-      while(findMatches().length > 0){
-        createEmptyBoard();
-      }
-      renderBoard();
-      updateScoreUI();
-      window.updateCoinDisplay && window.updateCoinDisplay();
-      document.getElementById('game-screen').classList.add('active');
-      document.getElementById('map-screen').classList.remove('active');
-      console.log('Game initialized at level', level);
-    } catch(err){
-      console.error('Error: initGame error', err);
-    }
-  };
-
-  window.addCoins = function(n){ StorageAPI.addCoins(Number(n||0)); window.updateCoinDisplay && window.updateCoinDisplay(); };
-
-  // expose small helper for level completion (demo: reach score >= goal)
+  // check level complete by goal; show modal
   window.checkLevelComplete = function(){
-    const goal = 1000 * (StorageAPI.getLevel() || 1);
+    const goal = (StorageAPI.getLevel() || 1) * 500; // adjustable
     if(score >= goal){
-      // give reward, show modal
-      StorageAPI.addCoins(100);
-      const modal = document.getElementById('levelUpModal');
+      StorageAPI.addCoins(50);
+      const modal = $('levelUpModal');
       if(modal){
-        document.getElementById('levelUpTitle').textContent = 'Level Complete!';
-        document.getElementById('levelUpText').textContent = `Level ${StorageAPI.getLevel()} cleared!`;
+        $('levelUpTitle').textContent = 'Level Complete!';
+        $('levelUpText').textContent = `Level ${StorageAPI.getLevel()} cleared! Reward: 50 coins`;
         modal.style.display = 'flex';
       }
     }
   };
 
-  // small interval to check progress
-  setInterval(()=>{
-    try{ if(typeof window.checkLevelComplete === 'function') window.checkLevelComplete(); } catch(e){}
-  }, 1500);
+  // expose initGame
+  window.initGame = function(){
+    try {
+      level = StorageAPI.getLevel() || 1;
+      boardSize = (level >= 4) ? 9 : DEFAULT_SIZE; // example: levels 4+ bigger board
+      score = 0;
+      createInitialBoard();
+      renderBoard();
+      updateScoreUI();
+      // show game screen
+      const gs = $('game-screen'), ms = $('map-screen');
+      if(gs) gs.classList.add('active');
+      if(ms) ms.classList.remove('active');
+      console.log('Game initialized at level', level);
+    } catch(e){
+      console.error('initGame error', e);
+    }
+  };
 
-  console.log('Loaded: js/game.js');
+  // small periodic check for completion
+  setInterval(()=>{ try{ window.checkLevelComplete && window.checkLevelComplete(); } catch(e){} }, 1200);
+
+  console.log('Loaded: js/game.js (updated)');
 })();
