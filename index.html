@@ -1,101 +1,149 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
-  <link rel="stylesheet" href="css/home.css">
+  <title>Candy Match — Game</title>
+
+  <!-- main game css -->
   <link rel="stylesheet" href="css/game.css">
+
+  <style>
+    /* small fallback if css missing */
+    body{font-family:Poppins, sans-serif;background:#ffeef6;margin:0;padding:0}
+    .container{max-width:980px;margin:0 auto;padding:8px;}
+  </style>
 </head>
 <body>
-  <!-- Home screen -->
-  <div id="home-screen" class="screen active">
-    <div class="hero">
-      <img src="images/bg-gradient.png" alt="" class="hero-bg">
-      <div class="hero-card">
-        <div class="logo">🍭</div>
-        <h1>Candy Match</h1>
-        <p>स्वीट्स को मिलाओ और मज़ा करो!</p>
-        <button id="startBtn" class="btn-primary">🎮 खेल शुरू करें</button>
-      </div>
-    </div>
-  </div>
+  <div class="container">
 
-  <!-- Level map screen -->
-  <div id="map-screen" class="screen">
-    <div class="map-header">
-      <button id="backFromMap" class="btn-light">← Back</button>
-      <h2>Level Map</h2>
-    </div>
-    <div id="levelPath" class="level-path">
-      Loading map...
-    </div>
-  </div>
+    <!-- Header / Top stats -->
+    <header class="header-bar" role="banner" aria-label="Game header">
+      <button id="homeBtn" onclick="location.href='index.html'">← Home</button>
 
-  <!-- Game screen -->
-  <div id="game-screen" class="screen">
-    <header class="topbar">
-      <button id="backBtn" class="btn-light">← Home</button>
-      <div class="stats">
-        <span>Score: <span id="score">0</span></span>
-        <span>Level: <span id="currentLevel">1</span></span>
-        <span>Coins: <span id="coins">0</span></span>
-      </div>
+      <div style="flex:1"></div>
+
+      <div class="header-item">Score: <span id="score">0</span></div>
+      <div class="header-item">Level: <span id="levelNum">1</span></div>
+      <div class="header-item">Coins: <span id="coins">0</span></div>
+      <div class="header-item">Moves: <span id="movesLeft">0</span></div>
     </header>
 
-    <main class="game-area">
-      <div id="boardWrap">
-        <div id="game-board" class="board"></div>
-      </div>
+    <!-- Board area -->
+    <main class="board-wrap" role="main">
+      <section class="board-card" aria-label="Game board card">
+        <div id="game-board" aria-label="Game board grid" tabindex="0"></div>
 
-      <div class="controls">
-        <button id="restartBtn" class="btn">Restart</button>
-        <button id="shuffleBtn" class="btn">Shuffle</button>
-        <button id="shopBtn" class="btn">Shop</button>
-      </div>
+        <div class="controls" style="margin-top:16px;">
+          <button id="btnRestart" class="btn" aria-label="Restart game">Restart</button>
+          <button id="btnShuffle" class="btn" aria-label="Shuffle board">Shuffle</button>
+          <button id="playBtn" class="btn" aria-label="Start level / Play">Play</button>
+          <button id="openMapBtn" class="btn" style="background:linear-gradient(90deg,#7ee8fa,#80ff72);">Level Map</button>
+        </div>
+      </section>
     </main>
-  </div>
 
-  <!-- Level Up modal -->
-  <div id="levelUpModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999;">
-    <div style="background:#fff;padding:22px;border-radius:14px;min-width:260px;text-align:center;">
-      <h2 id="levelUpTitle">Level Up!</h2>
-      <p id="levelUpText">Congrats — next level unlocked.</p>
-      <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
-        <button id="levelReplay" class="btn">🔁 Replay</button>
-        <button id="levelNext" class="btn-primary">👉 Next Level</button>
+    <!-- Level Map page (hidden by default; can be navigated to) -->
+    <section id="levelMapPage" style="display:none;padding:18px;">
+      <button id="mapBackBtn" class="btn" style="background:#ffb6d1;">← Back</button>
+      <h1 style="margin-top:12px;">Level Map</h1>
+      <div id="levelPath" style="margin-top:12px;">
+        <div class="loading">Loading map…</div>
+      </div>
+    </section>
+
+    <!-- Level Up Modal -->
+    <div id="levelUpModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:9999;">
+      <div class="card" style="padding:18px; border-radius:12px; min-width:280px; text-align:center;">
+        <h3 class="title">Level Complete</h3>
+        <p class="text">Congrats!</p>
+        <div style="margin-top:14px;">
+          <button class="bigbtn level-up-next" style="margin-right:10px;">👉 Next Level</button>
+          <button class="bigbtn level-up-close" style="background:#ddd;color:#333;">✖ Close</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- optional shop modal basic (stub) -->
-  <div id="shopModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9998;">
-    <div style="background:#fff;padding:18px;border-radius:12px;width:90%;max-width:420px;">
-      <h3>Shop</h3>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <button id="buyBomb" class="btn">Bomb (200)</button>
-        <button id="buyShuffle" class="btn">Shuffle (100)</button>
-        <button id="buyMoves" class="btn">Extra Moves (80)</button>
+    <!-- Start overlay (optionally generated by level-modal.js; present here as fallback) -->
+    <div id="startOverlay" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:900;">
+      <div class="start-card" style="background:#fff;padding:22px;border-radius:12px; text-align:center;">
+        <h2 id="startLevelTitle">Level 1</h2>
+        <p id="startLevelText">Goal: 500 • Moves: 30</p>
+        <div style="margin-top:10px;">
+          <button id="startNowBtn" class="bigbtn">Start Level</button>
+        </div>
       </div>
-      <div style="margin-top:12px;text-align:center;"><button id="closeShop" class="btn-light">Close</button></div>
     </div>
+
+    <!-- Settings / debug floating button (optional) -->
+    <div id="debugFab" style="position:fixed; right:16px; bottom:16px; width:56px;height:56px;border-radius:12px;background:#eee;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,0.08);">
+      ⚙
+    </div>
+
   </div>
 
-  <!-- scripts (defer order matters) -->
+  <!-- Scripts: IMPORTANT order -->
+  <!-- storage.js should expose StorageAPI used by game.js (or game.js contains a stub) -->
   <script defer src="js/storage.js"></script>
-  <script defer src="js/safe-ui.js"></script>
-  <script defer src="js/level-map.js"></script>
-  <script defer src="js/shop.js"></script>
-  <script defer src="js/game.js"></script>
+  <script defer src="js/level-data.js"></script>
   <script defer src="js/level-modal.js"></script>
+  <script defer src="js/game.js"></script>
+
+  <!-- optional extra modules -->
+  <script defer src="js/shop.js"></script>
+  <script defer src="js/safe-ui.js"></script>
+
+  <!-- Eruda console (mobile debugging) - will load if network allowed -->
+  <script>
+    (function(){
+      // load eruda only if window.eruda not present
+      if(!window.eruda){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+        s.onload = function(){ eruda.init(); console.log('Eruda console loaded'); };
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
+
+  <!-- small initializer to wire map button/back and ensure elements exist -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      // map show/hide
+      const openMapBtn = document.getElementById('openMapBtn');
+      const mapPage = document.getElementById('levelMapPage');
+      const mainWrap = document.querySelector('.board-wrap');
+      const mapBack = document.getElementById('mapBackBtn');
+      if(openMapBtn && mapPage){
+        openMapBtn.addEventListener('click', function(){
+          mapPage.style.display = 'block';
+          mainWrap.style.display = 'none';
+          // if level-map.js has a function to render path, call it
+          if(window.renderLevelMap) window.renderLevelMap();
+        });
+      }
+      if(mapBack){
+        mapBack.addEventListener('click', function(){
+          mapPage.style.display = 'none';
+          mainWrap.style.display = 'block';
+        });
+      }
+
+      // hook play button to initGame (from game.js)
+      const playBtn = document.getElementById('playBtn');
+      if(playBtn && window.initGame) playBtn.addEventListener('click', ()=> { window.initGame(); });
+
+      // wire modal close (if exists)
+      document.querySelectorAll('.level-up-close').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const modal = document.getElementById('levelUpModal');
+          if(modal){ modal.style.display='none'; modal.classList.remove('show'); }
+        });
+      });
+
+      console.log('index.html loaded');
+    });
+  </script>
+
 </body>
-  <!-- level up modal -->
-<div id="levelUpModal" style="display:none; align-items:center; justify-content:center;">
-  <div class="card">
-    <h3 class="title">Level Complete</h3>
-    <p class="text"></p>
-    <button class="bigbtn level-up-next">Next Level</button>
-    <button class="bigbtn level-up-close" style="background:#ccc;color:#333;margin-top:12px;">Close</button>
-  </div>
-  </div>
-        </html>
+      </html>
