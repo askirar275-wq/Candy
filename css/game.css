@@ -1,91 +1,49 @@
-body {
-  font-family: Poppins, sans-serif;
-  margin: 0;
-  padding: 0;
-  background: #fff4f8;
-  color: #333;
-  text-align: center;
+/* game.css */
+:root{
+  --tile-size:60px; --tile-gap:8px;
+}
+body { margin:0; font-family:"Poppins",sans-serif; color:#2b2b2b; background:transparent; }
+.topbar{ display:flex; align-items:center; gap:12px; padding:10px 14px; max-width:980px; margin:10px auto; }
+.topbar .score{ font-weight:800; }
+.coins-bubble{ margin-left:8px; background:#fff; padding:6px 10px; border-radius:18px; box-shadow:0 8px 20px rgba(0,0,0,0.06);}
+#levelBadge{ margin-left:12px; padding:6px 10px; border-radius:12px; background:linear-gradient(90deg,#fff,#fff8fb); font-weight:800;}
+
+/* board container */
+.board-wrap{ display:flex; justify-content:center; padding:6px; }
+.board{
+  display:grid;
+  gap:var(--tile-gap);
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,250,252,0.94));
+  padding:12px; border-radius:18px; box-shadow:0 18px 40px rgba(0,0,0,0.06);
+  width: calc(var(--tile-size) * 6 + var(--tile-gap) * 5 + 24px);
+  max-width: calc(100% - 40px);
 }
 
-.screen { display: none; }
-.screen.active { display: block; }
+/* cells */
+.cell{ width:var(--tile-size); height:var(--tile-size); border-radius:12px; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(0,0,0,0.06); cursor:grab; position:relative; overflow:hidden;}
+.cell:active{ cursor:grabbing; }
+.tile{ width:84%; height:84%; object-fit:contain; user-select:none; -webkit-user-drag:none; transition:transform .18s ease; }
+.cell.pop .tile{ transform:scale(.2) rotate(-30deg); opacity:0; transition:transform .32s ease, opacity .32s ease; }
 
-.btn {
-  background: linear-gradient(90deg, #ff7bb0, #ff4fa1);
-  border: none;
-  color: #fff;
-  padding: 12px 22px;
-  margin: 6px;
-  border-radius: 24px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-.btn.small { padding: 8px 14px; font-size: 0.9rem; }
+/* selection */
+.selected-cell{ outline:3px solid rgba(255,111,179,0.12); transform:scale(1.02); }
 
-.header-bar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  padding: 10px;
-  background: #ffe3ed;
-}
+/* swap moving clone */
+.swap-moving{ position:fixed; z-index:9999; pointer-events:none; border-radius:10px; }
 
-.header-item {
-  background: #fff;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-}
+/* controls */
+.controls{ display:flex; gap:8px; justify-content:center; padding:12px; }
 
-.board-wrap {
-  margin: 20px auto;
-  max-width: 420px;
-}
-.board-card {
-  background: #fff;
-  padding: 14px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
+/* shop modal */
+.shop-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(10,10,20,0.36); z-index:9999; }
+.shop-card{ width:94%; max-width:480px; background:#fff; border-radius:12px; padding:12px; }
 
-#game-board {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-top: 12px;
-}
+/* coin popup */
+.coin-popup{ position:fixed; left:50%; transform:translateX(-50%); top:30%; font-weight:900; color:#ff397a; text-shadow:0 2px 8px rgba(0,0,0,0.12); z-index:11000; animation:coinRise 1.2s forwards; }
+@keyframes coinRise{ 0%{opacity:1; transform:translate(-50%,0) scale(1)} 100%{opacity:0; transform:translate(-50%,-120%) scale(.9)} }
 
-.cell {
-  background: #f9f9f9;
-  border-radius: 10px;
-  aspect-ratio: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.cell img {
-  width: 80%;
-  height: 80%;
-}
-
-.level-list button {
-  display: block;
-  margin: 8px auto;
-  width: 80%;
-}
-
-#levelUpModal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  justify-content: center;
-  align-items: center;
-}
-#levelUpModal .card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 14px;
-}
+/* responsive */
+@media(max-width:420px){
+  :root{ --tile-size: 44px; --tile-gap:6px; }
+  .board{ width: calc(var(--tile-size)*6 + var(--tile-gap)*5 + 20px); }
+                                 }
