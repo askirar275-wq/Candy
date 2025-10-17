@@ -1,43 +1,47 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- 🏡 HOME SCREEN -->
-  <section id="home" class="screen active" style="background-image:url('images/bg-home.jpg')">
-    <div class="center-box">
+  <!-- HOME -->
+  <section id="home" class="screen active" style="background-image:url('images/bg-gradient.png')">
+    <div class="card center">
       <h1>🍭 Candy Match</h1>
-      <p>स्वीट्स को मिलाओ और मज़ा करो!</p>
+      <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
       <button id="startBtn" class="btn primary">🎮 खेल शुरू करें</button>
     </div>
   </section>
 
-  <!-- 🗺️ LEVEL MAP -->
-  <section id="levelMap" class="screen" style="background-image:url('images/bg-map.jpg')">
-    <header>
-      <button class="btn back" id="backHome">← Home</button>
+  <!-- LEVEL MAP -->
+  <section id="levelMap" class="screen" style="background-image:url('images/bg-gradient.png')">
+    <div class="topbar">
+      <button id="backHome" class="btn back">← Back</button>
       <h2>Level Map</h2>
-    </header>
+    </div>
     <div id="levelList" class="level-list"></div>
   </section>
 
-  <!-- 🎯 GAME SCREEN -->
-  <section id="gameScreen" class="screen" style="background-image:url('images/bg-game.jpg')">
-    <header class="game-header">
+  <!-- GAME -->
+  <section id="gameScreen" class="screen" style="background-image:url('images/bg-gradient.png')">
+    <div class="topbar game-top">
       <button id="btnBackMap" class="btn back">← Map</button>
       <div class="stats">
         <span>Score: <strong id="score">0</strong></span>
         <span>Coins: <strong id="coins">0</strong></span>
         <span>Level: <strong id="levelNum">1</strong></span>
       </div>
-    </header>
-    <div id="gameBoard" class="board"></div>
-    <div class="bottom-buttons">
+    </div>
+
+    <main class="board-wrap">
+      <div id="gameBoard" class="board" aria-label="Game board"></div>
+    </main>
+
+    <div class="controls">
       <button id="restartBtn" class="btn">🔄 Restart</button>
       <button id="shuffleBtn" class="btn">🔃 Shuffle</button>
     </div>
@@ -48,4 +52,4 @@
   <script src="js/game.js"></script>
 
 </body>
-                                                     </html>
+  </html>
