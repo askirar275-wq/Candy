@@ -1,228 +1,386 @@
-// js/game.js
-// Config
-const CONFIG = {
-  candies: 6,        // number of candy images (1..6) in images/candy-#.png
-  cols: 7,           // default grid width
-  rows: 7,           // default grid height
-  matchSize:3,
-  tileSize:56,
-  gap:10,
-  baseScore:100
-};
+/* ===== game.js =====
+   Complete engine:
+   - board init
+   - swipe (touch + mouse)
+   - match detection (>=3), remove, gravity, refill
+   - score, level checks
+   - shuffle/restart
+   - pack switching
+*/
 
-let boardEl, scoreEl, coinsEl, levelEl;
-let boardCols, boardRows;
-let board = []; // 2D array [r][c] storing candy index or null
-let selectedStart = null;
-let score=0, coins=0, level=1, goal=500;
+(function(){
+  // state
+  let currentPackKey = Object.keys(IMAGE_PACKS)[0];
+  let candies = IMAGE_PACKS[currentPackKey].candies.slice();
+  let boardEl = null;
+  let rows = 8, cols = 7;
+  let grid = []; // grid[row][col] => {id: index into candies}
+  let score = 0, coins = 0;
+  let currentLevel = 1;
+  let movesLeft = 0;
+  let animating = false;
 
-function $(id){return document.getElementById(id)}
+  // UI refs
+  const HUD = {
+    score: ()=>document.querySelector('#hud-score'),
+    coins: ()=>document.querySelector('#hud-coins'),
+    level: ()=>document.querySelector('#hud-level'),
+    goal: ()=>document.querySelector('#hud-goal')
+  };
 
-function makeBoardGrid(cols, rows){
-  boardCols = cols; boardRows = rows;
-  const b = $( 'board');
-  // set CSS grid
-  b.style.gridTemplateColumns = `repeat(${cols}, ${CONFIG.tileSize}px)`;
-  b.style.gridTemplateRows = `repeat(${rows}, ${CONFIG.tileSize}px)`;
-  b.innerHTML = '';
-  board = Array.from({length:rows}, ()=>Array(cols).fill(0));
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      const el = document.createElement('div');
-      el.className='candy';
-      el.dataset.r=r; el.dataset.c=c;
-      el.style.width=`${CONFIG.tileSize}px`; el.style.height=`${CONFIG.tileSize}px`;
-      el.addEventListener('pointerdown', onPointerDown);
-      el.addEventListener('pointerup', onPointerUp);
-      el.addEventListener('pointermove', onPointerMove);
-      b.appendChild(el);
+  // util
+  function randInt(n){ return Math.floor(Math.random()*n); }
+
+  // initialize board DOM and events
+  function initBoard(r,c, packCandies, moves=40){
+    if (animating) return;
+    rows = r; cols = c;
+    candies = packCandies.slice();
+    movesLeft = moves;
+    score = 0;
+    updateHUD();
+    boardEl = document.querySelector('#board');
+    // style grid columns
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    // create underlying grid data
+    grid = Array.from({length:rows}, () => Array.from({length:cols}, () => ({id:-1})));
+    // fill random ensuring no initial matches
+    for(let r0=0;r0<rows;r0++){
+      for(let c0=0;c0<cols;c0++){
+        let id;
+        do {
+          id = randInt(candies.length);
+          grid[r0][c0].id = id;
+        } while (createsMatchAt(r0,c0));
+      }
+    }
+    renderBoard();
+  }
+
+  // render board DOM
+  function renderBoard(){
+    if (!boardEl) boardEl = document.querySelector('#board');
+    boardEl.innerHTML = '';
+    for(let r0=0;r0<rows;r0++){
+      for(let c0=0;c0<cols;c0++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r0; cell.dataset.c = c0;
+        const img = document.createElement('img');
+        const id = grid[r0][c0].id;
+        img.src = (id>=0 && candies[id]) ? candies[id] : '';
+        img.alt = '';
+        cell.appendChild(img);
+        cell.addEventListener('pointerdown', onPointerDown);
+        cell.addEventListener('pointerup', onPointerUp);
+        cell.addEventListener('pointercancel', onPointerCancel);
+        cell.addEventListener('pointermove', onPointerMove);
+        boardEl.appendChild(cell);
+      }
     }
   }
-}
 
-function randomCandy(){
-  return Math.floor(Math.random()*CONFIG.candies)+1;
-}
+  // match helper: check if placing grid[r][c] creates a pre-existing match
+  function createsMatchAt(r,c){
+    const id = grid[r][c].id;
+    // check two left
+    if (c>=2 && grid[r][c-1].id===id && grid[r][c-2].id===id) return true;
+    // check two up
+    if (r>=2 && grid[r-1][c].id===id && grid[r-2][c].id===id) return true;
+    return false;
+  }
 
-function fillInitial(){
-  for(let r=0;r<boardRows;r++){
-    for(let c=0;c<boardCols;c++){
-      board[r][c]=randomCandy();
+  // pointer/swipe handling
+  let startR=-1,startC=-1,dragging=false,startX=0,startY=0;
+  function onPointerDown(e){
+    if (animating) return;
+    const cell = e.currentTarget;
+    startR = parseInt(cell.dataset.r,10);
+    startC = parseInt(cell.dataset.c,10);
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    cell.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e){
+    if (!dragging) return;
+    // we allow dragging but we'll process on pointerup for simplicity
+  }
+  function onPointerCancel(e){
+    dragging=false;
+  }
+  function onPointerUp(e){
+    if (!dragging) return;
+    dragging=false;
+    const endX = e.clientX, endY = e.clientY;
+    const dx = endX - startX, dy = endY - startY;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    const threshold = 20; // minimal movement
+    if (adx < threshold && ady < threshold) {
+      // tapped — no swap
+      return;
+    }
+    let dr=0, dc=0;
+    if (adx > ady) {
+      // horizontal move
+      dc = dx>0 ? 1 : -1;
+    } else {
+      dr = dy>0 ? 1 : -1;
+    }
+    const r2 = startR+dr, c2 = startC+dc;
+    if (r2<0 || r2>=rows || c2<0 || c2>=cols) return;
+    swapAndResolve(startR,startC,r2,c2);
+  }
+
+  // swap two cells (r1,c1) <-> (r2,c2) and process matches. If swap produces no match -> revert.
+  async function swapAndResolve(r1,c1,r2,c2){
+    if (animating) return;
+    animating=true;
+    // swap data
+    const tmp = grid[r1][c1].id; grid[r1][c1].id = grid[r2][c2].id; grid[r2][c2].id = tmp;
+    renderBoard();
+    await sleep(120);
+    const matches = findAllMatches();
+    if (matches.length===0) {
+      // revert
+      const tmp2 = grid[r1][c1].id; grid[r1][c1].id = grid[r2][c2].id; grid[r2][c2].id = tmp2;
+      renderBoard();
+      animating=false;
+      return;
+    }
+    // valid swap
+    movesLeft = Math.max(0, movesLeft-1);
+    // remove matches repeatedly until none
+    let totalRemoved = 0;
+    while(true){
+      const mm = findAllMatches();
+      if (mm.length===0) break;
+      const removed = removeMatches(mm);
+      totalRemoved += removed;
+      await animateRemove(mm);
+      applyGravity();
+      await sleep(140);
+      refillBoard();
+      renderBoard();
+      await sleep(120);
+    }
+    // score update
+    score += totalRemoved * 60; // each candy 60 points (tweakable)
+    coins += Math.floor(totalRemoved/3);
+    updateHUD();
+    checkLevelComplete();
+    animating=false;
+  }
+
+  // find all matches (list of cells to remove). returns array of {r,c}
+  function findAllMatches(){
+    const toRemove = [];
+    // rows
+    for(let r0=0;r0<rows;r0++){
+      let runId = -1, runStart=0, runLen=0;
+      for(let c0=0;c0<=cols;c0++){
+        const id = (c0<cols) ? grid[r0][c0].id : -999;
+        if (id === runId) { runLen++; }
+        else {
+          if (runLen >= 3) {
+            for(let k=runStart;k<runStart+runLen;k++) toRemove.push({r:r0,c:k});
+          }
+          runId = id; runStart = c0; runLen = 1;
+        }
+      }
+    }
+    // cols
+    for(let c0=0;c0<cols;c0++){
+      let runId=-1, runStart=0, runLen=0;
+      for(let r0=0;r0<=rows;r0++){
+        const id = (r0<rows) ? grid[r0][c0].id : -999;
+        if (id === runId) runLen++;
+        else {
+          if (runLen >= 3) {
+            for(let k=runStart;k<runStart+runLen;k++) toRemove.push({r:k,c:c0});
+          }
+          runId = id; runStart = r0; runLen = 1;
+        }
+      }
+    }
+    // dedupe
+    const keyset = new Set();
+    const out = [];
+    for(const p of toRemove){ const key = p.r+','+p.c; if (!keyset.has(key)){ keyset.add(key); out.push(p); } }
+    return out;
+  }
+
+  // remove matches (set id=-1) and return count
+  function removeMatches(list){
+    for(const p of list) grid[p.r][p.c].id = -1;
+    return list.length;
+  }
+
+  // animate remove: simple fade / scale
+  async function animateRemove(list){
+    for(const item of list){
+      const cell = boardEl.querySelector(`.cell[data-r="${item.r}"][data-c="${item.c}"]`);
+      if (cell){
+        cell.style.transform = 'scale(0.6)';
+        const img = cell.querySelector('img');
+        if (img) img.style.transform = 'scale(0.4)';
+        cell.style.opacity = '0.25';
+      }
+    }
+    await sleep(180);
+  }
+
+  // gravity: for each column, drop candies down to fill -1
+  function applyGravity(){
+    for(let c0=0;c0<cols;c0++){
+      let write = rows-1;
+      for(let r0=rows-1;r0>=0;r0--){
+        if (grid[r0][c0].id >= 0){
+          grid[write][c0].id = grid[r0][c0].id;
+          write--;
+        }
+      }
+      for(let rfill = write; rfill>=0; rfill--){
+        grid[rfill][c0].id = -1;
+      }
     }
   }
-  // remove any initial matches
-  while(true){
-    const matches = findMatches();
-    if(matches.length===0) break;
-    for(const m of matches){
-      for(const {r,c} of m) board[r][c]=randomCandy();
+
+  // refill empty slots with random (ensure no instant matches maybe)
+  function refillBoard(){
+    for(let c0=0;c0<cols;c0++){
+      for(let r0=0;r0<rows;r0++){
+        if (grid[r0][c0].id === -1){
+          let id;
+          do { id = randInt(candies.length); } while (wouldCreateImmediateMatch(r0,c0,id));
+          grid[r0][c0].id = id;
+        }
+      }
     }
   }
-  renderAll();
-}
 
-function renderAll(){
-  const nodes = document.querySelectorAll('#board .candy');
-  nodes.forEach(n=>{
-    const r = +n.dataset.r, c=+n.dataset.c;
-    renderTile(n, r, c);
-  });
-}
-
-function renderTile(node,r,c){
-  const val = board[r][c];
-  node.innerHTML='';
-  if(val){
-    const img = document.createElement('img');
-    img.src = `images/candy-${val}.png`;
-    img.alt='c';
-    node.appendChild(img);
+  function wouldCreateImmediateMatch(r,c,id){
+    // check left x2
+    if (c>=2 && grid[r][c-1].id===id && grid[r][c-2].id===id) return true;
+    // up x2
+    if (r>=2 && grid[r-1][c].id===id && grid[r-2][c].id===id) return true;
+    return false;
   }
-}
 
-// pointer swipe handling
-let pointerStartX=0, pointerStartY=0, pointerDown=false, startR=-1, startC=-1;
-function onPointerDown(e){
-  e.preventDefault();
-  const el = e.currentTarget; pointerDown=true;
-  pointerStartX = e.clientX; pointerStartY = e.clientY;
-  startR = +el.dataset.r; startC = +el.dataset.c;
-}
-function onPointerMove(e){
-  if(!pointerDown) return;
-}
-function onPointerUp(e){
-  if(!pointerDown) return; pointerDown=false;
-  const dx = e.clientX - pointerStartX; const dy = e.clientY - pointerStartY;
-  const absX = Math.abs(dx), absY = Math.abs(dy);
-  let tr=startR, tc=startC;
-  if(Math.max(absX,absY) < 20) return; // small tap
-  if(absX>absY){ // horizontal
-    tc = dx>0 ? startC+1 : startC-1;
-  } else {
-    tr = dy>0 ? startR+1 : startR-1;
+  // shuffle board randomly
+  function shuffleBoard(){
+    const all = [];
+    for(let r0=0;r0<rows;r0++) for(let c0=0;c0<cols;c0++) all.push(grid[r0][c0].id);
+    // Fisher-Yates
+    for(let i=all.length-1;i>0;i--){ const j=randInt(i+1); [all[i],all[j]]=[all[j],all[i]]; }
+    let idx=0;
+    for(let r0=0;r0<rows;r0++) for(let c0=0;c0<cols;c0++) grid[r0][c0].id = all[idx++];
+    // if immediate matches exist, try again (but limit tries)
+    let tries=0;
+    while(findAllMatches().length>0 && tries<6){ shuffleBoard(); tries++; return; }
+    renderBoard();
   }
-  if(tr<0||tr>=boardRows||tc<0||tc>=boardCols) return;
-  swapAndResolve(startR,startC,tr,tc);
-}
 
-function swapAndResolve(r1,c1,r2,c2){
-  const tmp = board[r1][c1]; board[r1][c1]=board[r2][c2]; board[r2][c2]=tmp;
-  renderAll();
-  // check for matches, if none swap back
-  const matches = findMatches();
-  if(matches.length===0){
-    // invalid move -> swap back
-    setTimeout(()=>{ const t=board[r1][c1]; board[r1][c1]=board[r2][c2]; board[r2][c2]=t; renderAll(); }, 220);
-    return;
+  // small helper
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  // HUD updates
+  function updateHUD(){
+    document.querySelector('#hud-score').textContent = score;
+    document.querySelector('#hud-coins').textContent = coins;
+    document.querySelector('#hud-level').textContent = currentLevel;
   }
-  // we have matches -> process until none
-  processMatchesLoop();
-}
 
-function findMatches(){
-  const out = [];
-  // horizontal
-  for(let r=0;r<boardRows;r++){
-    let run=[{r,c:0}];
-    for(let c=1;c<boardCols;c++){
-      if(board[r][c] && board[r][c]===board[r][c-1]) run.push({r,c}); else { if(run.length>=CONFIG.matchSize) out.push(run); run=[{r,c}]; }
+  // level checks
+  function getLevelCfg(levelNum){
+    return LEVELS.find(l => l.level === levelNum);
+  }
+  function startLevel(levelNum){
+    const cfg = getLevelCfg(levelNum);
+    if (!cfg) {
+      alert('Level not defined: '+levelNum);
+      return;
     }
-    if(run.length>=CONFIG.matchSize) out.push(run);
-  }
-  // vertical
-  for(let c=0;c<boardCols;c++){
-    let run=[{r:0,c}];
-    for(let r=1;r<boardRows;r++){
-      if(board[r][c] && board[r][c]===board[r-1][c]) run.push({r,c}); else { if(run.length>=CONFIG.matchSize) out.push(run); run=[{r,c}]; }
+    // ensure unlocked:
+    const unlocked = getUnlockedLevels();
+    if (!unlocked.includes(levelNum)){
+      alert('This level is locked!');
+      return;
     }
-    if(run.length>=CONFIG.matchSize) out.push(run);
+    currentLevel = levelNum;
+    // set background according to pack
+    const pack = IMAGE_PACKS[currentPackKey];
+    if (pack && pack.bg) document.body.style.backgroundImage = `url("${pack.bg}")`;
+    initBoard(cfg.rows, cfg.cols, candies, cfg.moves);
+    updateHUD();
+    showPage('gamePage');
   }
-  return out;
-}
 
-async function processMatchesLoop(){
-  while(true){
-    const matches = findMatches();
-    if(matches.length===0) break;
-    const removeSet = new Set();
-    for(const m of matches) for(const p of m) removeSet.add(`${p.r},${p.c}`);
-    // animate remove
-    for(const key of removeSet){
-      const [r,c] = key.split(',').map(Number);
-      const node = document.querySelector(`#board .candy[data-r='${r}'][data-c='${c}']`);
-      node.classList.add('removing');
+  function checkLevelComplete(){
+    const cfg = getLevelCfg(currentLevel);
+    if (!cfg) return;
+    if (score >= cfg.goalScore){
+      // unlock next level
+      unlockLevel(currentLevel+1);
+      // show modal
+      const modal = document.querySelector('#levelComplete');
+      modal.classList.remove('hidden');
     }
-    // increment score
-    score += removeSet.size * CONFIG.baseScore;
-    updateUI();
-    await delay(260);
-    // clear
-    for(const key of removeSet){
-      const [r,c] = key.split(',').map(Number);
-      board[r][c]=null;
+  }
+
+  // unlock helpers
+  function getUnlockedLevels(){
+    try{
+      const raw = localStorage.getItem('unlockedLevels');
+      if (!raw) return [1];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [1];
+      return arr;
+    }catch(e){ return [1]; }
+  }
+  function unlockLevel(n){
+    const arr = new Set(getUnlockedLevels());
+    arr.add(1);
+    arr.add(n);
+    localStorage.setItem('unlockedLevels', JSON.stringify(Array.from(arr).sort((a,b)=>a-b)));
+  }
+
+  // pack switching
+  function setImagePack(key){
+    if (!IMAGE_PACKS[key]) return;
+    currentPackKey = key;
+    candies = IMAGE_PACKS[key].candies.slice();
+    if (IMAGE_PACKS[key].bg) document.body.style.backgroundImage = `url("${IMAGE_PACKS[key].bg}")`;
+    // re-init current level to apply new images
+    const cfg = getLevelCfg(currentLevel) || LEVELS[0];
+    initBoard(cfg.rows, cfg.cols, candies, cfg.moves);
+  }
+
+  // build level map UI
+  function buildMap(){
+    const mapList = document.querySelector('#mapList');
+    mapList.innerHTML = '';
+    const unlocked = getUnlockedLevels();
+    for(const cfg of LEVELS){
+      const item = document.createElement('div');
+      item.className = 'map-item';
+      item.textContent = `Level ${cfg.level} — Goal: ${cfg.goalScore}`;
+      if (!unlocked.includes(cfg.level)) {
+        item.style.opacity = '0.45';
+        item.style.cursor = 'not-allowed';
+        item.innerHTML += ' 🔒';
+      } else {
+        item.addEventListener('click', ()=> startLevel(cfg.level));
+      }
+      mapList.appendChild(item);
     }
-    renderAll();
-    // gravity
-    applyGravity();
-    renderAll();
-    await delay(260);
   }
-  // check goal
-  if(score >= goal){
-    unlockNextLevel();
-    alert('Level complete! Next level unlocked.');
-  }
-}
 
-function applyGravity(){
-  for(let c=0;c<boardCols;c++){
-    let writeRow = boardRows-1;
-    for(let r=boardRows-1;r>=0;r--){
-      if(board[r][c]){ board[writeRow][c] = board[r][c]; writeRow--; }
-    }
-    for(let r=writeRow;r>=0;r--){ board[r][c] = randomCandy(); }
-  }
-}
+  // public small API for app.js
+  window.CandyEngine = {
+    initBoard, renderBoard, startLevel, setImagePack, shuffleBoard,
+    getUnlockedLevels, unlockLevel
+  };
 
-function delay(ms){return new Promise(res=>setTimeout(res,ms))}
-
-function updateUI(){
-  scoreEl.textContent = score;
-  coinsEl.textContent = coins;
-  levelEl.textContent = level;
-}
-
-function unlockNextLevel(){
-  const unlocked = Storage.get('unlocked',[1]);
-  if(!unlocked.includes(level+1)){
-    unlocked.push(level+1); Storage.set('unlocked',unlocked);
-  }
-}
-
-function initGame(levelIndex=1){
-  level = levelIndex;
-  // customize by level (grid size / goal)
-  const cols = Math.min(9, 6 + Math.floor((level-1)/3));
-  const rows = Math.min(9, 6 + Math.floor((level-1)/3));
-  goal = 500 * level;
-  CONFIG.cols = cols; CONFIG.rows = rows;
-  makeBoardGrid(cols, rows);
-  fillInitial();
-  score=0; updateUI();
-}
-
-window.addEventListener('load', ()=>{
-  boardEl = $('board'); scoreEl=$('score'); coinsEl=$('coins'); levelEl=$('level');
-  // setup default size
-  initGame(Storage.get('currentLevel',1));
-
-  $('restart').addEventListener('click', ()=> initGame(level));
-  $('shuffle').addEventListener('click', ()=>{
-    // shuffle board
-    for(let r=0;r<boardRows;r++) for(let c=0;c<boardCols;c++) board[r][c]=randomCandy(); renderAll();
-  });
-});
-
-// expose initGame for level-map.js
-window.initGame = initGame;
+  // export a simple debug mount
+  console.log('CandyEngine ready');
+})();
