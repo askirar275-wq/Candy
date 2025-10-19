@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="2000" viewBox="0 0 1200 2000" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffd1e6"/>
+      <stop offset="40%" stop-color="#ffebf3"/>
+      <stop offset="100%" stop-color="#d7fbe8"/>
+    </linearGradient>
+
+    <radialGradient id="bubble" cx="30%" cy="20%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="30" />
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="2000" fill="url(#g1)" />
+
+  <!-- soft clouds / shapes -->
+  <g opacity="0.9" filter="url(#soft)">
+    <ellipse cx="900" cy="220" rx="420" ry="200" fill="#ffd1e6" opacity="0.55" />
+    <ellipse cx="220" cy="140" rx="300" ry="140" fill="#fff3f8" opacity="0.5" />
+    <ellipse cx="600" cy="650" rx="520" ry="260" fill="#e9fff6" opacity="0.45" />
+  </g>
+
+  <!-- trees style rounded shapes -->
+  <g transform="translate(60,920)" opacity="0.95">
+    <ellipse cx="220" cy="180" rx="210" ry="110" fill="#7fe6a7" />
+    <ellipse cx="440" cy="140" rx="160" ry="90" fill="#65d18a" />
+    <ellipse cx="80" cy="120" rx="120" ry="70" fill="#5fcf85" />
+  </g>
+
+  <!-- foreground candies / shapes (decorative) -->
+  <g transform="translate(60,1250)" opacity="0.95">
+    <g transform="translate(40,40)">
+      <rect x="0" y="0" width="220" height="220" rx="28" fill="#96e88f" />
+      <rect x="28" y="28" width="164" height="164" rx="20" fill="url(#bubble)" opacity="0.18" />
+    </g>
+
+    <g transform="translate(320,10)">
+      <circle cx="120" cy="120" r="110" fill="#ffd1e6" />
+      <circle cx="120" cy="120" r="80" fill="#ff7bac" opacity="0.9" />
+    </g>
+
+    <g transform="translate(640,80)">
+      <path d="M40 160 C98 20 182 20 240 160 L240 240 L40 240 Z" fill="#ffd879" stroke="#ffbf00" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- top-left small lollipop -->
+  <g transform="translate(70,70) scale(0.6)">
+    <circle cx="100" cy="100" r="54" fill="#ffe9f3"/>
+    <circle cx="100" cy="100" r="42" fill="#ff6fa8"/>
+    <rect x="96" y="140" width="8" height="70" fill="#fff7f9" transform="rotate(10 100 175)" />
+  </g>
+
+  <!-- soft overlay for readability -->
+  <rect width="1200" height="2000" fill="url(#bubble)" opacity="0.06"/>
+</svg>
