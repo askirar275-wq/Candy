@@ -3,51 +3,82 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Play</title>
+  <title>Candy Match — Demo</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="app" class="page">
-    <!-- header / top bar -->
-    <header class="topbar">
-      <a id="backHome" class="btn small">← Map</a>
-      <div class="stats">
-        <div>Score: <span id="score">0</span></div>
-        <div>Coins: <span id="coins">0</span></div>
-        <div>Level: <span id="level">1</span></div>
+  <!-- Home screen -->
+  <main id="homePage" class="page active">
+    <div class="hero">
+      <img class="hero-icon" src="images/pack-classic/candy1.png" alt="logo">
+      <h1>Candy Match</h1>
+      <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+      <div class="btn-row">
+        <button id="btnStart" class="big">🎮 खेल शुरू करें</button>
+        <button id="btnPacks" class="ghost">पैक्स</button>
       </div>
-    </header>
+    </div>
+  </main>
 
-    <!-- game board container -->
-    <main class="board-area">
-      <div id="boardWrap" class="board-wrap">
-        <div id="board" class="board"></div>
-      </div>
+  <!-- Level Map -->
+  <section id="mapPage" class="page">
+    <div class="header">
+      <button id="backFromMap" class="back">← Back</button>
+      <h2>Level Map</h2>
+    </div>
+    <div id="mapList" class="map-list">
+      <div class="loading">Loading levels…</div>
+    </div>
+  </section>
 
-      <div class="controls">
-        <button id="restart" class="btn">🔁 Restart</button>
-        <button id="shuffle" class="btn">🔀 Shuffle</button>
-      </div>
-    </main>
-
-    <!-- level modal (simple) -->
-    <div id="levelModal" class="modal hidden">
-      <div class="modal-body">
-        <h2>Level Map</h2>
-        <div id="levels" class="levels"></div>
-        <button id="closeMap" class="btn small">Close</button>
+  <!-- Game screen -->
+  <section id="gamePage" class="page">
+    <div class="game-top">
+      <button id="btnBackHome" class="back">← Home</button>
+      <div class="hud">
+        <div>Score: <span id="hud-score">0</span></div>
+        <div>Coins: <span id="hud-coins">0</span></div>
+        <div>Level: <span id="hud-level">1</span></div>
       </div>
     </div>
 
+    <div id="boardWrap">
+      <div id="board" class="board"></div>
+    </div>
+
+    <div class="controls">
+      <button id="btnRestart" class="control">🔁 Restart</button>
+      <button id="btnShuffle" class="control">🔀 Shuffle</button>
+      <button id="btnOpenMap" class="control">🗺️ Map</button>
+    </div>
+  </section>
+
+  <!-- Pack modal (simple) -->
+  <div id="packModal" class="modal hidden">
+    <div class="modal-inner">
+      <h3>Choose Image Pack</h3>
+      <button id="pack-classic" class="pack-btn">Classic</button>
+      <button id="pack-neon" class="pack-btn">Neon</button>
+      <button id="closePacks" class="ghost">Close</button>
+    </div>
   </div>
 
-  <!-- eruda console for debugging (mobile) -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init(); console.log('Eruda initialized');</script>
+  <!-- level complete modal -->
+  <div id="levelComplete" class="modal hidden">
+    <div class="modal-inner">
+      <h3>🎉 Level Complete!</h3>
+      <button id="nextLevelBtn" class="big">👉 Next Level</button>
+      <button id="closeLC" class="ghost">Close</button>
+    </div>
+  </div>
 
   <!-- scripts -->
-  <script src="js/storage.js" defer></script>
-  <script src="js/level-map.js" defer></script>
+  <!-- eruda console (dev) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+
+  <script src="js/config.js" defer></script>
   <script src="js/game.js" defer></script>
+  <script src="js/app.js" defer></script>
 </body>
   </html>
