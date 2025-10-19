@@ -1,450 +1,53 @@
 <!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Candy Match — Demo</title>
-<style>
-  :root{
-    --pink:#ff7bac;
-    --bg:#fde9f0;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Noto Sans',sans-serif;background:var(--bg);}
-  /* background image full */
-  .page {
-    min-height:100vh;
-    background-image: url('images/bg-gradient.png');
-    background-size: cover;
-    background-position: center;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:26px 12px;
-    box-sizing:border-box;
-  }
-
-  /* Card on home */
-  .home-card {
-    width:100%;
-    max-width:420px;
-    background:rgba(255,255,255,0.95);
-    border-radius:18px;
-    padding:28px;
-    margin-top:56px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.12);
-    text-align:center;
-  }
-  h1{margin:0 0 10px;font-size:34px;color:#ff3b88;letter-spacing:0.5px;}
-  p.lead{margin:0 0 18px;color:#333;opacity:0.9}
-
-  .btn {
-    background:linear-gradient(180deg,#ff78a8,#ff4b88);
-    color:#fff;
-    display:inline-block;
-    padding:12px 26px;
-    border-radius:28px;
-    box-shadow: 0 8px 16px rgba(255,75,136,0.18);
-    border:0;
-    font-size:18px;
-  }
-
-  /* GAME screen */
-  #game { display:none; width:100%; max-width:600px; margin:18px auto; }
-  .hud {
-    display:flex;
-    gap:12px;
-    align-items:center;
-    justify-content:space-between;
-    margin-bottom:14px;
-    padding:10px;
-  }
-  .hud .left { display:flex; gap:10px; align-items:center;}
-  .hud .box { background:#fff;border-radius:12px;padding:8px 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08);}
-  #boardWrap { background:rgba(255,255,255,0.95); padding:18px; border-radius:18px; box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
-  #board {
-    display:grid;
-    gap:10px;
-    width:100%;
-    touch-action: none; /* important for mobile drag */
-    user-select:none;
-    -webkit-user-select:none;
-  }
-  .cell {
-    aspect-ratio:1/1;
-    border-radius:12px;
-    background:linear-gradient(180deg,#fff,#f6f6f6);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow: 0 6px 10px rgba(0,0,0,0.03);
-    overflow:hidden;
-  }
-  .candy {
-    width:68%;
-    height:68%;
-    background-size:contain;
-    background-repeat:no-repeat;
-    background-position:center;
-    transition: transform 120ms ease, opacity 200ms ease;
-    will-change: transform;
-  }
-
-  /* controls */
-  .controls { display:flex; gap:14px; margin-top:18px; justify-content:center; }
-  .controls .small { background:#fff;border-radius:20px;padding:10px 14px;box-shadow:0 8px 18px rgba(0,0,0,0.06) }
-
-  /* responsive board sizes */
-  @media (min-width:0px){
-    #board { grid-template-columns: repeat(8, 1fr); max-width:420px; }
-    .candy { width:66%; height:66%; }
-  }
-  @media (min-width:600px){
-    #board { grid-template-columns: repeat(8, 1fr); max-width:540px; gap:12px; }
-  }
-
-  /* small helper */
-  .hidden { display:none!important; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Play</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-<!-- HOME PAGE -->
-<div id="home" class="page">
-  <div class="home-card" role="main">
-    <h1>🍭 Candy Match</h1>
-    <p class="lead">स्वीट्स को मिलाओ और लेवल पार करो!</p>
-    <button id="startBtn" class="btn">🎮 खेल शुरू करें</button>
-    <div style="height:18px"></div>
-    <button id="openMapBtn" class="btn" style="background:linear-gradient(180deg,#6ae7c6,#29d08b)">🗺 Level Map</button>
-  </div>
-</div>
-
-<!-- LEVEL MAP -->
-<div id="map" class="page" style="display:none;align-items:flex-start;padding-top:30px;">
-  <div style="width:100%;max-width:720px;">
-    <h2 style="font-size:28px;margin:6px 0 18px;">Level Map</h2>
-    <div id="levelsList" style="display:grid;grid-template-columns:repeat(2,1fr); gap:12px;"></div>
-    <div style="height:20px"></div>
-    <button id="mapBack" class="btn" style="background:#fff;color:#333;border-radius:12px;padding:10px 14px;">← Back</button>
-  </div>
-</div>
-
-<!-- GAME PAGE -->
-<div id="game" class="page">
-  <div style="width:100%;max-width:720px;">
-    <div class="hud">
-      <div class="left">
-        <button id="mapBtn" class="small">← Map</button>
-        <div style="width:8px"></div>
-        <div class="box">Score: <span id="score">0</span></div>
+  <div id="app" class="page">
+    <!-- header / top bar -->
+    <header class="topbar">
+      <a id="backHome" class="btn small">← Map</a>
+      <div class="stats">
+        <div>Score: <span id="score">0</span></div>
+        <div>Coins: <span id="coins">0</span></div>
+        <div>Level: <span id="level">1</span></div>
       </div>
-      <div style="display:flex;gap:12px;">
-        <div class="box">Coins: <span id="coins">0</span></div>
-        <div class="box">Level: <span id="levelNum">1</span></div>
+    </header>
+
+    <!-- game board container -->
+    <main class="board-area">
+      <div id="boardWrap" class="board-wrap">
+        <div id="board" class="board"></div>
+      </div>
+
+      <div class="controls">
+        <button id="restart" class="btn">🔁 Restart</button>
+        <button id="shuffle" class="btn">🔀 Shuffle</button>
+      </div>
+    </main>
+
+    <!-- level modal (simple) -->
+    <div id="levelModal" class="modal hidden">
+      <div class="modal-body">
+        <h2>Level Map</h2>
+        <div id="levels" class="levels"></div>
+        <button id="closeMap" class="btn small">Close</button>
       </div>
     </div>
 
-    <div id="boardWrap">
-      <div id="board" aria-live="polite"></div>
-    </div>
-
-    <div class="controls">
-      <button id="restartBtn" class="small">🔁 Restart</button>
-      <button id="shuffleBtn" class="small">🔀 Shuffle</button>
-    </div>
   </div>
-</div>
 
-<!-- SCRIPTS: Storage + Game logic (inline for simplicity) -->
-<script>
-/* Simple Storage shim — saves to localStorage */
-const Storage = (function(){
-  const key = 'candy_state_v1';
-  function _load(){
-    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch(e){ return {}; }
-  }
-  function _save(state){
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch(e){}
-  }
-  const st = _load();
-  return {
-    getLevel(){ return st.level || 1; },
-    setLevel(l){ st.level = l; _save(st); },
-    getCoins(){ return st.coins || 0; },
-    setCoins(c){ st.coins = c; _save(st); },
-    unlockLevel(l){ if(!st.unlocked) st.unlocked = {}; st.unlocked[l]=true; _save(st); },
-    isUnlocked(l){ if(!st.unlocked) return l===1; return !!st.unlocked[l] || l===1; }
-  };
-})();
-</script>
+  <!-- eruda console for debugging (mobile) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init(); console.log('Eruda initialized');</script>
 
-<script>
-/* game.js - core (same logic as provided earlier) */
-
-/* CONFIG */
-const BOARD_COLS = 8;
-const BOARD_ROWS = 8;
-const BOARD_SIZE = BOARD_COLS * BOARD_ROWS;
-const CANDY_TYPES = 6;
-const CANDY_IMG_PATH = (n) => `images/c${n}.png`;
-
-/* STATE */
-let board = new Array(BOARD_SIZE).fill(null);
-let score = 0;
-let level = Storage.getLevel ? Storage.getLevel() : 1;
-let coins = Storage.getCoins ? Storage.getCoins() : 0;
-let isProcessing = false;
-let dragFromIndex = null;
-let pointerStartX=0,pointerStartY=0,pointerEndX=0,pointerEndY=0;
-
-/* DOM */
-const homePage = document.getElementById('home');
-const mapPage = document.getElementById('map');
-const gamePage = document.getElementById('game');
-const startBtn = document.getElementById('startBtn');
-const openMapBtn = document.getElementById('openMapBtn');
-const mapBack = document.getElementById('mapBack');
-const levelsList = document.getElementById('levelsList');
-const boardEl = document.getElementById('board');
-const scoreEl = document.getElementById('score');
-const coinsEl = document.getElementById('coins');
-const levelNumEl = document.getElementById('levelNum');
-const restartBtn = document.getElementById('restartBtn');
-const shuffleBtn = document.getElementById('shuffleBtn');
-const mapBtn = document.getElementById('mapBtn');
-
-function randCandy(){ return Math.floor(Math.random()*CANDY_TYPES); }
-function indexOf(col,row){return row*BOARD_COLS+col;}
-function colOf(i){return i%BOARD_COLS;}
-function rowOf(i){return Math.floor(i/BOARD_COLS);}
-
-function updateHUD(){
-  if(scoreEl) scoreEl.textContent = score;
-  if(coinsEl) coinsEl.textContent = coins;
-  if(levelNumEl) levelNumEl.textContent = level;
-}
-
-/* RENDER */
-function renderBoard(){
-  if(!boardEl) return;
-  boardEl.innerHTML='';
-  boardEl.style.gridTemplateColumns = `repeat(${BOARD_COLS},1fr)`;
-  for(let i=0;i<BOARD_SIZE;i++){
-    const cell = document.createElement('div'); cell.className='cell'; cell.dataset.index=i;
-    const candy = document.createElement('div'); candy.className='candy';
-    if(board[i]!==null && board[i]!==undefined){
-      candy.style.backgroundImage = `url("${CANDY_IMG_PATH(board[i]+1)}")`;
-      candy.dataset.type = board[i];
-    } else { candy.dataset.type=''; candy.style.backgroundImage=''; }
-    attachPointerHandlers(cell,i);
-    cell.appendChild(candy); boardEl.appendChild(cell);
-  }
-}
-
-/* INIT */
-function initGame(){
-  console.log('initGame level',level);
-  score=0; coins = Storage.getCoins?Storage.getCoins():coins;
-  isProcessing=false;
-  do {
-    for(let i=0;i<BOARD_SIZE;i++) board[i]=randCandy();
-  } while (hasAnyMatches());
-  updateHUD(); renderBoard();
-}
-
-/* MATCH DETECTION */
-function findMatches(){
-  const matches = new Set();
-  for(let r=0;r<BOARD_ROWS;r++){
-    let runType=null, runStart=0;
-    for(let c=0;c<BOARD_COLS;c++){
-      const idx = indexOf(c,r); const t = board[idx];
-      if(t!==null && t===runType){
-      } else {
-        const runLen = c - runStart;
-        if(runType!==null && runLen>=3){ for(let k=runStart;k<c;k++) matches.add(indexOf(k,r)); }
-        runType = t; runStart = c;
-      }
-    }
-    const runLen = BOARD_COLS - runStart;
-    if(runType!==null && runLen>=3){ for(let k=runStart;k<BOARD_COLS;k++) matches.add(indexOf(k,r)); }
-  }
-  for(let c=0;c<BOARD_COLS;c++){
-    let runType=null, runStart=0;
-    for(let r=0;r<BOARD_ROWS;r++){
-      const idx = indexOf(c,r); const t = board[idx];
-      if(t!==null && t===runType){
-      } else {
-        const runLen = r - runStart;
-        if(runType!==null && runLen>=3){ for(let k=runStart;k<r;k++) matches.add(indexOf(c,k)); }
-        runType=t; runStart=r;
-      }
-    }
-    const runLen = BOARD_ROWS - runStart;
-    if(runType!==null && runLen>=3){ for(let k=runStart;k<BOARD_ROWS;k++) matches.add(indexOf(c,k)); }
-  }
-  return Array.from(matches);
-}
-function hasAnyMatches(){ return findMatches().length>0; }
-
-/* REMOVE / GRAVITY / REFILL */
-function wait(ms){ return new Promise(res=>setTimeout(res,ms)); }
-async function removeMatchesAndCollapse(){
-  const matches = findMatches();
-  if(matches.length===0) return 0;
-  isProcessing = true;
-  const gained = matches.length * 10;
-  score += gained; updateHUD();
-  matches.forEach(idx => board[idx]=null);
-  renderBoard();
-  await wait(220);
-  // gravity
-  for(let c=0;c<BOARD_COLS;c++){
-    const colVals=[];
-    for(let r=0;r<BOARD_ROWS;r++){
-      const idx = indexOf(c,r);
-      if(board[idx]!==null && board[idx]!==undefined) colVals.push(board[idx]);
-    }
-    for(let r=BOARD_ROWS-1;r>=0;r--){
-      const idx = indexOf(c,r);
-      const val = colVals.pop();
-      board[idx] = (val===undefined)?null:val;
-    }
-  }
-  renderBoard();
-  await wait(120);
-  for(let i=0;i<BOARD_SIZE;i++) if(board[i]===null || board[i]===undefined) board[i]=randCandy();
-  renderBoard();
-  await wait(160);
-  isProcessing=false;
-  return matches.length;
-}
-
-/* SWAP */
-function validIndex(i){return Number.isInteger(i) && i>=0 && i<BOARD_SIZE;}
-function areAdjacent(a,b){ const ca=colOf(a), ra=rowOf(a); const cb=colOf(b), rb=rowOf(b); return Math.abs(ca-cb)+Math.abs(ra-rb)===1; }
-async function trySwapAndResolve(fromIdx,toIdx){
-  if(isProcessing) return false;
-  if(!validIndex(fromIdx) || !validIndex(toIdx)) return false;
-  if(!areAdjacent(fromIdx,toIdx)) return false;
-  isProcessing=true;
-  const t=board[fromIdx]; board[fromIdx]=board[toIdx]; board[toIdx]=t;
-  renderBoard(); await wait(140);
-  if(hasAnyMatches()){
-    let totalRemoved=0;
-    while(hasAnyMatches()){
-      const removed = await removeMatchesAndCollapse();
-      totalRemoved += removed;
-    }
-    coins += Math.floor(totalRemoved/3);
-    if(Storage.setCoins) Storage.setCoins(coins);
-    updateHUD();
-    const target = level * 500;
-    if(score >= target){
-      Storage.unlockLevel(level+1);
-      setTimeout(()=>{ alert(`Level ${level} complete! Agla level unlock ho gaya.`); },200);
-    }
-    isProcessing=false; return true;
-  } else {
-    await wait(120);
-    const t2=board[fromIdx]; board[fromIdx]=board[toIdx]; board[toIdx]=t2;
-    renderBoard();
-    isProcessing=false; return false;
-  }
-}
-
-/* SHUFFLE / RESTART */
-function shuffleBoard(){
-  do { for(let i=0;i<BOARD_SIZE;i++) board[i]=randCandy(); } while(hasAnyMatches());
-  renderBoard();
-}
-function restartGame(){ initGame(); }
-
-/* POINTER HANDLERS */
-function attachPointerHandlers(cellEl, idx){
-  if(cellEl._hasHandlers) return;
-  cellEl._hasHandlers = true;
-  cellEl.addEventListener('pointerdown', (e)=>{
-    if(isProcessing) return;
-    e.preventDefault();
-    pointerStartX = e.clientX; pointerStartY = e.clientY; dragFromIndex = idx;
-  });
-  cellEl.addEventListener('pointerup', async (e)=>{
-    if(isProcessing) return;
-    pointerEndX = e.clientX; pointerEndY = e.clientY;
-    if(dragFromIndex===null) return;
-    const dx = pointerEndX - pointerStartX, dy = pointerEndY - pointerStartY;
-    const absX = Math.abs(dx), absY = Math.abs(dy);
-    let targetIdx = null;
-    if(Math.max(absX,absY) < 10){ dragFromIndex=null; return; }
-    if(absX > absY){
-      if(dx>0){ if(colOf(dragFromIndex) < BOARD_COLS-1) targetIdx = dragFromIndex+1; }
-      else { if(colOf(dragFromIndex) > 0) targetIdx = dragFromIndex-1; }
-    } else {
-      if(dy>0){ if(rowOf(dragFromIndex) < BOARD_ROWS-1) targetIdx = dragFromIndex + BOARD_COLS; }
-      else { if(rowOf(dragFromIndex) > 0) targetIdx = dragFromIndex - BOARD_COLS; }
-    }
-    if(targetIdx !== null) await trySwapAndResolve(dragFromIndex, targetIdx);
-    dragFromIndex = null;
-  });
-  cellEl.addEventListener('pointercancel', ()=>{ dragFromIndex = null; });
-}
-
-/* levels UI */
-function buildLevelsList(){
-  if(!levelsList) return;
-  levelsList.innerHTML = '';
-  const TOTAL = 30;
-  for(let i=1;i<=TOTAL;i++){
-    const b = document.createElement('button');
-    b.textContent = `Level ${i}`;
-    b.style.padding='12px 18px';
-    b.style.borderRadius='10px';
-    b.style.border='0';
-    b.style.background = Storage.isUnlocked(i) ? '#fff' : '#ffffffaa';
-    b.style.opacity = Storage.isUnlocked(i) ? '1' : '0.5';
-    b.onclick = ()=>{
-      if(Storage.isUnlocked(i)){
-        level = i;
-        Storage.setLevel && Storage.setLevel(i);
-        showGame();
-        setTimeout(()=>initGame(), 120);
-      } else {
-        alert('Ye level abhi locked hai. Pehle pehle wale level ko complete karo.');
-      }
-    };
-    levelsList.appendChild(b);
-  }
-}
-
-/* NAV */
-function showHome(){ homePage.style.display='flex'; mapPage.style.display='none'; gamePage.style.display='none'; }
-function showMap(){ homePage.style.display='none'; mapPage.style.display='flex'; gamePage.style.display='none'; buildLevelsList(); }
-function showGame(){ homePage.style.display='none'; mapPage.style.display='none'; gamePage.style.display='flex'; updateHUD(); renderBoard(); }
-
-/* Hook buttons */
-startBtn.addEventListener('click', ()=>{
-  // show map first (as user wanted) then choose level1
-  showMap();
-});
-openMapBtn.addEventListener('click', showMap);
-mapBack.addEventListener('click', showHome);
-if(mapBtn) mapBtn.addEventListener('click', showMap);
-if(restartBtn) restartBtn.addEventListener('click', restartGame);
-if(shuffleBtn) shuffleBtn.addEventListener('click', shuffleBoard);
-
-/* Auto show home */
-showHome();
-
-/* auto-init when game page becomes visible: ensure board is ready */
-const observer = new MutationObserver(()=>{
-  if(gamePage.style.display !== 'none'){
-    // init when entering game
-    initGame();
-  }
-});
-observer.observe(gamePage, {attributes:true, attributeFilter:['style']});
-</script>
-
+  <!-- scripts -->
+  <script src="js/storage.js" defer></script>
+  <script src="js/level-map.js" defer></script>
+  <script src="js/game.js" defer></script>
 </body>
   </html>
