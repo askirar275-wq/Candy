@@ -63,11 +63,12 @@
     </div>
   </div>
 
-  <!-- scripts -->
-  <script src="js/safe-ui.js" defer></script>
-  <script src="js/storage.js" defer></script>
-  <script src="js/level-map.js" defer></script>
-  <script src="js/game.js" defer></script>
-  <script src="js/shop.js" defer></script>
+<!-- scripts at end of body -->
+  <script defer src="js/safe-ui.js"></script>
+  <script defer src="js/storage.js"></script>
+  <!-- GAME engine must load BEFORE level-map, otherwise level-map calls startLevel before it's available -->
+  <script defer src="js/game.js"></script>
+  <script defer src="js/level-map.js"></script>
+  <script defer src="js/shop.js"></script>
 </body>
 </html>
