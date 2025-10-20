@@ -1,261 +1,236 @@
-// js/game.js
+// CandyGame engine (exposed as window.CandyGame)
 (function(){
-  console.log('Loaded: js/game.js (engine starting)');
+  const width = 8;
+  const candyCount = 6;
+  let board = [];
+  let boardEl, scoreEl, coinsEl, levelEl;
+  let score = 0, coins = 0, currentLevel = 1;
+  let isProcessing = false;
 
-  var rows = 8, cols = 8;
-  var candyCount = 6;
-  var candyPrefix = 'images/candy';
-  var boardEl = document.getElementById('board');
-  var scoreEl = document.getElementById('score');
-  var coinsEl = document.getElementById('coins');
-  var levelEl = document.getElementById('levelNum');
+  function randCandy(){ return Math.floor(Math.random()*candyCount)+1; }
 
-  var grid = [];
-  var score = 0;
-  var coins = 0;
-  var currentLevel = 1;
-  var animating = false;
-
-  function $(id){ return document.getElementById(id); }
-
-  // API for level map
-  window.CandyGame = {
-    startLevel: function(lvl){
-      currentLevel = lvl || 1;
-      if(levelEl) levelEl.textContent = currentLevel;
-      initBoard();
-      console.log('CandyEngine startLevel', currentLevel);
-    }
-  };
-
-  function randomCandy(){ return Math.floor(Math.random()*candyCount)+1; }
-
-  function createBoardLayout(){
-    if(!boardEl) return;
+  function createBoardUI(){
     boardEl.innerHTML = '';
-    for(var r=0;r<rows;r++){
-      var rowDiv = document.createElement('div'); rowDiv.className='row';
-      for(var c=0;c<cols;c++){
-        var cell = document.createElement('div'); cell.className='cell';
-        cell.dataset.r = r; cell.dataset.c = c;
-        var img = document.createElement('img'); img.draggable=false;
-        img.src = candyPrefix + '1.png'; img.style.visibility='hidden';
+    for(let i=0;i<width*width;i++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.idx = i;
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function renderBoard(){
+    for(let i=0;i<board.length;i++){
+      const cell = boardEl.children[i];
+      cell.innerHTML = '';
+      const v = board[i];
+      if(v){
+        const img = document.createElement('img');
+        img.src = `images/candy${v}.png`;
+        img.alt = '';
         cell.appendChild(img);
-        rowDiv.appendChild(cell);
       }
-      boardEl.appendChild(rowDiv);
     }
   }
 
-  function initBoard(){
-    animating = false;
-    score = 0; updateHUD();
-    grid = [];
-    boardEl.innerHTML = '';
-    for(var r=0;r<rows;r++){
-      var row = [];
-      for(var c=0;c<cols;c++){
-        var id = randomCandy();
-        var cellEl = document.createElement('div'); cellEl.className='cell'; cellEl.dataset.r=r; cellEl.dataset.c=c;
-        var img = document.createElement('img'); img.draggable=false; img.src = candyPrefix + id + '.png';
-        cellEl.appendChild(img);
-        row.push({id:id, el:cellEl});
-      }
-      grid.push(row);
+  function fillInitial(){
+    board = new Array(width*width).fill(0);
+    for(let i=0;i<board.length;i++) board[i]=randCandy();
+    // ensure no immediate matches
+    while(checkAnyMatches().length) {
+      for(let i=0;i<board.length;i++) board[i]=randCandy();
     }
-    // render
-    for(var rr=0; rr<rows; rr++){
-      var rd = document.createElement('div'); rd.className='row';
-      for(var cc=0; cc<cols; cc++) rd.appendChild(grid[rr][cc].el);
-      boardEl.appendChild(rd);
-    }
-
-    attachEvents();
-
-    // remove accidental initial matches
-    setTimeout(function(){
-      var m = findAllMatches();
-      if(m.length) {
-        removeMatches(m).then(function(){ collapseColumns(); refillBoard(); });
-      }
-    }, 80);
   }
 
-  function updateHUD(){ if(scoreEl) scoreEl.textContent = score; if(coinsEl) coinsEl.textContent = coins; }
-
-  // find matches
-  function findAllMatches(){
-    var map = {};
-    // rows
-    for(var r=0;r<rows;r++){
-      var run = grid[r][0].id, start = 0;
-      for(var c=1;c<=cols;c++){
-        var now = (c<cols)?grid[r][c].id:null;
-        if(now === run){} else {
-          var len = c - start;
-          if(run && len>=3){
-            for(var k=start;k<c;k++) map[r+','+k]=true;
-          }
-          start = c; run = now;
-        }
-      }
-    }
-    // cols
-    for(var c2=0;c2<cols;c2++){
-      var run2 = grid[0][c2].id, s2=0;
-      for(var r2=1;r2<=rows;r2++){
-        var now2 = (r2<rows)?grid[r2][c2].id:null;
-        if(now2 === run2){} else {
-          var len2 = r2 - s2;
-          if(run2 && len2>=3){
-            for(var k2=s2;k2<r2;k2++) map[k2+','+c2]=true;
-          }
-          s2 = r2; run2 = now2;
-        }
-      }
-    }
-    var out=[]; for(var k in map){ var p=k.split(','); out.push({r:parseInt(p[0],10),c:parseInt(p[1],10), id:grid[parseInt(p[0],10)][parseInt(p[1],10)].id}); }
-    return out;
+  // swap and check
+  function swap(i,j){
+    const tmp = board[i]; board[i]=board[j]; board[j]=tmp;
   }
 
-  function removeMatches(matches){
-    if(!matches || matches.length===0) return Promise.resolve();
-    animating = true;
-    for(var i=0;i<matches.length;i++){
-      var m = matches[i];
-      var el = grid[m.r][m.c].el;
-      el.classList.add('fade');
-    }
-    return new Promise(function(resolve){
-      setTimeout(function(){
-        for(var j=0;j<matches.length;j++){
-          var mm=matches[j];
-          grid[mm.r][mm.c].id = 0;
-          var im = grid[mm.r][mm.c].el.querySelector('img'); if(im) im.style.visibility='hidden';
-          grid[mm.r][mm.c].el.classList.remove('fade');
+  function inSameRow(a,b){
+    return Math.floor(a/width)===Math.floor(b/width);
+  }
+
+  function checkAnyMatches(){
+    const matches = [];
+    // horizontal
+    for(let r=0;r<width;r++){
+      for(let c=0;c<width-2;c++){
+        const i = r*width+c;
+        const v = board[i];
+        if(!v) continue;
+        if(board[i+1]===v && board[i+2]===v){
+          let j=i;
+          const group=[];
+          while(j<r*width+width && board[j]===v){ group.push(j); j++; }
+          matches.push(group);
         }
-        score += matches.length*10;
-        updateHUD();
-        animating = false;
-        resolve();
-      },250);
+      }
+    }
+    // vertical
+    for(let c=0;c<width;c++){
+      for(let r=0;r<width-2;r++){
+        const i = r*width+c;
+        const v=board[i];
+        if(!v) continue;
+        if(board[i+width]===v && board[i+2*width]===v){
+          let j=r;
+          const group=[];
+          while(j<width && board[j*width+c]===v){ group.push(j*width+c); j++; }
+          matches.push(group);
+        }
+      }
+    }
+    return matches;
+  }
+
+  function removeMatchesAndScore(){
+    const matches = checkAnyMatches();
+    if(!matches.length) return false;
+    let removedCount=0;
+    matches.forEach(g=>{
+      g.forEach(idx=>{
+        if(board[idx]!==0){ board[idx]=0; removedCount++; }
+      });
+    });
+    score += removedCount * 10;
+    coins += Math.floor(removedCount/3);
+    updateStats();
+    return true;
+  }
+
+  function collapseAndRefill(){
+    for(let c=0;c<width;c++){
+      const col=[];
+      for(let r=0;r<width;r++){
+        const v = board[r*width+c];
+        if(v) col.push(v);
+      }
+      const missing = width - col.length;
+      const newCol = new Array(missing).fill(0).map(()=>randCandy()).concat(col);
+      for(let r=0;r<width;r++){
+        board[r*width+c]=newCol[r];
+      }
+    }
+  }
+
+  function updateStats(){
+    scoreEl.textContent = score;
+    coinsEl.textContent = coins;
+    levelEl.textContent = currentLevel;
+  }
+
+  // touch / mouse swap handling
+  let dragStartIdx = null;
+  function bindInput(){
+    let startX=0,startY=0;
+    boardEl.addEventListener('pointerdown', (e)=>{
+      const el = e.target.closest('.cell');
+      if(!el) return;
+      dragStartIdx = parseInt(el.dataset.idx,10);
+      startX = e.clientX; startY = e.clientY;
+    });
+    boardEl.addEventListener('pointerup',(e)=>{
+      if(dragStartIdx===null) return;
+      const el = e.target.closest('.cell');
+      if(!el){ dragStartIdx=null; return; }
+      const endIdx = parseInt(el.dataset.idx,10);
+      if(endIdx===dragStartIdx){ dragStartIdx=null; return;}
+      // check adjacency: up/down/left/right
+      const di = Math.abs(endIdx-dragStartIdx);
+      const valid = (di===1 && inSameRow(endIdx,dragStartIdx)) || (di===width);
+      if(!valid){ dragStartIdx=null; return; }
+      trySwapAndResolve(dragStartIdx,endIdx);
+      dragStartIdx=null;
     });
   }
 
-  function collapseColumns(){
-    for(var c=0;c<cols;c++){
-      var write = rows-1;
-      for(var r=rows-1;r>=0;r--){
-        if(grid[r][c].id !== 0){
-          if(write !== r){
-            grid[write][c].id = grid[r][c].id;
-            var src = grid[r][c].el.querySelector('img');
-            var dst = grid[write][c].el.querySelector('img');
-            if(dst && src){ dst.src = src.src; dst.style.visibility='visible'; }
-            grid[r][c].id = 0;
-            var h = grid[r][c].el.querySelector('img'); if(h) h.style.visibility='hidden';
-          }
-          write--;
-        }
-      }
-      for(var rf = write; rf>=0; rf--){
-        var nid = randomCandy();
-        grid[rf][c].id = nid;
-        var imf = grid[rf][c].el.querySelector('img'); if(imf){ imf.src = candyPrefix + nid + '.png'; imf.style.visibility='visible'; }
-      }
+  async function trySwapAndResolve(i,j){
+    if(isProcessing) return;
+    isProcessing = true;
+    swap(i,j);
+    renderBoard();
+    await sleep(120);
+    let matched = checkAnyMatches().length>0;
+    if(!matched){
+      // revert
+      swap(i,j);
+      renderBoard();
+      isProcessing=false;
+      return;
     }
-  }
-
-  function refillBoard(){
-    if(animating) return;
-    var tries = 0;
-    (function step(){
-      var m = findAllMatches();
-      if(m.length && tries<12){
-        tries++;
-        removeMatches(m).then(function(){ collapseColumns(); setTimeout(step,120); });
-      } else {
-        // level check
-        var goal = currentLevel * 500;
-        if(score >= goal){
-          var prog = window.Storage.get('candy_progress', {unlocked:[1],coins:0});
-          if(prog.unlocked.indexOf(currentLevel+1) === -1){ prog.unlocked.push(currentLevel+1); window.Storage.set('candy_progress', prog); }
-          setTimeout(function(){ alert('Level cleared! Next unlocked.'); }, 60);
-        }
-      }
-    })();
-  }
-
-  // swap
-  function trySwap(r1,c1,r2,c2){
-    if(animating) return;
-    var t = grid[r1][c1].id;
-    grid[r1][c1].id = grid[r2][c2].id; grid[r2][c2].id = t;
-    var im1 = grid[r1][c1].el.querySelector('img'); var im2 = grid[r2][c2].el.querySelector('img');
-    var s1=im1.src, s2=im2.src; im1.src=s2; im2.src=s1;
-    var m = findAllMatches();
-    if(m.length){
-      removeMatches(m).then(function(){ collapseColumns(); setTimeout(refillBoard,120); });
-    } else {
-      animating = true;
-      setTimeout(function(){ // revert
-        var tmp = grid[r1][c1].id; grid[r1][c1].id = grid[r2][c2].id; grid[r2][c2].id = tmp;
-        im1.src=s1; im2.src=s2;
-        animating = false;
-      },150);
+    // resolve loop
+    while(true){
+      await sleep(120);
+      removeMatchesAndScore();
+      renderBoard();
+      await sleep(120);
+      collapseAndRefill();
+      renderBoard();
+      await sleep(140);
+      if(!checkAnyMatches().length) break;
     }
+    isProcessing=false;
+    saveProgress();
   }
 
-  // pointer attach
-  var startR = null, startC = null;
-  function attachEvents(){
-    if(!boardEl) return;
-    var cells = boardEl.querySelectorAll('.cell');
-    for(var i=0;i<cells.length;i++){
-      (function(cell){
-        cell.onpointerdown = function(e){
-          if(animating) return;
-          startR = Number(cell.dataset.r); startC = Number(cell.dataset.c);
-          cell.classList.add('moving');
-          try{ e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); }catch(ex){}
-        };
-        cell.onpointerup = function(e){
-          if(animating) return;
-          var r = Number(cell.dataset.r); var c = Number(cell.dataset.c);
-          var dr = r - startR, dc = c - startC;
-          var absr = Math.abs(dr), absc = Math.abs(dc);
-          if(absr + absc === 1){
-            trySwap(startR, startC, r, c);
-          }
-          var all = boardEl.querySelectorAll('.cell'); for(var j=0;j<all.length;j++) all[j].classList.remove('moving');
-          startR = startC = null;
-        };
-        cell.onpointercancel = function(){ var all = boardEl.querySelectorAll('.cell'); for(var j=0;j<all.length;j++) all[j].classList.remove('moving'); startR=startC=null; };
-        cell.ondragstart = function(){ return false; };
-      }(cells[i]));
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function shuffleBoard(){
+    for(let i=0;i<board.length;i++) board[i]=randCandy();
+    // ensure at least one valid match exists
+    while(!checkAnyMatches().length){
+      for(let i=0;i<board.length;i++) board[i]=randCandy();
     }
-    var restart = document.getElementById('restartBtn'); var shuffle = document.getElementById('shuffleBtn');
-    if(restart) restart.onclick = function(){ initBoard(); };
-    if(shuffle) shuffle.onclick = function(){ safeShuffle(); };
+    renderBoard();
   }
 
-  function safeShuffle(){
-    var arr=[];
-    for(var r=0;r<rows;r++) for(var c=0;c<cols;c++) arr.push(grid[r][c].id);
-    for(var i=arr.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; }
-    var idx=0; for(var rr=0;rr<rows;rr++) for(var cc=0;cc<cols;cc++){ grid[rr][cc].id = arr[idx++]; var im = grid[rr][cc].el.querySelector('img'); if(im){ im.src=candyPrefix+grid[rr][cc].id+'.png'; im.style.visibility='visible'; } }
-    // ensure no immediate matches
-    var tries=0;
-    while(findAllMatches().length && tries<12){ tries++; for(var k=arr.length-1;k>0;k--){ var kk=Math.floor(Math.random()*(k+1)); var t=arr[k]; arr[k]=arr[kk]; arr[kk]=t; } idx=0; for(var rr2=0;rr2<rows;rr2++) for(var cc2=0;cc2<cols;cc2++){ grid[rr2][cc2].id = arr[idx++]; var im2 = grid[rr2][cc2].el.querySelector('img'); if(im2){ im2.src = candyPrefix + grid[rr2][cc2].id + '.png'; im2.style.visibility='visible'; } } }
-    console.log('shuffled tries=',tries);
+  function restart(){
+    score=0;
+    fillInitial();
+    renderBoard();
+    updateStats();
+    saveProgress();
   }
 
-  // init on dom
-  document.addEventListener('DOMContentLoaded', function(){
-    if(!boardEl) { console.warn('board not found'); return; }
-    // prepare small blank layout first
-    createBoardLayout();
-    console.log('CandyEngine ready');
-  });
+  function saveProgress(){
+    Storage.set('candy-coins', coins);
+    Storage.set('candy-best-score', score);
+  }
 
+  // public API
+  window.CandyGame = {
+    init: function(opts){
+      boardEl = document.getElementById('board');
+      scoreEl = document.getElementById('score');
+      coinsEl = document.getElementById('coins');
+      levelEl = document.getElementById('level-num');
+
+      coins = Storage.get('candy-coins', 0);
+      score = 0;
+      currentLevel = opts && opts.level ? opts.level : 1;
+      updateStats();
+      createBoardUI();
+      fillInitial();
+      renderBoard();
+      bindInput();
+
+      // expose actions for UI
+      document.getElementById('btn-restart').addEventListener('click',restart);
+      document.getElementById('btn-shuffle').addEventListener('click',()=>{
+        shuffleBoard();
+        saveProgress();
+      });
+      console.info('CandyEngine ready');
+    },
+    startLevel: function(level){
+      currentLevel = level;
+      score = 0;
+      // level settings (example): you could vary width / targets per level - keep simple now
+      updateStats();
+      fillInitial();
+      renderBoard();
+      console.info('Started level', level);
+    }
+  };
 })();
