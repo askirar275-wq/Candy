@@ -1,84 +1,75 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match — Demo</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Eruda for mobile console (dev only) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init(); console.log('Eruda console loaded');</script>
 </head>
 <body>
-  <!-- Home screen -->
-  <main id="homePage" class="page active">
-    <div class="hero">
-      <img class="hero-icon" src="images/pack-classic/candy1.png" alt="logo">
-      <h1>Candy Match</h1>
+
+  <!-- HOME -->
+  <main id="homeScreen" class="screen center-screen" aria-hidden="false">
+    <div class="home-bg">
+      <img src="images/bg-gradient.png" alt="bg" class="bg-img">
+    </div>
+
+    <div class="home-card">
+      <h1>🍭 Candy Match</h1>
       <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-      <div class="btn-row">
-        <button id="btnStart" class="big">🎮 खेल शुरू करें</button>
-        <button id="btnPacks" class="ghost">पैक्स</button>
-      </div>
+      <button id="btnStart" class="big-btn">🎮 खेल शुरू करें</button>
+      <div class="home-foot">Made with ❤️ — Your Studio</div>
     </div>
   </main>
 
-  <!-- Level Map -->
-  <section id="mapPage" class="page">
-    <div class="header">
-      <button id="backFromMap" class="back">← Back</button>
+  <!-- LEVEL MAP -->
+  <section id="mapScreen" class="screen" aria-hidden="true">
+    <div class="map-header">
+      <button id="backToHome" class="pill">← Home</button>
       <h2>Level Map</h2>
     </div>
-    <div id="mapList" class="map-list">
-      <div class="loading">Loading levels…</div>
-    </div>
+
+    <div id="levelList" class="level-list"></div>
   </section>
 
-  <!-- Game screen -->
-  <section id="gamePage" class="page">
-    <div class="game-top">
-      <button id="btnBackHome" class="back">← Home</button>
+  <!-- GAME -->
+  <section id="gameScreen" class="screen" aria-hidden="true">
+    <div class="game-header">
+      <button id="backToMap" class="pill">← Map</button>
       <div class="hud">
-        <div>Score: <span id="hud-score">0</span></div>
-        <div>Coins: <span id="hud-coins">0</span></div>
-        <div>Level: <span id="hud-level">1</span></div>
+        <div class="hud-item">Score: <span id="score">0</span></div>
+        <div class="hud-item">Coins: <span id="coins">0</span></div>
+        <div class="hud-item">Level: <span id="levelNum">1</span></div>
       </div>
     </div>
 
-    <div id="boardWrap">
+    <div id="boardWrap" class="board-wrap">
       <div id="board" class="board"></div>
     </div>
 
     <div class="controls">
-      <button id="btnRestart" class="control">🔁 Restart</button>
-      <button id="btnShuffle" class="control">🔀 Shuffle</button>
-      <button id="btnOpenMap" class="control">🗺️ Map</button>
+      <button id="restartBtn" class="control-btn">↻ Restart</button>
+      <button id="shuffleBtn" class="control-btn">🔀 Shuffle</button>
+      <button id="openShop" class="control-btn">🛒 Shop</button>
     </div>
   </section>
 
-  <!-- Pack modal (simple) -->
-  <div id="packModal" class="modal hidden">
-    <div class="modal-inner">
-      <h3>Choose Image Pack</h3>
-      <button id="pack-classic" class="pack-btn">Classic</button>
-      <button id="pack-neon" class="pack-btn">Neon</button>
-      <button id="closePacks" class="ghost">Close</button>
+  <!-- SIMPLE SHOP (stub) -->
+  <div id="shopModal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Shop</h3>
+      <p>यहाँ पॉवर-अप और कस्टम पैक आ सकते हैं।</p>
+      <button id="closeShop" class="control-btn">Close</button>
     </div>
   </div>
 
-  <!-- level complete modal -->
-  <div id="levelComplete" class="modal hidden">
-    <div class="modal-inner">
-      <h3>🎉 Level Complete!</h3>
-      <button id="nextLevelBtn" class="big">👉 Next Level</button>
-      <button id="closeLC" class="ghost">Close</button>
-    </div>
-  </div>
-
-  <!-- scripts -->
-  <!-- eruda console (dev) -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
-
-  <script src="js/config.js" defer></script>
-  <script src="js/game.js" defer></script>
-  <script src="js/app.js" defer></script>
+  <script defer src="js/storage.js"></script>
+  <script defer src="js/safe-ui.js"></script>
+  <script defer src="js/level-map.js"></script>
+  <script defer src="js/shop.js"></script>
+  <script defer src="js/game.js"></script>
 </body>
-  </html>
+</html>
