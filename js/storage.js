@@ -1,22 +1,27 @@
-// storage.js
-const Storage = {
-  get(key, defaultValue){
-    try{
-      const v = localStorage.getItem(key);
-      return v? JSON.parse(v): defaultValue;
-    }catch(e){
-      console.error('Storage.get error', e);
-      return defaultValue;
+// js/storage.js
+(function(){
+  var store = {
+    get: function(key, def){
+      try {
+        var v = window.localStorage.getItem(key);
+        if(!v) return def || null;
+        return JSON.parse(v);
+      } catch(e){ return def || null; }
+    },
+    set: function(key, val){
+      try { window.localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
     }
-  },
-  set(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); }
-    catch(e){ console.error('Storage.set error', e); }
-  }
-};
+  };
+  window.Storage = store;
 
-// init default progress if not present
-if (!Storage.get('candy_progress', null)){
-  Storage.set('candy_progress', {unlocked: [1], coins:0});
-}
-console.log('Loaded: js/storage.js');
+  // initialize default progress if not present
+  document.addEventListener('DOMContentLoaded', function(){
+    var prog = Storage.get('candy_progress');
+    if(!prog){
+      Storage.set('candy_progress', { unlocked: [1], coins: 0 });
+      console.log('Loaded: js/storage.js (init)');
+    } else {
+      console.log('Loaded: js/storage.js');
+    }
+  });
+})();
