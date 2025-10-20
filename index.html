@@ -1,74 +1,59 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body data-page="home">
-  <!-- safe ui / eruda will be injected by safe-ui.js -->
+<body>
   <div id="app">
-    <!-- HOME -->
+    <!-- Home -->
     <main id="home" class="page">
-      <div class="hero">
-        <img src="images/bg-gradient.png" class="hero-bg" alt="bg" />
+      <div class="hero" style="background-image:url('images/bg-gradient.png')">
         <div class="hero-card">
           <h1>🍭 Candy Match</h1>
           <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-          <button id="btnPlay" class="btn primary">🎮 खेल शुरू करें</button>
-          <button id="btnMap" class="btn">🗺️ Level Map</button>
+          <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
+          <button id="btn-map" class="btn">🗺️ Level Map</button>
         </div>
       </div>
     </main>
 
-    <!-- LEVEL MAP -->
-    <section id="levelMap" class="page hidden">
-      <div class="topbar">
-        <button id="btnMapBack" class="btn small">← Home</button>
-        <h2>Level Map</h2>
-      </div>
-      <div id="levelsContainer" class="levels"></div>
+    <!-- Level map -->
+    <section id="map" class="page hidden">
+      <button class="back btn" data-go="home">← Home</button>
+      <h2>Level Map</h2>
+      <div id="levels" class="levels"></div>
     </section>
 
-    <!-- GAME -->
+    <!-- Game -->
     <section id="game" class="page hidden">
-      <div class="topbar">
-        <button id="btnHome" class="btn small">← Map</button>
-        <div class="hud">
+      <header class="game-header">
+        <button class="back btn" data-go="map">← Map</button>
+        <div class="stats">
           <div>Score: <span id="score">0</span></div>
           <div>Coins: <span id="coins">0</span></div>
-          <div>Level: <span id="levelNum">1</span></div>
+          <div>Level: <span id="level-num">1</span></div>
         </div>
-      </div>
+      </header>
 
-      <div id="boardWrap">
+      <div class="board-wrap">
         <div id="board" class="board"></div>
       </div>
 
       <div class="controls">
-        <button id="restartBtn" class="btn">🔄 Restart</button>
-        <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
-        <button id="openShop" class="btn">🛒 Shop</button>
+        <button id="btn-restart" class="btn">🔁 Restart</button>
+        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
       </div>
     </section>
-
-    <!-- SHOP -->
-    <div id="shop" class="modal hidden">
-      <div class="modal-card">
-        <h3>Shop</h3>
-        <p>यहाँ पावर-अप और कस्टम पैक आ सकते हैं।</p>
-        <button id="closeShop" class="btn">Close</button>
-      </div>
-    </div>
   </div>
 
-<!-- scripts at end of body -->
-  <script defer src="js/safe-ui.js"></script>
+  <!-- Scripts -->
   <script defer src="js/storage.js"></script>
-  <!-- GAME engine must load BEFORE level-map, otherwise level-map calls startLevel before it's available -->
+  <script defer src="js/safe-ui.js"></script>
   <script defer src="js/game.js"></script>
   <script defer src="js/level-map.js"></script>
-  <script defer src="js/shop.js"></script>
+
 </body>
 </html>
