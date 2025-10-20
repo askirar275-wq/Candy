@@ -1,4 +1,5 @@
-// CandyGame engine (exposed as window.CandyGame)
+// js/game.js
+// Safe Candy engine — replace existing file with this
 (function(){
   const width = 8;
   const candyCount = 6;
@@ -10,6 +11,7 @@
   function randCandy(){ return Math.floor(Math.random()*candyCount)+1; }
 
   function createBoardUI(){
+    if(!boardEl) return;
     boardEl.innerHTML = '';
     for(let i=0;i<width*width;i++){
       const cell = document.createElement('div');
@@ -20,8 +22,10 @@
   }
 
   function renderBoard(){
+    if(!boardEl) return;
     for(let i=0;i<board.length;i++){
       const cell = boardEl.children[i];
+      if(!cell) continue;
       cell.innerHTML = '';
       const v = board[i];
       if(v){
@@ -36,13 +40,14 @@
   function fillInitial(){
     board = new Array(width*width).fill(0);
     for(let i=0;i<board.length;i++) board[i]=randCandy();
-    // ensure no immediate matches
-    while(checkAnyMatches().length) {
+    // remove accidental immediate matches
+    let tries=0;
+    while(checkAnyMatches().length && tries<30) {
       for(let i=0;i<board.length;i++) board[i]=randCandy();
+      tries++;
     }
   }
 
-  // swap and check
   function swap(i,j){
     const tmp = board[i]; board[i]=board[j]; board[j]=tmp;
   }
@@ -114,15 +119,21 @@
     }
   }
 
-  function updateStats(){
-    scoreEl.textContent = score;
-    coinsEl.textContent = coins;
-    levelEl.textContent = currentLevel;
+  function safeSetText(el, txt){
+    if(!el) return;
+    el.textContent = txt;
   }
 
-  // touch / mouse swap handling
+  function updateStats(){
+    safeSetText(scoreEl, score);
+    safeSetText(coinsEl, coins);
+    safeSetText(levelEl, currentLevel);
+  }
+
+  // input handling (pointer)
   let dragStartIdx = null;
   function bindInput(){
+    if(!boardEl) return;
     let startX=0,startY=0;
     boardEl.addEventListener('pointerdown', (e)=>{
       const el = e.target.closest('.cell');
@@ -136,7 +147,6 @@
       if(!el){ dragStartIdx=null; return; }
       const endIdx = parseInt(el.dataset.idx,10);
       if(endIdx===dragStartIdx){ dragStartIdx=null; return;}
-      // check adjacency: up/down/left/right
       const di = Math.abs(endIdx-dragStartIdx);
       const valid = (di===1 && inSameRow(endIdx,dragStartIdx)) || (di===width);
       if(!valid){ dragStartIdx=null; return; }
@@ -178,9 +188,10 @@
 
   function shuffleBoard(){
     for(let i=0;i<board.length;i++) board[i]=randCandy();
-    // ensure at least one valid match exists
-    while(!checkAnyMatches().length){
+    let tries=0;
+    while(!checkAnyMatches().length && tries<30){
       for(let i=0;i<board.length;i++) board[i]=randCandy();
+      tries++;
     }
     renderBoard();
   }
@@ -194,43 +205,64 @@
   }
 
   function saveProgress(){
-    Storage.set('candy-coins', coins);
-    Storage.set('candy-best-score', score);
+    try{
+      Storage.set('candy-coins', coins);
+      Storage.set('candy-best-score', score);
+    }catch(e){
+      console.warn('Save failed', e);
+    }
   }
 
-  // public API
+  // Public API
   window.CandyGame = {
     init: function(opts){
-      boardEl = document.getElementById('board');
-      scoreEl = document.getElementById('score');
-      coinsEl = document.getElementById('coins');
-      levelEl = document.getElementById('level-num');
+      // get DOM elements safely (may be null if HTML changed)
+      boardEl = document.getElementById('board') || document.querySelector('.board');
+      scoreEl = document.getElementById('score') || document.querySelector('[data-stat="score"]');
+      coinsEl = document.getElementById('coins') || document.querySelector('[data-stat="coins"]');
+      levelEl = document.getElementById('level-num') || document.querySelector('[data-stat="level"]');
 
+      // load persistant
       coins = Storage.get('candy-coins', 0);
       score = 0;
-      currentLevel = opts && opts.level ? opts.level : 1;
-      updateStats();
+      currentLevel = (opts && opts.level) ? opts.level : 1;
+
       createBoardUI();
       fillInitial();
       renderBoard();
       bindInput();
+      updateStats();
 
-      // expose actions for UI
-      document.getElementById('btn-restart').addEventListener('click',restart);
-      document.getElementById('btn-shuffle').addEventListener('click',()=>{
-        shuffleBoard();
-        saveProgress();
-      });
+      // UI buttons if exist
+      const btnRestart = document.getElementById('btn-restart');
+      const btnShuffle = document.getElementById('btn-shuffle');
+      if(btnRestart) btnRestart.addEventListener('click', restart);
+      if(btnShuffle) btnShuffle.addEventListener('click', ()=>{ shuffleBoard(); saveProgress(); });
+
       console.info('CandyEngine ready');
     },
     startLevel: function(level){
       currentLevel = level;
       score = 0;
-      // level settings (example): you could vary width / targets per level - keep simple now
       updateStats();
       fillInitial();
       renderBoard();
       console.info('Started level', level);
     }
   };
+
+  // auto-init when DOM is ready (safe)
+  window.addEventListener('DOMContentLoaded', ()=>{
+    // Delay small time to allow level-map init if needed
+    setTimeout(()=>{
+      if(window.CandyGame && typeof window.CandyGame.init === 'function') {
+        // only init once
+        if(!window.__candy_inited){
+          window.CandyGame.init({level:1});
+          window.__candy_inited = true;
+        }
+      }
+    }, 80);
+  });
+
 })();
