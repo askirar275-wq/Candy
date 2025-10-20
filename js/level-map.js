@@ -1,68 +1,41 @@
-// level-map.js
-console.log('Loaded: js/level-map.js');
-
-const homeScreen = $('#homeScreen');
-const mapScreen = $('#mapScreen');
-const gameScreen = $('#gameScreen');
-
-const btnStart = $('#btnStart');
-const backToHome = $('#backToHome');
-const backToMap = $('#backToMap');
-const levelList = $('#levelList');
-const levelNumSpan = $('#levelNum');
-
-let currentLevel = 1;
-const MAX_LEVELS = 100;
-
-// load progress
-const progress = Storage.get('candy_progress', {unlocked:[1], coins:0});
-
-function showHome(){ homeScreen.style.display='flex'; mapScreen.style.display='none'; gameScreen.style.display='none'; }
-function showMap(){ homeScreen.style.display='none'; mapScreen.style.display='block'; gameScreen.style.display='none'; }
-function showGame(){ homeScreen.style.display='none'; mapScreen.style.display='none'; gameScreen.style.display='block'; }
-
-btnStart.addEventListener('click', ()=>{
-  showMap();
-});
-
-backToHome.addEventListener('click', ()=>{
-  showHome();
-});
-
-backToMap.addEventListener('click', ()=>{
-  showMap();
-});
-
-function renderLevels(){
-  levelList.innerHTML = '';
-  for (let i=1;i<=30;i++){
-    const unlocked = progress.unlocked.includes(i);
-    const div = document.createElement('div');
-    div.className = 'level-card';
-    div.innerHTML = `<div>Level ${i}</div>
-      <div>
-        <button data-level="${i}" class="pill level-btn" ${unlocked?'':'disabled'}>${unlocked? 'Play':'🔒'}</button>
-      </div>`;
-    levelList.appendChild(div);
-  }
-  // attach events
-  levelList.querySelectorAll('.level-btn').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const l = Number(btn.dataset.level);
-      currentLevel = l;
-      levelNumSpan.textContent = currentLevel;
-      showGame();
-      // init game start event
-      if (window.CandyGame && typeof window.CandyGame.startLevel === 'function'){
-        window.CandyGame.startLevel(currentLevel);
+// js/level-map.js (simple list of many levels)
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    console.log('Loaded: js/level-map.js (init)');
+    var container = document.getElementById('levelsContainer');
+    if(!container) return;
+    var prog = window.Storage.get('candy_progress', {unlocked:[1],coins:0});
+    var unlocked = prog.unlocked || [1];
+    container.innerHTML = '';
+    for(var i=1;i<=30;i++){
+      var item = document.createElement('div');
+      item.className = 'level-item';
+      var lbl = document.createElement('div');
+      lbl.textContent = 'Level ' + i;
+      var btn = document.createElement('button');
+      btn.className = 'btn';
+      if(unlocked.indexOf(i) !== -1){
+        btn.textContent = 'Play';
+        (function(level){
+          btn.onclick = function(){
+            window.AppNav.showPage('game');
+            // start level via CandyGame API (game.js must expose)
+            setTimeout(function(){
+              if(window.CandyGame && window.CandyGame.startLevel) {
+                window.CandyGame.startLevel(level);
+              } else {
+                console.warn('CandyGame.startLevel not available yet');
+              }
+            }, 60);
+          };
+        }(i));
       } else {
-        console.warn('CandyGame.startLevel not available yet');
+        btn.textContent = '🔒';
+        btn.className += ' lock';
       }
-    });
+      item.appendChild(lbl);
+      item.appendChild(btn);
+      container.appendChild(item);
+    }
   });
-}
-
-renderLevels();
-showHome();
-
-console.log('Loaded: level-map initialized');
+})();
