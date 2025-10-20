@@ -266,10 +266,54 @@
     return false;
   }
 
-  // shuffle board randomly
-  function shuffleBoard(){
-    const all = [];
-    for(let r0=0;r0<rows;r0++) for(let c0=0;c0<cols;c0++) all.push(grid[r0][c0].id);
+  // shuffle board randomly (fixed — no recursion, retry up to N times)
+function shuffleBoard(){
+  if (!grid || rows <= 0 || cols <= 0) return;
+  // collect all ids
+  const all = [];
+  for(let r0=0;r0<rows;r0++){
+    for(let c0=0;c0<cols;c0++){
+      all.push(grid[r0][c0].id);
+    }
+  }
+  // fisher-yates once
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+
+  // try to place them back and ensure no immediate matches remain.
+  // We'll retry reshuffling up to 10 times (loop, not recursion).
+  const MAX_TRIES = 10;
+  let tries = 0;
+  let ok = false;
+
+  while (tries < MAX_TRIES && !ok) {
+    // put back into grid
+    let idx = 0;
+    for(let r0=0;r0<rows;r0++){
+      for(let c0=0;c0<cols;c0++){
+        grid[r0][c0].id = all[idx++];
+      }
+    }
+    // check result
+    const matches = findAllMatches();
+    if (matches.length === 0) {
+      ok = true;
+      break;
+    }
+    // otherwise reshuffle the array and try again (in-place)
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    tries++;
+  }
+
+  // If still not ok after MAX_TRIES, we will accept the board (prevents infinite loop)
+  renderBoard();
+     }
+  
     // Fisher-Yates
     for(let i=all.length-1;i>0;i--){ const j=randInt(i+1); [all[i],all[j]]=[all[j],all[i]]; }
     let idx=0;
