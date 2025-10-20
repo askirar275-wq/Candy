@@ -1,151 +1,205 @@
-// game.js
-console.log('Loaded: js/game.js — CandyEngine starting');
+// js/game.js  (ES5-compatible, no arrow, no const/let)
+(function () {
+  try {
+    console.log('Loaded: js/game.js (safe ES5 build)');
+  } catch (e) {}
 
-(function(){
-  // constants
-  const rows = 8;
-  const cols = 8;
-  const candyCount = 6; // exactly 6 candy images: candy1..candy6.png
-  const candyPrefix = 'images/candy';
-  const boardEl = document.getElementById('board');
-  const scoreEl = document.getElementById('score');
-  const coinsEl = document.getElementById('coins');
-  const levelEl = document.getElementById('levelNum');
+  // small helpers
+  function $(sel) { return document.querySelector(sel); }
+  function id(n) { return document.getElementById(n); }
 
-  // state
-  let grid = []; // grid[r][c] = {id: number, el: DOM}
-  let score = 0;
-  let coins = 0;
-  let currentLevel = 1;
-  let isAnimating = false;
+  var rows = 8, cols = 8;
+  var candyCount = 6;
+  var candyPrefix = 'images/candy';
+  var boardEl = id('board');
+  var scoreEl = id('score');
+  var coinsEl = id('coins');
+  var levelEl = id('levelNum');
 
-  // expose for level-map to call
+  var grid = [];
+  var score = 0;
+  var coins = 0;
+  var currentLevel = 1;
+  var isAnimating = false;
+
+  // Expose API for level-map
   window.CandyGame = {
-    startLevel(level){
-      currentLevel = level || 1;
-      levelEl.textContent = currentLevel;
+    startLevel: function (lvl) {
+      currentLevel = lvl || 1;
+      if (levelEl) levelEl.textContent = currentLevel;
       initBoard();
-      console.log('Game initialized at level', currentLevel);
+      console.log('CandyGame.startLevel ->', currentLevel);
+    },
+    safeShuffle: function () {
+      safeShuffleBoard();
     }
   };
 
-  // helper: create cell DOM
-  function createCell(r,c,id){
-    const div = document.createElement('div');
-    div.className = 'cell';
-    div.dataset.r = r; div.dataset.c = c;
-    const img = document.createElement('img');
-    img.draggable = false;
-    img.src = `${candyPrefix}${id}.png`;
-    img.alt = 'candy';
-    div.appendChild(img);
-    return {id, el: div};
-  }
-
-  function randomCandy(){
-    return Math.floor(Math.random()*candyCount)+1;
-  }
-
-  function initBoard(){
-    score = 0; updateHUD();
+  // create empty board layout (cells) so CSS layout exists even before start
+  function ensureBoardLayout() {
+    if (!boardEl) return;
     boardEl.innerHTML = '';
+    for (var r = 0; r < rows; r++) {
+      var rowDiv = document.createElement('div');
+      rowDiv.className = 'row';
+      for (var c = 0; c < cols; c++) {
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        var img = document.createElement('img');
+        img.draggable = false;
+        img.src = candyPrefix + '1.png';
+        img.style.visibility = 'hidden';
+        cell.appendChild(img);
+        rowDiv.appendChild(cell);
+      }
+      boardEl.appendChild(rowDiv);
+    }
+  }
+
+  function randomCandy() {
+    return Math.floor(Math.random() * candyCount) + 1;
+  }
+
+  function createCell(r, c, idVal) {
+    var div = document.createElement('div');
+    div.className = 'cell';
+    div.dataset.r = r;
+    div.dataset.c = c;
+    var img = document.createElement('img');
+    img.draggable = false;
+    img.src = candyPrefix + idVal + '.png';
+    div.appendChild(img);
+    return { id: idVal, el: div };
+  }
+
+  function initBoard() {
+    if (!boardEl) {
+      console.warn('Board element not found');
+      return;
+    }
+    score = 0;
+    updateHUD();
     grid = [];
-    // build random grid, ensuring no immediate matches (simple attempt)
-    for (let r=0;r<rows;r++){
-      const row = [];
-      for (let c=0;c<cols;c++){
-        let id;
-        let attempt=0;
-        do{
-          id = randomCandy(); attempt++;
-          // avoid horizontal match
-          if (c>=2 && id===row[c-1].id && id===row[c-2].id) continue;
-          // avoid vertical match
-          if (r>=2 && id=== (grid[r-1][c] && grid[r-1][c].id) && id=== (grid[r-2][c] && grid[r-2][c].id) ) continue;
-          break;
-        } while(attempt<20);
-        const cellObj = createCell(r,c,id);
+    boardEl.innerHTML = '';
+
+    // fill grid with random but try avoid immediate matches
+    for (var r = 0; r < rows; r++) {
+      var row = [];
+      for (var c = 0; c < cols; c++) {
+        var idVal = randomCandy();
+        var tries = 0;
+        while (tries < 20) {
+          var bad = false;
+          // horizontal check
+          if (c >= 2 && row[c - 1] && row[c - 2] && idVal === row[c - 1].id && idVal === row[c - 2].id) bad = true;
+          // vertical check
+          if (r >= 2 && grid[r - 1] && grid[r - 2] && idVal === grid[r - 1][c].id && idVal === grid[r - 2][c].id) bad = true;
+          if (!bad) break;
+          idVal = randomCandy();
+          tries++;
+        }
+        var cellObj = createCell(r, c, idVal);
         row.push(cellObj);
       }
       grid.push(row);
     }
-    // render DOM rows
-    for (let r=0;r<rows;r++){
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'row';
-      for (let c=0;c<cols;c++){
-        rowDiv.appendChild(grid[r][c].el);
+
+    // render
+    for (var rr = 0; rr < rows; rr++) {
+      var rowDiv2 = document.createElement('div');
+      rowDiv2.className = 'row';
+      for (var cc = 0; cc < cols; cc++) {
+        rowDiv2.appendChild(grid[rr][cc].el);
       }
-      boardEl.appendChild(rowDiv);
+      boardEl.appendChild(rowDiv2);
     }
 
     attachEvents();
-    // final safe check: if initial matches exist, remove them once to avoid instant clears
-    setTimeout(()=>{ const matches = findAllMatches(); if (matches.length) { removeMatches(matches).then(()=>{ refillBoard(); }); } }, 120);
+    // small defer to remove accidental initial matches
+    setTimeout(function () {
+      var m = findAllMatches();
+      if (m.length) {
+        removeMatches(m).then(function () {
+          collapseColumns();
+          refillBoard();
+        });
+      }
+    }, 120);
   }
 
-  function updateHUD(){
-    scoreEl.textContent = score;
-    coinsEl.textContent = coins;
+  function updateHUD() {
+    if (scoreEl) scoreEl.textContent = score;
+    if (coinsEl) coinsEl.textContent = coins;
   }
 
-  /* ---------- Matching logic ---------- */
-  function findAllMatches(){
-    const matches = [];
+  // find matches (returns unique coordinates)
+  function findAllMatches() {
+    var coords = {};
     // rows
-    for (let r=0;r<rows;r++){
-      let run = [ {r, c:0, id:grid[r][0].id} ];
-      for (let c=1;c<cols;c++){
-        const id = grid[r][c].id;
-        if (id===run[0].id) run.push({r,c,id});
-        else {
-          if (run.length>=3) matches.push(run.slice());
-          run = [{r,c,id}];
+    for (var r = 0; r < rows; r++) {
+      var runId = grid[r][0].id;
+      var runStart = 0;
+      for (var c = 1; c <= cols; c++) {
+        var idNow = (c < cols) ? grid[r][c].id : null;
+        if (idNow === runId) {
+          // continue run
+        } else {
+          var runLength = c - runStart;
+          if (runId !== 0 && runLength >= 3) {
+            for (var k = runStart; k < c; k++) coords[r + ',' + k] = true;
+          }
+          runStart = c;
+          runId = idNow;
         }
       }
-      if (run.length>=3) matches.push(run.slice());
     }
     // cols
-    for (let c=0;c<cols;c++){
-      let run = [ {r:0, c, id:grid[0][c].id} ];
-      for (let r=1;r<rows;r++){
-        const id = grid[r][c].id;
-        if (id===run[0].id) run.push({r,c,id});
-        else {
-          if (run.length>=3) matches.push(run.slice());
-          run = [{r,c,id}];
+    for (var c2 = 0; c2 < cols; c2++) {
+      var runId2 = grid[0][c2].id;
+      var runStart2 = 0;
+      for (var r2 = 1; r2 <= rows; r2++) {
+        var idNow2 = (r2 < rows) ? grid[r2][c2].id : null;
+        if (idNow2 === runId2) {
+          // continue
+        } else {
+          var runLen = r2 - runStart2;
+          if (runId2 !== 0 && runLen >= 3) {
+            for (var k2 = runStart2; k2 < r2; k2++) coords[k2 + ',' + c2] = true;
+          }
+          runStart2 = r2;
+          runId2 = idNow2;
         }
       }
-      if (run.length>=3) matches.push(run.slice());
     }
-    // flatten and unique coordinates
-    const coordSet = new Set();
-    matches.forEach(group=>{
-      group.forEach(cell=> coordSet.add(`${cell.r},${cell.c}`));
-    });
-    const unique = Array.from(coordSet).map(s=>{ const [r,c]=s.split(',').map(Number); return {r,c, id:grid[r][c].id}; });
-    return unique;
+    // convert to array
+    var out = [];
+    for (var key in coords) {
+      var parts = key.split(',');
+      out.push({ r: parseInt(parts[0], 10), c: parseInt(parts[1], 10), id: grid[parseInt(parts[0], 10)][parseInt(parts[1], 10)].id });
+    }
+    return out;
   }
 
-  // removes matches with animation, returns Promise resolved when done
-  function removeMatches(matches){
+  function removeMatches(matches) {
     if (!matches || !matches.length) return Promise.resolve();
     isAnimating = true;
-    console.log('Matches found:', matches.length);
-    matches.forEach(m=>{
-      const el = grid[m.r][m.c].el;
-      el.classList.add('fade');
-    });
-    // after animation remove and mark empty (id=0)
-    return new Promise((resolve)=>{
-      setTimeout(()=>{
-        matches.forEach(m=>{
-          grid[m.r][m.c].id = 0;
-          const img = grid[m.r][m.c].el.querySelector('img');
-          if (img) img.style.visibility = 'hidden';
-          grid[m.r][m.c].el.classList.remove('fade');
-        });
-        // update score
+    try { console.log('removeMatches count=', matches.length); } catch (e) {}
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      var el = grid[m.r][m.c].el;
+      if (el) el.classList.add('fade');
+    }
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        for (var j = 0; j < matches.length; j++) {
+          var mm = matches[j];
+          grid[mm.r][mm.c].id = 0;
+          var im = grid[mm.r][mm.c].el.querySelector('img');
+          if (im) im.style.visibility = 'hidden';
+          grid[mm.r][mm.c].el.classList.remove('fade');
+        }
         score += matches.length * 10;
         updateHUD();
         isAnimating = false;
@@ -154,46 +208,45 @@ console.log('Loaded: js/game.js — CandyEngine starting');
     });
   }
 
-  // gravity: collapse columns and create new candies at top
-  function collapseColumns(){
-    for (let c=0;c<cols;c++){
-      let write = rows-1;
-      for (let r=rows-1;r>=0;r--){
-        if (grid[r][c].id !== 0){
-          if (write !== r){
-            // move id down
-            grid[write][c].id = grid[r][c].id;
-            const srcImg = grid[r][c].el.querySelector('img');
-            const dstImg = grid[write][c].el.querySelector('img');
-            dstImg.src = srcImg.src;
-            dstImg.style.visibility = 'visible';
+  function collapseColumns() {
+    for (var c3 = 0; c3 < cols; c3++) {
+      var write = rows - 1;
+      for (var r3 = rows - 1; r3 >= 0; r3--) {
+        if (grid[r3][c3].id !== 0) {
+          if (write !== r3) {
+            grid[write][c3].id = grid[r3][c3].id;
+            var srcImg = grid[r3][c3].el.querySelector('img');
+            var dstImg = grid[write][c3].el.querySelector('img');
+            if (dstImg && srcImg) {
+              dstImg.src = srcImg.src;
+              dstImg.style.visibility = 'visible';
+            }
+            grid[r3][c3].id = 0;
+            var hideImg = grid[r3][c3].el.querySelector('img');
+            if (hideImg) hideImg.style.visibility = 'hidden';
           }
           write--;
         }
       }
-      // fill remainder with new candies
-      for (let r=write;r>=0;r--){
-        const nid = randomCandy();
-        grid[r][c].id = nid;
-        const img = grid[r][c].el.querySelector('img');
-        img.src = `${candyPrefix}${nid}.png`;
-        img.style.visibility = 'visible';
+      for (var rFill = write; rFill >= 0; rFill--) {
+        var nid = randomCandy();
+        grid[rFill][c3].id = nid;
+        var imf = grid[rFill][c3].el.querySelector('img');
+        if (imf) { imf.src = candyPrefix + nid + '.png'; imf.style.visibility = 'visible'; }
       }
     }
   }
 
-  function refillBoard(){ // loop: find matches, remove, collapse, repeat until no matches (safe limited loop)
+  function refillBoard() {
     if (isAnimating) return;
-    let loopCount = 0;
-    const MAX_LOOPS = 10;
-    function step(){
-      const matches = findAllMatches();
-      if (matches.length && loopCount < MAX_LOOPS){
-        loopCount++;
-        removeMatches(matches).then(()=>{
+    var attempts = 0;
+    function step() {
+      var matches = findAllMatches();
+      if (matches.length && attempts < 12) {
+        attempts++;
+        removeMatches(matches).then(function () {
           collapseColumns();
-          updateHUD();
-          setTimeout(step, 180);
+          setTimeout(step, 140);
         });
       } else {
         // done
@@ -203,171 +256,128 @@ console.log('Loaded: js/game.js — CandyEngine starting');
     step();
   }
 
-  function checkLevelComplete(){
-    // simple goal: reach score threshold per level
-    const goal = currentLevel * 500;
-    if (score >= goal){
-      // unlock next level in storage
-      const prog = Storage.get('candy_progress', {unlocked:[1], coins:0});
-      if (!prog.unlocked.includes(currentLevel+1)){
-        prog.unlocked.push(currentLevel+1);
-        Storage.set('candy_progress', prog);
+  function checkLevelComplete() {
+    var goal = currentLevel * 500;
+    if (score >= goal) {
+      var prog = (window.Storage && window.Storage.get) ? window.Storage.get('candy_progress', { unlocked: [1], coins: 0 }) : null;
+      if (prog) {
+        if (prog.unlocked.indexOf(currentLevel + 1) === -1) {
+          prog.unlocked.push(currentLevel + 1);
+          window.Storage.set && window.Storage.set('candy_progress', prog);
+        }
       }
-      alert('Level cleared! Next level unlocked.');
-      console.log('Level completed:', currentLevel);
+      setTimeout(function () {
+        try { alert('Level cleared! Next level unlocked.'); } catch (e) {}
+      }, 60);
     }
   }
 
-  /* ---------- Interaction (swipe / drag) ---------- */
-
-  let startR=null, startC=null;
-  let isTouch=false;
-
-  function attachEvents(){
-    // remove existing listeners
-    boardEl.querySelectorAll('.cell').forEach(cell=>{
-      cell.onpointerdown = null;
-      cell.onpointerup = null;
-      cell.ondragstart = ()=>false;
-    });
-
-    boardEl.querySelectorAll('.cell').forEach(cell=>{
-      cell.addEventListener('pointerdown', e=>{
-        if (isAnimating) return;
-        const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
-        startR = r; startC = c;
-        cell.classList.add('moving');
-        e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
-      });
-
-      cell.addEventListener('pointerup', e=>{
-        if (isAnimating) return;
-        const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
-        const dr = r - startR, dc = c - startC;
-        const absr = Math.abs(dr), absc = Math.abs(dc);
-        if ((absr+absc) === 1){ // adjacent
-          trySwap(startR, startC, r, c);
-        }
-        boardEl.querySelectorAll('.cell').forEach(x=>x.classList.remove('moving'));
-        startR = startC = null;
-      });
-
-      // also support pointercancel
-      cell.addEventListener('pointercancel', ()=>{
-        boardEl.querySelectorAll('.cell').forEach(x=>x.classList.remove('moving'));
-        startR = startC = null;
-      });
-    });
-
-    // restart & shuffle
-    $('#restartBtn').onclick = ()=>{
-      initBoard();
-    };
-    $('#shuffleBtn').onclick = ()=>{
-      safeShuffleBoard();
-    };
-  }
-
-  // try swapping two cells; if swap produces match then keep and animate, else revert
-  function trySwap(r1,c1,r2,c2){
+  // swap logic
+  function trySwap(r1, c1, r2, c2) {
     if (isAnimating) return;
     // swap ids
-    const tmp = grid[r1][c1].id;
+    var t = grid[r1][c1].id;
     grid[r1][c1].id = grid[r2][c2].id;
-    grid[r2][c2].id = tmp;
-    // update DOM images
-    const img1 = grid[r1][c1].el.querySelector('img');
-    const img2 = grid[r2][c2].el.querySelector('img');
-    const t1 = img1.src, t2 = img2.src;
-    img1.src = t2; img2.src = t1;
-
-    // check matches
-    const matches = findAllMatches();
-    if (matches.length){
-      // accept swap
-      removeMatches(matches).then(()=>{ collapseColumns(); setTimeout(refillBoard,120); });
+    grid[r2][c2].id = t;
+    // swap images
+    var im1 = grid[r1][c1].el.querySelector('img');
+    var im2 = grid[r2][c2].el.querySelector('img');
+    var s1 = im1.src, s2 = im2.src;
+    im1.src = s2; im2.src = s1;
+    var matches = findAllMatches();
+    if (matches.length) {
+      removeMatches(matches).then(function () {
+        collapseColumns();
+        setTimeout(refillBoard, 120);
+      });
     } else {
-      // revert swap visually after short delay
+      // revert
       isAnimating = true;
-      setTimeout(()=>{
-        const tmp2 = grid[r1][c1].id;
+      setTimeout(function () {
+        var tmpx = grid[r1][c1].id;
         grid[r1][c1].id = grid[r2][c2].id;
-        grid[r2][c2].id = tmp2;
-        img1.src = t1; img2.src = t2;
+        grid[r2][c2].id = tmpx;
+        im1.src = s1; im2.src = s2;
         isAnimating = false;
       }, 160);
     }
   }
 
-  /* ---------- Safe shuffle (non recursive) ---------- */
-  function safeShuffleBoard(){
-    console.log('safeShuffleBoard start');
-    // collect ids
-    const all = [];
-    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++) all.push(grid[r][c].id);
-    // fisher-yates
-    for (let i=all.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [all[i], all[j]] = [all[j], all[i]];
+  var startR = null, startC = null;
+
+  function attachEvents() {
+    if (!boardEl) return;
+    // pointer events
+    var cells = boardEl.querySelectorAll('.cell');
+    for (var i = 0; i < cells.length; i++) {
+      (function (cell) {
+        cell.onpointerdown = function (e) {
+          if (isAnimating) return;
+          startR = Number(cell.dataset.r);
+          startC = Number(cell.dataset.c);
+          cell.classList.add('moving');
+          try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (ex) {}
+        };
+        cell.onpointerup = function (e) {
+          if (isAnimating) return;
+          var r = Number(cell.dataset.r);
+          var c = Number(cell.dataset.c);
+          var dr = r - startR, dc = c - startC;
+          var absr = Math.abs(dr), absc = Math.abs(dc);
+          if ((absr + absc) === 1) {
+            trySwap(startR, startC, r, c);
+          }
+          var all = boardEl.querySelectorAll('.cell');
+          for (var j = 0; j < all.length; j++) all[j].classList.remove('moving');
+          startR = startC = null;
+        };
+        cell.onpointercancel = function () {
+          var all2 = boardEl.querySelectorAll('.cell');
+          for (var j2 = 0; j2 < all2.length; j2++) all2[j2].classList.remove('moving');
+          startR = startC = null;
+        };
+        cell.ondragstart = function () { return false; };
+      }(cells[i]));
     }
-    const MAX_TRIES = 12;
-    let tries=0;
-    let ok=false;
-    while(tries<MAX_TRIES && !ok){
-      // place back
-      let idx=0;
-      for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
-        grid[r][c].id = all[idx++];
-        const img = grid[r][c].el.querySelector('img');
-        img.src = `${candyPrefix}${grid[r][c].id}.png`;
-        img.style.visibility = 'visible';
+
+    var restartBtn = id('restartBtn');
+    var shuffleBtn = id('shuffleBtn');
+    if (restartBtn) restartBtn.onclick = function () { initBoard(); };
+    if (shuffleBtn) shuffleBtn.onclick = function () { safeShuffleBoard(); };
+  }
+
+  // simple shuffle try
+  function safeShuffleBoard() {
+    var all = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) all.push(grid[r][c].id);
+    for (var i = all.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = all[i]; all[i] = all[j]; all[j] = tmp;
+    }
+    var tries = 0, ok = false;
+    while (tries < 12 && !ok) {
+      var idx = 0;
+      for (var rr2 = 0; rr2 < rows; rr2++) for (var cc2 = 0; cc2 < cols; cc2++) {
+        grid[rr2][cc2].id = all[idx++];
+        var im = grid[rr2][cc2].el.querySelector('img');
+        if (im) { im.src = candyPrefix + grid[rr2][cc2].id + '.png'; im.style.visibility = 'visible'; }
       }
-      const matches = findAllMatches();
-      if (matches.length === 0) ok=true;
+      if (findAllMatches().length === 0) ok = true;
       else {
-        // reshuffle all array and try again
-        for (let i=all.length-1;i>0;i--){
-          const j = Math.floor(Math.random()*(i+1));
-          [all[i], all[j]] = [all[j], all[i]];
+        for (var k = all.length - 1; k > 0; k--) {
+          var kk = Math.floor(Math.random() * (k + 1));
+          var ttmp = all[k]; all[k] = all[kk]; all[kk] = ttmp;
         }
       }
       tries++;
     }
-    renderBoardImages();
-    console.log('safeShuffleBoard done tries=',tries,'ok=',ok);
+    console.log('safeShuffleBoard finished tries=', tries, 'ok=', ok);
   }
 
-  function renderBoardImages(){
-    for (let r=0;r<rows;r++){
-      for (let c=0;c<cols;c++){
-        const img = grid[r][c].el.querySelector('img');
-        img.src = `${candyPrefix}${grid[r][c].id}.png`;
-        img.style.visibility = 'visible';
-      }
-    }
-  }
-
-  // Expose small API
-  window.CandyGame.safeShuffle = safeShuffleBoard;
-
-  // initialize once DOM loaded
-  document.addEventListener('DOMContentLoaded', ()=>{
-    console.log('DOM ready - creating initial board');
-    // ensure gameScreen visible check: don't auto-start; wait for user to hit startLevel
-    // But create empty placeholder cells so layout exists
-    boardEl.innerHTML = '';
-    for (let r=0;r<rows;r++){
-      const rowDiv = document.createElement('div'); rowDiv.className='row';
-      for (let c=0;c<cols;c++){
-        const div = document.createElement('div'); div.className='cell';
-        const img = document.createElement('img'); img.src='images/candy1.png'; img.style.visibility='hidden';
-        div.appendChild(img);
-        rowDiv.appendChild(div);
-      }
-      boardEl.appendChild(rowDiv);
-    }
-    // When map starts level, CandyGame.startLevel will build the actual board.
-    console.log('CandyEngine ready');
+  // initial layout
+  document.addEventListener('DOMContentLoaded', function () {
+    try { ensureBoardLayout(); } catch (e) {}
+    console.log('game.js DOM ready (placeholder layout created)');
   });
 
-})();
+}());
