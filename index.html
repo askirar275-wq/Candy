@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,31 +6,40 @@
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
+
+<!-- background image specified here (aapka images/bg-gradient.png) -->
+<body style="background: url('images/bg-gradient.png') center/cover no-repeat fixed;">
+
   <div id="app">
-    <!-- Home -->
+
+    <!-- HOME -->
     <main id="home" class="page">
-      <div class="hero" style="background-image:url('images/bg-gradient.png')">
-        <div class="hero-card">
-          <h1>🍭 Candy Match</h1>
-          <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+      <div class="hero-card">
+        <h1>🍭 Candy Match</h1>
+        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+
+        <!-- Start / Map buttons -->
+        <div class="hero-actions">
           <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
           <button id="btn-map" class="btn">🗺️ Level Map</button>
         </div>
       </div>
     </main>
 
-    <!-- Level map -->
+    <!-- LEVEL MAP -->
     <section id="map" class="page hidden">
       <button class="back btn" data-go="home">← Home</button>
       <h2>Level Map</h2>
       <div id="levels" class="levels"></div>
     </section>
 
-    <!-- Game -->
+    <!-- GAME SCREEN -->
     <section id="game" class="page hidden">
+
+      <!-- header with stats -->
       <header class="game-header">
         <button class="back btn" data-go="map">← Map</button>
+
         <div class="stats">
           <div>Score: <span id="score">0</span></div>
           <div>Coins: <span id="coins">0</span></div>
@@ -38,10 +47,13 @@
         </div>
       </header>
 
+      <!-- board wrapper -->
       <div class="board-wrap">
-        <div id="board" class="board"></div>
+        <!-- BOARD: yahi game grid render hoga -->
+        <div id="board" class="board" aria-label="Game board"></div>
       </div>
 
+      <!-- controls -->
       <div class="controls">
         <button id="btn-restart" class="btn">🔁 Restart</button>
         <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
@@ -49,11 +61,31 @@
     </section>
   </div>
 
-  <!-- Scripts -->
+  <!-- small startup check: console me batayega agar koi required element missing hai -->
+  <script>
+    // run after DOM is parsed (defer scripts below will run after this)
+    document.addEventListener('DOMContentLoaded', () => {
+      const requiredIds = ['board','score','coins','level-num','btn-restart','btn-shuffle','btn-start','btn-map','levels'];
+      let ok = true;
+      for (const id of requiredIds) {
+        if (!document.getElementById(id)) {
+          console.error(`Startup check: missing element with id "${id}"`);
+          ok = false;
+        } else {
+          console.log(`Loaded: ${id}`);
+        }
+      }
+      if (ok) console.info('Startup check: all required elements found ✔');
+      else console.warn('Startup check: some required elements are missing — check above errors before running game code.');
+    });
+  </script>
+
+  <!-- Your JS files (defer so DOM is available to scripts) -->
+  <!-- order: storage/safe-ui/level-map/game — agar game uses level-map api to start levels -->
   <script defer src="js/storage.js"></script>
   <script defer src="js/safe-ui.js"></script>
-  <script defer src="js/game.js"></script>
   <script defer src="js/level-map.js"></script>
+  <script defer src="js/game.js"></script>
 
 </body>
 </html>
