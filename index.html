@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Clean</title>
+  <title>Candy Match — Complete</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,7 +14,6 @@
       <div class="center-card home-card">
         <div class="logo-row">
           <div class="logo-badge">
-            <!-- inline candy icon -->
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="7" width="18" height="10" rx="5" fill="#FFD166"/>
               <circle cx="7.5" cy="12" r="3.2" fill="#FF6B6B"/>
@@ -67,7 +66,8 @@
 
       <main class="game-area">
         <div id="game-container" class="game-board-wrap">
-          <div id="board-placeholder" class="board-placeholder">
+          <div id="board" class="board" aria-label="game board"></div>
+          <div id="board-placeholder" class="board-placeholder" style="display:none">
             <svg width="120" height="120" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd166"/></svg>
             <div class="ph-text muted">Game loading…</div>
           </div>
@@ -102,8 +102,10 @@
 
   </div>
 
+  <!-- order matters: storage, level-map, game-core, main -->
+  <script src="js/storage.js" defer></script>
+  <script src="js/level-map.js" defer></script>
+  <script src="js/game-core.js" defer></script>
   <script src="js/main.js" defer></script>
-  <!-- optionally include your game-core below if present -->
-  <!-- <script src="js/game-core.js" defer></script> -->
 </body>
-  </html>
+          </html>
