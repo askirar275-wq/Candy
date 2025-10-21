@@ -145,3 +145,31 @@
     }
   }, 600);
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    try {
+      // prefer API if available
+      if(window.Nav && typeof window.Nav.renderMap === 'function'){
+        window.Nav.renderMap();
+      } else if (window.Nav && typeof window.Nav.startLevel === 'function'){
+        // just render map if startLevel exists
+        // no-op
+      } else if(window.AppNav && typeof window.AppNav.renderMap === 'function'){
+        window.AppNav.renderMap();
+      }
+      // show map screen (fallbacks)
+      if(typeof navigateTo === 'function') navigateTo('map');
+      else if(typeof showScreen === 'function') showScreen('map');
+      else {
+        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+        const mg = document.getElementById('screen-map');
+        mg && mg.classList.add('active');
+      }
+    } catch(err){
+      console.error('AUTO MAP ERROR', err);
+      alert('AUTO MAP ERROR: ' + err.message);
+    }
+  }, 300);
+});
+</script>
