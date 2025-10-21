@@ -1,254 +1,210 @@
-// js/game.js
-const ROWS = 8, COLS = 8;
-const TYPES = 5; // images: candy1..candy5
-const boardEl = document.getElementById('board');
-const scoreEl = document.getElementById('score');
-const movesEl = document.getElementById('moves');
-const msgEl = document.getElementById('message');
-const btnRestart = document.getElementById('btnRestart');
-const btnHint = document.getElementById('btnHint');
+// js/main.js - Navigation + small flow manager
+(function(){
+  // Screen elements
+  const screens = {
+    home: document.getElementById('screen-home'),
+    map: document.getElementById('screen-map'),
+    game: document.getElementById('screen-game'),
+    gameover: document.getElementById('screen-gameover')
+  };
 
-let grid = [];
-let cells = [];
-let score = 0;
-let moves = 30;
-let selected = null;
-let animating = false;
+  // UI elements
+  const btnPlay = document.getElementById('btn-play');
+  const btnOpenMap = document.getElementById('btn-open-map');
+  const mapGrid = document.getElementById('map-grid');
+  const gameTitle = document.getElementById('game-title');
+  const boardPlaceholder = document.getElementById('board-placeholder');
+  const goTitle = document.getElementById('go-title');
+  const goScore = document.getElementById('go-score');
 
-function rand(n){ return Math.floor(Math.random()*n); }
-function candySrc(type){ return `images/candy${type+1}.png`; } // 0->candy1.png
+  // game sidebar controls
+  const navScore = document.getElementById('nav-score');
+  const navMoves = document.getElementById('nav-moves');
+  const btnRestart = document.getElementById('btn-restart-level');
+  const btnEnd = document.getElementById('btn-end-level');
+  const btnReplay = document.getElementById('btn-replay');
+  const btnNext = document.getElementById('btn-next');
+  const btnToMap = document.getElementById('btn-to-map');
 
-// create empty grid structure
-function createEmpty(){ grid = Array.from({length:ROWS}, ()=> Array(COLS).fill(null)); }
+  // back buttons (declared in markup)
+  document.querySelectorAll('.back').forEach(b => b.addEventListener('click', (e)=>{
+    const target = e.currentTarget.dataset.target || 'home';
+    navigateTo(target);
+  }));
 
-// fill grid ensuring no immediate 3+ matches
-function fillNoInitialMatches(){
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      let val;
-      do {
-        val = rand(TYPES);
-      } while (
-        (c>=2 && grid[r][c-1] && grid[r][c-2] && grid[r][c-1].type === val && grid[r][c-2].type === val) ||
-        (r>=2 && grid[r-1][c] && grid[r-2][c] && grid[r-1][c].type === val && grid[r-2][c].type === val)
-      );
-      grid[r][c] = { type: val, special: null };
-    }
+  // Simple persistent storage for unlocked levels
+  const STORAGE_KEY = 'cm_unlocked_levels_v1';
+  function getUnlocked(){
+    try {
+      const v = localStorage.getItem(STORAGE_KEY);
+      if(!v) return [1]; // level 1 unlocked
+      return JSON.parse(v);
+    } catch(e){ return [1]; }
   }
-}
+  function setUnlocked(list){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+  function unlockLevel(n){
+    const list = new Set(getUnlocked());
+    list.add(n);
+    setUnlocked(Array.from(list).sort((a,b)=>a-b));
+  }
 
-// build DOM cells and event listeners
-function buildDOM(){
-  boardEl.innerHTML = '';
-  cells = [];
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const el = document.createElement('div');
-      el.className = 'cell';
-      el.dataset.r = r; el.dataset.c = c;
-      const img = document.createElement('img');
-      img.className = 'candy-img';
-      img.alt = `candy ${r},${c}`;
-      el.appendChild(img);
-      boardEl.appendChild(el);
-      cells.push(el);
-      el.addEventListener('click', onCellClick);
-      // accessibility: keyboard support
-      el.tabIndex = 0;
-      el.addEventListener('keydown', (e)=>{
-        if(e.key === 'Enter' || e.key === ' ') onCellClick({ currentTarget: el });
+  // sample number of levels
+  const LEVEL_COUNT = 12;
+
+  // render map/grid of levels
+  function renderMap(){
+    mapGrid.innerHTML = '';
+    const unlocked = new Set(getUnlocked());
+    for(let i=1;i<=LEVEL_COUNT;i++){
+      const card = document.createElement('div');
+      card.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
+      card.dataset.level = i;
+      card.innerHTML = `<div class="lvl">Level ${i}</div><div class="desc">${unlocked.has(i)?'Play':'Locked'}</div>`;
+      card.addEventListener('click', ()=> {
+        if(!unlocked.has(i)){ alert('Level locked — complete previous levels to unlock.'); return; }
+        startLevel(i);
       });
+      mapGrid.appendChild(card);
     }
   }
-  renderAll();
-}
 
-function renderAll(){
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++) renderCell(r,c);
+  // navigation
+  function showScreen(name){
+    Object.values(screens).forEach(s=> s.classList.remove('active'));
+    if(screens[name]) screens[name].classList.add('active');
   }
-  scoreEl.textContent = score;
-  movesEl.textContent = moves;
-}
 
-function renderCell(r,c){
-  const idx = r*COLS + c;
-  const el = cells[idx];
-  const img = el.firstChild;
-  const item = grid[r][c];
-  if(!item){ img.removeAttribute('src'); el.classList.remove('selected'); return; }
-  img.src = candySrc(item.type);
-  el.classList.toggle('selected', selected && selected.r==r && selected.c==c);
-}
-
-function coordsAdjacent(a,b){
-  return Math.abs(a.r-b.r) + Math.abs(a.c-b.c) === 1;
-}
-
-function onCellClick(e){
-  if(animating) return;
-  const r = Number(e.currentTarget.dataset.r);
-  const c = Number(e.currentTarget.dataset.c);
-  if(!selected){
-    selected = {r,c};
-    renderAll();
-    return;
+  function navigateTo(name, state = {}){
+    // push to history so native back works
+    history.pushState({screen:name, state}, '', `#${name}`);
+    showScreen(name);
   }
-  const target = {r,c};
-  if(selected.r===target.r && selected.c===target.c){ selected = null; renderAll(); return; }
-  if(!coordsAdjacent(selected,target)){ selected = target; renderAll(); return; }
-  attemptSwap(selected, target);
-}
 
-function swapCells(a,b){
-  const tmp = grid[a.r][a.c];
-  grid[a.r][a.c] = grid[b.r][b.c];
-  grid[b.r][b.c] = tmp;
-  renderCell(a.r,a.c);
-  renderCell(b.r,b.c);
-}
+  // Start gameplay - calls GameAPI if available
+  function startLevel(level){
+    gameTitle.textContent = `Level ${level}`;
+    showScreen('game');
+    // try to init game via GameAPI (provided by your game-core.js)
+    if(window.GameAPI && typeof window.GameAPI.initGame === 'function'){
+      window.GameAPI.initGame(level);
+      // optionally poll UI values
+      updateHUDLoop();
+    } else {
+      // placeholder: show message in board
+      boardPlaceholder.textContent = `Game engine not found. Level ${level} would run here.`;
+      // simulate a fake score and then go to game over for demo
+      fakePlayDemo(level);
+    }
+  }
 
-function findMatches(){
-  const toRemove = [];
-  // horizontal
-  for(let r=0;r<ROWS;r++){
-    let runType = -1, runStart = 0, runLen = 0;
-    for(let c=0;c<=COLS;c++){
-      const t = c<COLS && grid[r][c] ? grid[r][c].type : -1;
-      if(t === runType) runLen++;
-      else {
-        if(runLen>=3) for(let k=runStart;k<runStart+runLen;k++) toRemove.push({r,c:k});
-        runType = t; runStart = c; runLen = 1;
+  // fake demo (only when GameAPI not present) — shows game over after 2s
+  function fakePlayDemo(level){
+    navScore.textContent = 0;
+    navMoves.textContent = 30;
+    setTimeout(()=>{
+      const fakeScore = 1200 + level*100;
+      showGameOver(true, fakeScore, level);
+      unlockLevel(level+1);
+      renderMap();
+    }, 1500);
+  }
+
+  // show game over screen
+  function showGameOver(win, score, level){
+    goTitle.textContent = win ? `Level ${level} Complete!` : `Level ${level} Failed`;
+    goScore.textContent = score;
+    showScreen('gameover');
+  }
+
+  // Link buttons
+  btnPlay.addEventListener('click', ()=> {
+    // default Play -> map
+    renderMap();
+    navigateTo('map');
+  });
+  btnOpenMap.addEventListener('click', ()=> { renderMap(); navigateTo('map'); });
+
+  // restart / end / replay / next buttons
+  if(btnRestart) btnRestart.addEventListener('click', ()=> {
+    // restart via GameAPI if available
+    if(window.GameAPI && window.GameAPI.reset) window.GameAPI.reset();
+  });
+  if(btnEnd) btnEnd.addEventListener('click', ()=> {
+    // end level (report game over)
+    if(window.GameAPI && window.GameAPI.getState){
+      const st = window.GameAPI.getState();
+      showGameOver(false, st.score||0, st.level||1);
+    } else {
+      showGameOver(false, 0, 1);
+    }
+  });
+  if(btnReplay) btnReplay.addEventListener('click', ()=> {
+    // replay current level
+    if(window.GameAPI && window.GameAPI.reset) window.GameAPI.reset();
+    navigateTo('game');
+  });
+  if(btnNext) btnNext.addEventListener('click', ()=> {
+    // next level (unlock and start)
+    if(window.GameAPI && window.GameAPI.getState){
+      const cur = window.GameAPI.getState();
+      const next = (cur.level || 1) + 1;
+      unlockLevel(next);
+      renderMap();
+      startLevel(next);
+    } else {
+      // fallback: pick next unlocked
+      const unlocked = getUnlocked();
+      const next = Math.min(unlocked[unlocked.length-1]+1, LEVEL_COUNT);
+      unlockLevel(next);
+      renderMap();
+      startLevel(next);
+    }
+  });
+  if(btnToMap) btnToMap.addEventListener('click', ()=> { renderMap(); navigateTo('map'); });
+
+  // HUD update loop (if GameAPI present)
+  let hudInterval = null;
+  function updateHUDLoop(){
+    if(hudInterval) clearInterval(hudInterval);
+    hudInterval = setInterval(()=>{
+      if(window.GameAPI && window.GameAPI.getState){
+        const st = window.GameAPI.getState();
+        navScore.textContent = st.score || 0;
+        navMoves.textContent = st.moves || 0;
       }
+    }, 300);
+  }
+
+  // handle popstate (back/forward)
+  window.addEventListener('popstate', (ev)=>{
+    const state = ev.state;
+    if(state && state.screen) showScreen(state.screen);
+    else showScreen('home');
+  });
+
+  // initial load: if hash present, navigate there
+  function init(){
+    renderMap();
+    const h = location.hash.replace('#','');
+    if(h && screens[h]) showScreen(h);
+    else showScreen('home');
+
+    // quick demo hook: if GameAPI exists, register onUpdate to get game over callback
+    if(window.LevelMap && window.LevelMap.onUpdate && window.GameAPI){
+      // optional: LevelMap can call this; left for advanced integration
     }
   }
-  // vertical
-  for(let c=0;c<COLS;c++){
-    let runType = -1, runStart = 0, runLen = 0;
-    for(let r=0;r<=ROWS;r++){
-      const t = r<ROWS && grid[r][c] ? grid[r][c].type : -1;
-      if(t === runType) runLen++;
-      else {
-        if(runLen>=3) for(let k=runStart;k<runStart+runLen;k++) toRemove.push({r:k,c});
-        runType = t; runStart = r; runLen = 1;
-      }
-    }
-  }
-  // dedupe
-  const set = new Set();
-  const unique = [];
-  for(const p of toRemove){
-    const k = p.r+','+p.c;
-    if(!set.has(k)){ set.add(k); unique.push(p); }
-  }
-  return unique;
-}
 
-async function clearMatchesThenCollapse(){
-  animating = true;
-  while(true){
-    const matches = findMatches();
-    if(matches.length === 0) break;
-    score += matches.length * 60;
-    msgEl.textContent = `Cleared ${matches.length} candies!`;
-    // clear matches
-    for(const m of matches) grid[m.r][m.c] = null;
-    renderAll();
-    await sleep(180);
-    collapseGrid();
-    renderAll();
-    await sleep(160);
-    refillGrid();
-    renderAll();
-    await sleep(160);
-  }
-  animating = false;
-}
+  // expose small API if needed
+  window.Nav = {
+    startLevel,
+    showGameOver,
+    unlockLevel,
+    navigateTo,
+    renderMap
+  };
 
-function collapseGrid(){
-  for(let c=0;c<COLS;c++){
-    let write = ROWS-1;
-    for(let r=ROWS-1;r>=0;r--){
-      if(grid[r][c]){
-        if(write !== r){ grid[write][c] = grid[r][c]; grid[r][c] = null; }
-        write--;
-      }
-    }
-    for(let r=write;r>=0;r--) grid[r][c] = null;
-  }
-}
-
-function refillGrid(){
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      if(!grid[r][c]) grid[r][c] = { type: rand(TYPES), special: null };
-    }
-  }
-}
-
-function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
-
-async function attemptSwap(a,b){
-  animating = true;
-  swapCells(a,b);
-  const matches = findMatches();
-  if(matches.length === 0){
-    await sleep(160);
-    swapCells(a,b); // revert
-    msgEl.textContent = 'No match — swap reverted';
-    selected = null;
-    animating = false;
-    renderAll();
-    return;
-  }
-  moves = Math.max(0, moves-1);
-  renderAll();
-  await clearMatchesThenCollapse();
-  selected = null;
-  renderAll();
-  if(moves <= 0) msgEl.textContent = `Game over! Final score: ${score}`;
-  else msgEl.textContent = `Moves left: ${moves}`;
-  animating = false;
-}
-
-function findHint(){
-  // brute force: try neighboring swaps
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const dirs = [{r:r,c:c+1},{r:r+1,c:c}];
-      for(const t of dirs){
-        if(t.r<ROWS && t.c<COLS){
-          swapCells({r,c}, t);
-          const matches = findMatches();
-          swapCells({r,c}, t);
-          if(matches.length>0) return [{r,c}, t];
-        }
-      }
-    }
-  }
-  return null;
-}
-
-/* UI bindings */
-btnRestart.addEventListener('click', ()=> initGame());
-btnHint.addEventListener('click', ()=>{
-  const h = findHint();
-  if(!h) msgEl.textContent = 'No hints available!';
-  else {
-    selected = h[0];
-    renderAll();
-    setTimeout(()=>{ msgEl.textContent = 'Try swapping highlighted cells'; selected = null; renderAll(); }, 700);
-  }
-});
-
-/* initialization */
-function initGame(){
-  score = 0; moves = 30; selected = null; animating = false;
-  createEmpty();
-  fillNoInitialMatches();
-  buildDOM();
-  renderAll();
-  msgEl.textContent = 'Tap one candy then tap adjacent candy to swap.';
-}
-// start
-initGame();
+  document.addEventListener('DOMContentLoaded', init);
+})();
