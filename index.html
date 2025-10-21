@@ -3,48 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>कैंडी मैच • Candy Match</title>
+  <title>Candy Match — Navigation</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="title-block">
-      <h1>🍬 कैंडी मैच</h1>
-      <div class="tag">Match. Pop. Smile!</div>
-    </div>
-  </header>
+  <!-- APP Shell -->
+  <div id="app">
 
-  <main class="main">
-    <aside class="sidebar">
-      <div class="panel">
-        <div class="label">स्कोर</div>
-        <div id="score" class="value">0</div>
-      </div>
-
-      <div class="panel">
-        <div class="label">Moves</div>
-        <div id="moves" class="value">30</div>
-      </div>
-
-      <div class="controls">
-        <button id="btnHint">Hint</button>
-        <button id="btnRestart">Restart</button>
-      </div>
-
-      <div id="message" class="message">एक कैंडी टैप करो, फिर पास वाली टैप करके swap करो।</div>
-    </aside>
-
-    <section class="play">
-      <div class="board-wrap" aria-hidden="false">
-        <div id="board" class="board" role="grid" aria-label="Candy board"></div>
+    <!-- HOME SCREEN -->
+    <section id="screen-home" class="screen active">
+      <div class="center-card">
+        <h1>🍬 Candy Match</h1>
+        <p class="muted">Match. Pop. Smile!</p>
+        <div class="btn-row">
+          <button id="btn-play">Play</button>
+          <button id="btn-open-map">Map</button>
+        </div>
+        <div class="btn-row">
+          <button id="btn-settings">Settings</button>
+          <button id="btn-about">About</button>
+        </div>
       </div>
     </section>
-  </main>
 
-  <footer class="site-footer">
-    <div>Prototype · HTML / CSS / JS · Images inside <code>images/</code></div>
-  </footer>
+    <!-- MAP / LEVEL SELECT SCREEN -->
+    <section id="screen-map" class="screen">
+      <header class="screen-header">
+        <button class="back" data-target="home">&larr; Back</button>
+        <h2>Level Map</h2>
+      </header>
+      <div class="map-grid" id="map-grid">
+        <!-- level buttons injected by JS -->
+      </div>
+    </section>
 
-  <script src="js/game.js" defer></script>
+    <!-- GAMEPLAY SCREEN -->
+    <section id="screen-game" class="screen">
+      <header class="screen-header">
+        <button class="back" data-target="map">&larr; Back</button>
+        <h2 id="game-title">Level 1</h2>
+      </header>
+
+      <main class="game-area">
+        <div id="game-container">
+          <!-- actual game board (GameAPI) will be mounted here -->
+          <div id="board-placeholder">Game will appear here</div>
+        </div>
+
+        <aside class="game-sidebar">
+          <div>Score: <span id="nav-score">0</span></div>
+          <div>Moves: <span id="nav-moves">30</span></div>
+          <div class="btn-row">
+            <button id="btn-restart-level">Restart</button>
+            <button id="btn-end-level">End</button>
+          </div>
+        </aside>
+      </main>
+    </section>
+
+    <!-- GAME OVER / LEVEL COMPLETE SCREEN -->
+    <section id="screen-gameover" class="screen">
+      <div class="center-card">
+        <h2 id="go-title">Level Complete!</h2>
+        <p id="go-sub">Score: <span id="go-score">0</span></p>
+        <div class="btn-row">
+          <button id="btn-replay">Replay</button>
+          <button id="btn-next">Next Level</button>
+          <button id="btn-to-map">Back to Map</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Navigation script -->
+  <script src="js/main.js" defer></script>
+
+  <!-- If you have game-core, include it AFTER main.js or ensure it exposes window.GameAPI -->
+  <!-- <script src="js/game-core.js" defer></script> -->
 </body>
-</html>
+          </html>
