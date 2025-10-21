@@ -1,29 +1,34 @@
-/* js/level-map.js */
-document.addEventListener('DOMContentLoaded', ()=>{
-  const levelsEl = document.getElementById('levels');
-  if (!levelsEl) { console.warn('level-map: #levels not found'); return; }
-  const MAX_ALL = 40; // total levels you want
-  const unlocked = Number(localStorage.getItem('maxLevel')||1);
+// js/level-map.js
+// define level initial layouts (8x8 arrays with values 0..4 or null for random)
 
-  for(let i=1;i<=MAX_ALL;i++){
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.style.margin = '10px';
-    btn.textContent = `Level ${i}`;
-    if (i>unlocked){
-      btn.disabled = true;
-      btn.style.opacity = '0.4';
-      btn.textContent = `Level ${i} 🔒`;
-    } else {
-      btn.addEventListener('click', ()=> {
-        // ensure game module available
-        if (window.CandyGame && CandyGame.startLevel){
-          CandyGame.startLevel(i);
-        } else {
-          console.warn('CandyGame.startLevel not available yet');
-        }
-      });
-    }
-    levelsEl.appendChild(btn);
+(function(){
+  const LEVELS = {
+    1: null,
+    2: [
+      [0,1,2,3,4,0,1,2],
+      [1,2,3,4,0,1,2,3],
+      [2,3,4,0,1,2,3,4],
+      [3,4,0,1,2,3,4,0],
+      [4,0,1,2,3,4,0,1],
+      [0,1,2,3,4,0,1,2],
+      [1,2,3,4,0,1,2,3],
+      [2,3,4,0,1,2,3,4]
+    ],
+    3: null
+    // add more levels as needed
+  };
+
+  function getInitial(level){
+    const L = LEVELS[level];
+    if(!L) return null;
+    return L.map(r=> r.slice());
   }
-});
+
+  function onUpdate(state){
+    // optional hook called by game-core (not required)
+    // state = {score, moves, level, event}
+    // console.log('LevelMap.onUpdate', state);
+  }
+
+  window.LevelMap = { getInitial, onUpdate };
+})();
