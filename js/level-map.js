@@ -1,11 +1,18 @@
-// js/level-map.js
-(function(){
-  const LEVELS = {
-    1: {layout:null, target:1200, moves:30},
-    2: {layout:null, target:1800, moves:28},
-    3: {layout:null, target:2500, moves:25}
-  };
-  function getInitial(level){ const L = LEVELS[level]; return L? L.layout : null; }
-  function getMeta(level){ return LEVELS[level] || {layout:null,target:1000,moves:30}; }
-  window.LevelMap = { getInitial, getMeta, onUpdate: ()=>{} };
-})();
+const LevelMap = {
+  total: 9,
+  render: () => {
+    const grid = document.getElementById('levelGrid');
+    const progress = Storage.getProgress();
+    grid.innerHTML = '';
+    for (let i = 1; i <= LevelMap.total; i++) {
+      const div = document.createElement('div');
+      div.className = 'level' + (progress.unlocked.includes(i) ? '' : ' locked');
+      div.textContent = progress.unlocked.includes(i) ? `Level ${i}` : `🔒 Level ${i}`;
+      div.addEventListener('click', () => {
+        if (!progress.unlocked.includes(i)) return alert('Locked Level');
+        Game.start(i);
+      });
+      grid.appendChild(div);
+    }
+  }
+};
