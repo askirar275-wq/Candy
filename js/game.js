@@ -3,16 +3,18 @@
 
 const Game = (function(){
   // config
-  const LEVEL_META = {
-    // level: { target: scoreNeededFor1Star, star2: threshold, star3: threshold }
-    1: { target: 800, star2: 1400, star3: 2200 },
-    2: { target: 900, star2: 1600, star3: 2600 },
-    3: { target: 1000, star2: 1900, star3: 2800 },
-    4: { target: 1100, star2: 2100, star3: 3200 },
-    5: { target: 1200, star2: 2300, star3: 3500 },
-    // fallback meta
-    default: { target: 1200, star2: 2200, star3: 3200 }
-  };
+ const LEVEL_META = {
+  1: { target: 600,  star2: 1000, star3: 1600 },
+  2: { target: 800,  star2: 1400, star3: 2000 },
+  3: { target: 1000, star2: 1700, star3: 2500 },
+  4: { target: 1200, star2: 2000, star3: 2800 },
+  5: { target: 1500, star2: 2400, star3: 3200 },
+  6: { target: 1800, star2: 2700, star3: 3600 },
+  7: { target: 2100, star2: 3000, star3: 4000 },
+  8: { target: 2500, star2: 3400, star3: 4500 },
+  9: { target: 3000, star2: 4000, star3: 5000 },
+  default: { target: 1200, star2: 2200, star3: 3200 }
+}; 
 
   // state
   let grid = [];
