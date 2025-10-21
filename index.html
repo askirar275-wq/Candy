@@ -1,19 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Candy Match Game</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>कैंडी मैच • Candy Match</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <h1>Candy Match 🍬</h1>
-  <div class="game-board" id="board"></div>
-  <div class="info">
-    <p>Score: <span id="score">0</span></p>
-    <button id="reset">Reset</button>
-  </div>
+  <header class="site-header">
+    <div class="title-block">
+      <h1>🍬 कैंडी मैच</h1>
+      <div class="tag">Match. Pop. Smile!</div>
+    </div>
+  </header>
 
-  <script src="game.js"></script>
+  <main class="main">
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="label">स्कोर</div>
+        <div id="score" class="value">0</div>
+      </div>
+
+      <div class="panel">
+        <div class="label">Moves</div>
+        <div id="moves" class="value">30</div>
+      </div>
+
+      <div class="controls">
+        <button id="btnHint">Hint</button>
+        <button id="btnRestart">Restart</button>
+      </div>
+
+      <div id="message" class="message">एक कैंडी टैप करो, फिर पास वाली टैप करके swap करो।</div>
+    </aside>
+
+    <section class="play">
+      <div class="board-wrap">
+        <div id="board" class="board" role="grid" aria-label="Candy board"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div>Prototype · HTML / CSS / JS · Images from <code>images/</code></div>
+  </footer>
+
+  <!-- core game script -->
+  <script src="js/game.js"></script>
 </body>
-</html>
+  </html>
