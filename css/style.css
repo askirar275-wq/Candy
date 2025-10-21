@@ -1,121 +1,51 @@
-/* FULL clean responsive styles for Candy Match navigation + visuals */
-
-/* reset-ish */
+/* full CSS (responsive + game styles) */
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: linear-gradient(180deg,#fff8fb,#f0fbff);
-  color:#111;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  line-height:1.35;
-}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#fff8fb,#f0fbff);color:#111}
 
-/* container */
-#app{min-height:100vh;display:block}
-
-/* screen basic */
-.screen{display:none;padding:18px 14px 36px}
+/* screen layout */
+.screen{display:none;padding:12px}
 .screen.active{display:block}
+.center-card{max-width:720px;margin:18px auto;background:#fff;border-radius:12px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,0.06)}
+.logo-row{display:flex;align-items:center;gap:12px}
+.logo-badge{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#fff,#ffe6f0);display:flex;align-items:center;justify-content:center}
+.title-block h1{margin:0;font-size:22px}
+.muted{color:#666}
 
-/* center card for home and gameover */
-.center-card{
-  max-width:640px;
-  margin:20px auto;
-  background:#fff;
-  border-radius:14px;
-  padding:20px;
-  box-shadow:0 14px 36px rgba(0,0,0,0.06);
-}
-
-/* HOME */
-.home-card{max-width:520px;padding:20px;border-radius:14px;text-align:center;margin:20px auto}
-.logo-row{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:6px}
-.logo-badge{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff,#ffe6f0);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,0.06)}
-.title-block h1{margin:0;font-size:26px}
-.title-block .tag{color:#666;font-size:14px;margin-top:4px}
-.home-sub{color:#666;margin-top:8px}
-
-/* buttons */
-.btn-row{display:flex;gap:12px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-button{background:#4dabf7;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,0.06)}
-button.ghost{background:transparent;color:#444;border:1px solid rgba(0,0,0,0.06);padding:9px 12px}
-
-/* small actions */
-.small-actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
-
-/* screen header */
-.screen-header{display:flex;align-items:center;gap:12px;padding:6px 0;margin-bottom:8px}
-.screen-header h2{margin:0;font-size:20px}
-.screen-header .back{background:transparent;color:#333;border:1px solid #ddd;padding:6px 8px;border-radius:8px;cursor:pointer}
-
-/* MAP grid */
-.map-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
-@media(min-width:520px){ .map-grid{grid-template-columns:repeat(3,1fr)} }
-
-.level-card{
-  background:#fff;padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,0.06);text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
-}
-.level-card.locked{opacity:0.5;filter:grayscale(.1); cursor:default}
+/* map */
+.map-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:12px}
+@media(min-width:640px){ .map-grid{grid-template-columns:repeat(3,1fr)} }
+.level-card{background:#fff;padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,0.06);text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+.level-card.locked{opacity:0.5;filter:grayscale(.1);cursor:default}
 .level-thumb{width:100%;height:64px;border-radius:8px;background:linear-gradient(90deg,#fff6f8,#f6fcff);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.level-thumb .candies{display:flex;gap:6px;align-items:center;justify-content:center}
-.level-thumb img{width:36px;height:36px;border-radius:6px;object-fit:cover;box-shadow:0 6px 16px rgba(0,0,0,0.05)}
-.lvl{font-weight:700}
-.desc{color:#666;font-size:13px}
+.level-thumb img{width:36px;height:36px;border-radius:6px;object-fit:cover;margin:0 4px}
 
-/* GAME play area */
-.game-area{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
+/* game layout */
+.game-area{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:center;padding:12px}
 .game-board-wrap{flex:1;min-width:260px;max-width:640px;display:flex;align-items:center;justify-content:center}
-.board{
-  display:grid;
-  grid-template-columns:repeat(8,44px);
-  gap:6px;
-  padding:10px;
-  background:linear-gradient(180deg,#fff,#fbfdff);
-  border-radius:12px;
-  box-shadow:inset 0 -6px 14px rgba(0,0,0,0.02);
-}
-.cell{
-  width:44px;height:44px;border-radius:8px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:transform .18s ease, opacity .18s ease;
-  position:relative;
-}
+.board{display:grid;grid-template-columns:repeat(8,44px);gap:6px;padding:10px;background:linear-gradient(180deg,#fff,#fbfdff);border-radius:12px;box-shadow:inset 0 -6px 14px rgba(0,0,0,0.02)}
+.cell{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .16s ease,opacity .16s}
+.cell.selected{outline:3px solid rgba(100,150,255,0.14);transform:scale(.98)}
 .candy-img{width:86%;height:86%;object-fit:contain;border-radius:6px;pointer-events:none}
-.board-placeholder{
-  width:100%;
-  min-height:320px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  background:#fff;border-radius:12px;padding:18px;box-shadow:0 10px 28px rgba(0,0,0,0.06);
-  text-align:center;color:#666;
-}
+
+/* pop popup */
+.popup-score{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-weight:800;color:#ff4d6d;font-size:12px;pointer-events:none;opacity:1;transition:transform .8s, opacity .8s}
+
+/* sidebar */
 .game-sidebar{width:220px;min-width:180px;background:#fff;padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,0.06);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .stat-row{display:flex;justify-content:space-between;width:100%}
 .btn-row-col{display:flex;gap:8px;width:100%}
 .btn-row-col button{flex:1;padding:10px;border-radius:8px;background:#ffd166;color:#333;font-weight:800}
 
-/* Gameover card */
-.go-card{text-align:center;padding:22px;border-radius:14px}
-.go-illustration{margin-bottom:10px}
+/* modal & drawer */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center}
+.modal-card{background:#fff;padding:16px;border-radius:12px;min-width:260px;text-align:center}
+.drawer{position:fixed;right:12px;top:12px;background:#fff;padding:12px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.08)}
 
-/* small util */
-.muted{color:#666}
-a{color:inherit}
+/* gameover */
+.go-card{text-align:center;padding:18px;border-radius:12px}
 
-/* make default input/button appearance consistent on mobile */
-button:active{transform:translateY(1px)}
-button:focus{outline:2px solid rgba(77,171,247,0.22);outline-offset:2px}
-
-/* final responsive tweaks */
-@media(max-width:560px){
-  .map-grid{grid-template-columns:repeat(2,1fr)}
-  .game-area{flex-direction:column}
-  .game-sidebar{width:100%}
-  .home-card{margin:14px}
-  .center-card{margin:12px}
-  .board-placeholder{min-height:260px}
-  .board{grid-template-columns:repeat(8,36px); gap:6px}
-  .cell{width:36px;height:36px}
-  .candy-img{width:82%;height:82%}
-    }
+/* misc */
+button{background:#4dabf7;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+button.ghost{background:transparent;color:#444;border:1px solid rgba(0,0,0,0.06);padding:6px 8px}
+@media(max-width:560px){ .board{grid-template-columns:repeat(8,36px);gap:6px}.cell{width:36px;height:36px}.game-sidebar{width:100%} }
