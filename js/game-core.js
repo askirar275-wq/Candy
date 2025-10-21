@@ -1,13 +1,10 @@
 // js/game-core.js
-// Core image-based Match-3 logic. Exposes window.GameAPI
-
 (function(){
   const ROWS = 8, COLS = 8;
   const TYPES = 5; // candy1..candy5
   const boardEl = document.getElementById('board');
   const scoreEl = document.getElementById('nav-score');
   const movesEl = document.getElementById('nav-moves');
-  const msgEl = document.getElementById('board-placeholder');
 
   let grid = [];
   let cells = [];
@@ -35,7 +32,6 @@
         return;
       }
     }
-    // random fill ensuring no initial matches
     for(let r=0;r<ROWS;r++){
       for(let c=0;c<COLS;c++){
         let val;
@@ -82,9 +78,13 @@
     const el = cells[idx];
     const img = el.firstChild;
     const item = grid[r][c];
-    if(!item){ img.removeAttribute('src'); el.classList.remove('selected'); return; }
+    if(!item){ img.removeAttribute('src'); el.classList.remove('selected'); el.style.opacity = ''; return; }
     img.src = candySrc(item.type);
     el.classList.toggle('selected', selected && selected.r==r && selected.c==c);
+    // reset transforms so gravity animation can play
+    el.style.transition = "transform .2s ease, opacity .18s ease";
+    el.style.transform = "translateY(0px)";
+    el.style.opacity = "";
   }
 
   function coordsAdjacent(a,b){
@@ -149,17 +149,73 @@
     while(true){
       const matches = findMatches();
       if(matches.length === 0) break;
-      score += matches.length * 50;
+
+      // play pop sound
+      if(window.SFX && typeof window.SFX.play === 'function') window.SFX.play('pop');
+
+      // score
+      const pointsEach = 50;
+      score += matches.length * pointsEach;
+
+      // animate matched cells (scale + popup)
+      for(const m of matches){
+        const idx = m.r*COLS + m.c;
+        const el = cells[idx];
+        if(!el) continue;
+        el.style.transform = "scale(1.18)";
+        el.style.transition = "transform .16s ease, opacity .18s ease";
+        el.style.opacity = "0.6";
+
+        // popup score
+        const popup = document.createElement("div");
+        popup.textContent = `+${pointsEach}`;
+        popup.style.position = "absolute";
+        popup.style.left = "50%";
+        popup.style.top = "10%";
+        popup.style.transform = "translateX(-50%)";
+        popup.style.color = "#ff4081";
+        popup.style.fontWeight = "800";
+        popup.style.fontSize = "12px";
+        popup.style.pointerEvents = "none";
+        popup.style.transition = "transform .9s ease, opacity .9s ease";
+        el.appendChild(popup);
+        setTimeout(()=>{ popup.style.transform = "translateX(-50%) translateY(-32px)"; popup.style.opacity = "0"; }, 30);
+        setTimeout(()=> popup.remove(), 900);
+      }
+
       renderAll();
-      for(const m of matches) grid[m.r][m.c] = null;
-      renderAll();
-      await sleep(200);
-      collapseGrid();
-      renderAll();
+      await sleep(220);
+
+      // remove matches visually
+      for(const m of matches){
+        grid[m.r][m.c] = null;
+        const idx = m.r*COLS + m.c;
+        const el = cells[idx];
+        if(el){
+          el.style.opacity = "0";
+          if(el.firstChild) el.firstChild.src = "";
+        }
+      }
+
       await sleep(160);
+
+      // collapse and gravity
+      collapseGrid();
+
+      // small bounce animation for falling cells
+      cells.forEach(el => {
+        el.style.transform = "translateY(8px)";
+      });
+      // render after collapse
+      renderAll();
+      setTimeout(()=> {
+        cells.forEach(el => el.style.transform = "translateY(0px)");
+      }, 120);
+
+      await sleep(180);
       refillGrid();
       renderAll();
-      await sleep(160);
+      await sleep(180);
     }
     animating = false;
   }
@@ -188,7 +244,7 @@
     swapCells(a,b);
     const matches = findMatches();
     if(matches.length === 0){
-      await sleep(180);
+      await sleep(160);
       swapCells(a,b);
       selected = null;
       animating = false;
@@ -200,12 +256,16 @@
     await clearMatchesThenCollapse();
     selected = null;
     renderAll();
-    // level complete check (simple: no moves left -> game over)
+
     if(moves <= 0){
-      // save best score and unlock next
-      StorageAPI && StorageAPI.setBestScore && StorageAPI.setBestScore(currentLevel, score);
-      StorageAPI && StorageAPI.unlock && StorageAPI.unlock(currentLevel+1);
-      // call Nav if present
+      // save best and unlock
+      try{
+        window.StorageAPI && window.StorageAPI.setBestScore && window.StorageAPI.setBestScore(currentLevel, score);
+        window.StorageAPI && window.StorageAPI.unlock && window.StorageAPI.unlock(currentLevel+1);
+      }catch(e){}
+      // play win sound
+      if(window.SFX && typeof window.SFX.play === 'function') window.SFX.play('win');
+      // call Nav.showGameOver if present
       if(window.Nav && typeof window.Nav.showGameOver === 'function') window.Nav.showGameOver(true, score, currentLevel);
     }
     animating = false;
@@ -235,21 +295,15 @@
     fillInitial(level);
     buildDOM();
     renderAll();
-    // show board and hide placeholder
     const ph = document.getElementById('board-placeholder');
     if(ph) ph.style.display = 'none';
     const b = document.getElementById('board');
     if(b) b.style.display = 'grid';
   }
 
-  function reset(){
-    initGame(currentLevel);
-  }
-
+  function reset(){ initGame(currentLevel); }
   function getState(){ return {score, moves, level: currentLevel, grid}; }
 
   window.GameAPI = { initGame, reset, getState, findHint };
-
-  // auto-init when page ready? No — main.js will call initGame when level starts.
 
 })();
