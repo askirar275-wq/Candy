@@ -6,5 +6,5 @@ const Storage = {
     if (!data.unlocked.includes(level)) data.unlocked.push(level);
     Storage.saveProgress(data);
   },
-  reset: () => localStorage.removeItem('progress')
+  reset: () => { localStorage.removeItem('progress'); }
 };
