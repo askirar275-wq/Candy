@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Updated</title>
+  <title>Candy Match — Pro</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,12 +21,12 @@
             </svg>
           </div>
           <div class="title-block">
-            <h1>🍬 Candy Match</h1>
-            <div class="tag muted">Match. Pop. Smile!</div>
+            <h1>🍬 Candy Match Pro</h1>
+            <div class="tag muted">Match. Pop. Combo!</div>
           </div>
         </div>
 
-        <p class="home-sub muted">Colorful puzzles, quick sessions — perfect for short breaks!</p>
+        <p class="home-sub muted">Tap Play → Open Map → Choose Level. Special candies, boosters & achievements included.</p>
 
         <div class="btn-row">
           <button id="btn-play">Play</button>
@@ -45,12 +45,8 @@
       <div class="screen-header">
         <button class="back" data-target="home">&larr; Back</button>
         <h2>Level Map</h2>
-      </div>
-
-      <div class="map-hero">
-        <div class="map-hero-inner">
-          <h3>Choose a Level</h3>
-          <p class="muted">Tap an unlocked level to play</p>
+        <div class="map-tools">
+          <button id="btn-reset-progress" class="ghost">Reset Progress</button>
         </div>
       </div>
 
@@ -62,14 +58,14 @@
       <div class="screen-header">
         <button class="back" data-target="map">&larr; Back</button>
         <h2 id="game-title">Level 1</h2>
+        <div class="header-actions">
+          <button id="btn-pause" class="ghost">Pause</button>
+        </div>
       </div>
 
       <main class="game-area">
         <div id="game-container" class="game-board-wrap">
-          <!-- board (grid) -->
           <div id="board" class="board" aria-label="game board"></div>
-
-          <!-- placeholder shown only when GameAPI missing -->
           <div id="board-placeholder" class="board-placeholder" style="display:none">
             <svg width="120" height="120" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd166"/></svg>
             <div class="ph-text muted">Game loading…</div>
@@ -78,14 +74,32 @@
 
         <aside class="game-sidebar">
           <div class="stat-row"><div>Score</div><div id="nav-score">0</div></div>
-          <div class="stat-row"><div>Moves</div><div id="nav-moves">30</div></div>
+          <div class="stat-row"><div id="moves-label">Moves</div><div id="nav-moves">30</div></div>
+          <div class="stat-row"><div>Target</div><div id="nav-target">1200</div></div>
+          <div class="stat-row"><div>Combo</div><div id="nav-combo">x1</div></div>
           <div class="btn-row-col" style="margin-top:12px">
+            <button id="btn-hint">Hint</button>
+            <button id="btn-shuffle">Shuffle</button>
+          </div>
+          <div class="btn-row-col" style="margin-top:8px">
+            <button id="btn-use-bomb">Use Bomb</button>
             <button id="btn-restart-level">Restart</button>
-            <button id="btn-end-level">End</button>
           </div>
         </aside>
       </main>
     </section>
+
+    <!-- PAUSE Modal -->
+    <div id="pause-modal" class="modal" hidden>
+      <div class="modal-card">
+        <h3>Paused</h3>
+        <div class="modal-actions">
+          <button id="btn-resume">Resume</button>
+          <button id="btn-restart2">Restart</button>
+          <button id="btn-quit">Quit</button>
+        </div>
+      </div>
+    </div>
 
     <!-- GAME OVER -->
     <section id="screen-gameover" class="screen">
@@ -95,6 +109,7 @@
         </div>
         <h2 id="go-title">Level Complete!</h2>
         <p id="go-sub" class="muted">Score: <span id="go-score">0</span></p>
+        <p id="go-best" class="muted">Best: <span id="go-best-score">0</span></p>
         <div class="btn-row" style="margin-top:14px">
           <button id="btn-replay">Replay</button>
           <button id="btn-next">Next</button>
@@ -103,13 +118,26 @@
       </div>
     </section>
 
+    <!-- SETTINGS Drawer -->
+    <div id="settings-drawer" class="drawer" hidden>
+      <div class="drawer-card">
+        <h3>Settings</h3>
+        <label><input type="checkbox" id="opt-sound" checked> Sound</label>
+        <label><input type="checkbox" id="opt-music"> Music</label>
+        <label><input type="checkbox" id="opt-timer"> Timer Mode (instead of Moves)</label>
+        <div style="margin-top:8px">
+          <button id="btn-close-settings">Close</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- load order: storage, level-map, sounds, game-core, main -->
+  <!-- scripts -->
   <script src="js/storage.js" defer></script>
   <script src="js/level-map.js" defer></script>
-  <script src="js/sound.js" defer></script>
+  <script src="js/sound.js" defer></script> <!-- optional -->
   <script src="js/game-core.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>
-            </html>
+</html>
