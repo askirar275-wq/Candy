@@ -1,63 +1,103 @@
-/* === VISUAL THEME ADDITIONS === */
+/* FULL clean responsive styles for Candy Match navigation + visuals */
 
-/* soft page backgrounds */
-.home-bg{
-  position:fixed; inset:0; z-index:-1;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(255,200,200,0.12), transparent 8%),
-    radial-gradient(circle at 85% 25%, rgba(180,220,255,0.12), transparent 10%),
-    linear-gradient(180deg,#fff8fb,#f0fbff);
+/* reset-ish */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: linear-gradient(180deg,#fff8fb,#f0fbff);
+  color:#111;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.35;
 }
 
-/* HOME CARD visuals */
-.home-card{max-width:520px;padding:22px;border-radius:16px}
-.logo-row{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+/* container */
+#app{min-height:100vh;display:block}
+
+/* screen basic */
+.screen{display:none;padding:18px 14px 36px}
+.screen.active{display:block}
+
+/* center card for home and gameover */
+.center-card{
+  max-width:640px;
+  margin:20px auto;
+  background:#fff;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 14px 36px rgba(0,0,0,0.06);
+}
+
+/* HOME */
+.home-card{max-width:520px;padding:20px;border-radius:14px;text-align:center;margin:20px auto}
+.logo-row{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:6px}
 .logo-badge{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff,#ffe6f0);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,0.06)}
-.home-sub{color:#666;margin-top:2px}
+.title-block h1{margin:0;font-size:26px}
+.title-block .tag{color:#666;font-size:14px;margin-top:4px}
+.home-sub{color:#666;margin-top:8px}
 
-/* buttons with small icon */
-.btn-row button{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;font-size:16px;border-radius:12px}
+/* buttons */
+.btn-row{display:flex;gap:12px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+button{background:#4dabf7;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,0.06)}
+button.ghost{background:transparent;color:#444;border:1px solid rgba(0,0,0,0.06);padding:9px 12px}
+
+/* small actions */
 .small-actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
-button.ghost{background:transparent;color:#444;border:1px solid rgba(0,0,0,0.06);padding:8px 12px}
 
-/* MAP hero */
-.map-hero{display:flex;align-items:center;gap:12px;padding:12px}
-.map-bg-left{width:100px;height:64px;background:linear-gradient(135deg,#ffd1dc,#d6e7ff);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
-.map-hero-inner h3{margin:0}
-.muted{color:#666}
+/* screen header */
+.screen-header{display:flex;align-items:center;gap:12px;padding:6px 0;margin-bottom:8px}
+.screen-header h2{margin:0;font-size:20px}
+.screen-header .back{background:transparent;color:#333;border:1px solid #ddd;padding:6px 8px;border-radius:8px;cursor:pointer}
 
-/* level card thumbnail visuals */
+/* MAP grid */
+.map-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+@media(min-width:520px){ .map-grid{grid-template-columns:repeat(3,1fr)} }
+
 .level-card{
-  position:relative;
-  overflow:hidden;
-  min-height:92px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  transition:transform .18s, box-shadow .18s, opacity .18s;
+  background:#fff;padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,0.06);text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
 }
-.level-card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,0.08)}
-.level-card.locked{opacity:.55;filter:grayscale(.2)}
+.level-card.locked{opacity:0.5;filter:grayscale(.1); cursor:default}
+.level-thumb{width:100%;height:64px;border-radius:8px;background:linear-gradient(90deg,#fff6f8,#f6fcff);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.level-thumb .candies{display:flex;gap:6px;align-items:center;justify-content:center}
+.level-thumb img{width:36px;height:36px;border-radius:6px;object-fit:cover;box-shadow:0 6px 16px rgba(0,0,0,0.05)}
+.lvl{font-weight:700}
+.desc{color:#666;font-size:13px}
 
-.level-thumb{
-  width:86%;height:46px;border-radius:8px;margin-bottom:8px;overflow:hidden;
-  background:linear-gradient(90deg,#fff6f8,#f6fcff);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 -6px 10px rgba(0,0,0,0.03);
+/* GAME play area */
+.game-area{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
+.game-board-wrap{flex:1;min-width:260px;max-width:640px;display:flex;align-items:center;justify-content:center}
+.board-placeholder{
+  width:100%;
+  min-height:320px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:#fff;border-radius:12px;padding:18px;box-shadow:0 10px 28px rgba(0,0,0,0.06);
+  text-align:center;color:#666;
 }
+.game-sidebar{width:220px;min-width:180px;background:#fff;padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,0.06);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.stat-row{display:flex;justify-content:space-between;width:100%}
+.btn-row-col{display:flex;gap:8px;width:100%}
+.btn-row-col button{flex:1;padding:10px;border-radius:8px;background:#ffd166;color:#333;font-weight:800}
 
-/* small candy row inside thumb (generated via CSS) */
-.level-thumb .candies{display:flex;gap:6px}
-.level-thumb .candies img{width:28px;height:28px;object-fit:cover;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.06)}
+/* Gameover card */
+.go-card{text-align:center;padding:22px;border-radius:14px}
+.go-illustration{margin-bottom:10px}
 
-/* GAME BOARD placeholder styling */
-.board-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#666}
-.board-placeholder svg{filter:drop-shadow(0 6px 14px rgba(0,0,0,0.06))}
+/* small util */
+.muted{color:#666}
+a{color:inherit}
 
-/* GAME OVER card */
-.go-card{max-width:420px;padding:20px;border-radius:16px}
-.go-illustration{display:flex;justify-content:center;margin-bottom:8px}
+/* make default input/button appearance consistent on mobile */
+button:active{transform:translateY(1px)}
+button:focus{outline:2px solid rgba(77,171,247,0.22);outline-offset:2px}
 
-/* small responsive tweaks */
-@media (max-width:720px){
-  .home-card{margin:24px}
-  .map-grid{grid-template-columns:repeat(3,1fr)}
+/* final responsive tweaks */
+@media(max-width:560px){
+  .map-grid{grid-template-columns:repeat(2,1fr)}
+  .game-area{flex-direction:column}
+  .game-sidebar{width:100%}
+  .home-card{margin:14px}
+  .center-card{margin:12px}
+  .board-placeholder{min-height:260px}
 }
