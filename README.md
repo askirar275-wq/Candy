@@ -1,19 +1,14 @@
-# 🍬 Candy Match Game
+# Candy Match
 
-A simple Candy Crush–style game built using **HTML, CSS, and JavaScript**.  
-Swap candies to match 3 or more of the same color to score points.
+Simple Match-3 prototype (image-based).
 
-## 🚀 How to Play
-- Drag and drop candies to swap their positions.
-- Match 3 of the same color in a row or column to earn points.
-- Click **Reset** to restart the game.
+## Files
+- `index.html`
+- `css/style.css`
+- `js/game.js`
+- `images/` (contains candy1.png .. candy5.png)
 
-## 🛠️ Tech Stack
-- HTML5  
-- CSS3  
-- Vanilla JavaScript  
-- GitHub Pages for hosting
-
-## 🧩 Live Demo
-Once uploaded, your live link will look like:
-`https://<your-username>.github.io/candy-match/`
+## Run
+1. Ensure `images/candy1.png` .. `images/candy5.png` exist.
+2. Push to GitHub and enable Pages: Settings → Pages → Branch: `main` → Folder: `/ (root)`.
+3. Visit `https://<your-username>.github.io/<repo>/`
