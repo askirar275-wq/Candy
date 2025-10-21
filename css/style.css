@@ -1,99 +1,57 @@
-/* css/style.css - board + UI styling (responsive/mobile ready) */
-
-:root{
-  --bg: #ffeef3;
-  --card: rgba(255,255,255,0.95);
-  --accent: #ff6fa8;
-  --board-pad: 18px;
-  --cell-gap: 8px; /* small gap */
-  --cell-size: 56px; /* base */
+body {
+  background: linear-gradient(135deg, #f9a8d4, #fcd34d);
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
 }
 
-/* responsive: smaller screens slightly shrink cell size */
-@media (max-width:420px){
-  :root { --cell-size: 48px; --board-pad:14px; --cell-gap:6px; }
-}
-@media (min-width:900px){
-  :root { --cell-size: 64px; --board-pad:22px; --cell-gap:10px; }
+h1 {
+  color: #fff;
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+  margin-top: 20px;
 }
 
-*{box-sizing:border-box;font-family: 'Helvetica', Arial, sans-serif;margin:0;padding:0}
-body{
-  background: var(--bg);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  min-height:100vh;
-}
-
-/* header / back */
-.game-header, .hero-card { display:flex; align-items:center; gap:18px; padding:18px; }
-.game-header .stats { display:flex; gap:18px; align-items:center; font-weight:600; color:#2b2b2b; }
-
-/* board container (centered) */
-.board-wrap{
-  width: min(92vw, 680px);
-  margin: 16px auto;
-  padding: var(--board-pad);
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.98));
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-}
-
-/* grid of candies */
-.board {
+.game-board {
   display: grid;
-  grid-template-columns: repeat(8, var(--cell-size)); /* default 8x8 board, can adjust in JS */
-  gap: var(--cell-gap);
-  justify-content:center;
-  padding: 8px;
+  grid-template-columns: repeat(8, 60px);
+  grid-template-rows: repeat(8, 60px);
+  gap: 4px;
+  margin: 20px auto;
 }
 
-/* each cell */
-.cell {
-  width: var(--cell-size);
-  height: var(--cell-size);
-  background: rgba(255,255,255,0.95);
-  border-radius: 12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.06), inset 0 -2px 0 rgba(0,0,0,0.02);
-  user-select:none;
-  touch-action: none; /* important for pointer events */
-  position:relative;
-  transition: transform 180ms ease;
+.candy {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
 }
 
-/* candy image */
-.cell img {
-  width: 78%;
-  height: auto;
-  pointer-events:none;
-  -webkit-user-drag: none;
+.candy:hover {
+  transform: scale(1.1);
 }
 
-/* controls */
-.controls { display:flex; gap:18px; justify-content:center; margin:18px 0 30px; }
-.btn{
-  background:linear-gradient(180deg,#fff,#f7f7f7);
-  border-radius:28px;
-  padding:12px 20px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+.info {
+  text-align: center;
+  color: white;
+  font-size: 1.2em;
+}
+
+button {
+  background: #9333ea;
+  color: white;
   border: none;
-  font-weight:700;
-  cursor:pointer;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-size: 1em;
 }
-.btn.primary { background: linear-gradient(180deg,#ff84b2,#ff5f95); color:white; }
 
-/* selected visual */
-.cell.selected { transform: translateY(-6px) scale(1.03); box-shadow: 0 12px 28px rgba(0,0,0,0.12); }
-
-/* matched highlight (flash) */
-.cell.matched { animation: flash 360ms ease; }
-@keyframes flash { 0%{ transform: scale(1);} 50%{ transform: scale(1.12);} 100%{ transform: scale(1);} }
-
-/* small text below board on small screens */
-@media (max-width:420px){
-  .game-header .stats { font-size:14px; gap:12px; }
-  .btn { padding:10px 14px; font-size:14px; }
-  }
+button:hover {
+  background: #7e22ce;
+}
