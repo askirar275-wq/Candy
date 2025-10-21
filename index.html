@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Visuals</title>
+  <title>Candy Match — Clean</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,13 +11,11 @@
 
     <!-- HOME -->
     <section id="screen-home" class="screen active">
-      <div class="home-bg"></div>
-
       <div class="center-card home-card">
         <div class="logo-row">
           <div class="logo-badge">
-            <!-- small candy SVG inlined -->
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- inline candy icon -->
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="7" width="18" height="10" rx="5" fill="#FFD166"/>
               <circle cx="7.5" cy="12" r="3.2" fill="#FF6B6B"/>
               <circle cx="16.5" cy="12" r="3.2" fill="#8A63FF"/>
@@ -25,66 +23,62 @@
           </div>
           <div class="title-block">
             <h1>🍬 Candy Match</h1>
-            <div class="tag">Match. Pop. Smile!</div>
+            <div class="tag muted">Match. Pop. Smile!</div>
           </div>
         </div>
 
-        <p class="home-sub">Colorful puzzles, quick sessions — perfect for short breaks!</p>
+        <p class="home-sub muted">Colorful puzzles, quick sessions — perfect for short breaks!</p>
 
         <div class="btn-row">
-          <button id="btn-play"><span class="icon">▶</span> Play</button>
-          <button id="btn-open-map"><span class="icon">🗺️</span> Map</button>
+          <button id="btn-play">Play</button>
+          <button id="btn-open-map">Map</button>
         </div>
 
         <div class="small-actions">
-          <button id="btn-settings" class="ghost">⚙️ Settings</button>
-          <button id="btn-about" class="ghost">ℹ️ About</button>
+          <button id="btn-settings" class="ghost">Settings</button>
+          <button id="btn-about" class="ghost">About</button>
         </div>
       </div>
     </section>
 
     <!-- MAP -->
     <section id="screen-map" class="screen">
-      <header class="screen-header">
+      <div class="screen-header">
         <button class="back" data-target="home">&larr; Back</button>
         <h2>Level Map</h2>
-      </header>
+      </div>
 
       <div class="map-hero">
-        <div class="map-bg-left"></div>
         <div class="map-hero-inner">
           <h3>Choose a Level</h3>
           <p class="muted">Tap an unlocked level to play</p>
         </div>
       </div>
 
-      <div class="map-grid" id="map-grid">
-        <!-- JS injects level cards — cards styled with thumbnail visuals -->
-      </div>
+      <div class="map-grid" id="map-grid"></div>
     </section>
 
     <!-- GAME -->
     <section id="screen-game" class="screen">
-      <header class="screen-header">
+      <div class="screen-header">
         <button class="back" data-target="map">&larr; Back</button>
         <h2 id="game-title">Level 1</h2>
-      </header>
+      </div>
 
       <main class="game-area">
         <div id="game-container" class="game-board-wrap">
-          <!-- actual game inserts here (if GameAPI present) -->
           <div id="board-placeholder" class="board-placeholder">
             <svg width="120" height="120" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd166"/></svg>
-            <div class="ph-text">Game loading…</div>
+            <div class="ph-text muted">Game loading…</div>
           </div>
         </div>
 
         <aside class="game-sidebar">
-          <div class="stat-row"><strong>Score</strong><div id="nav-score">0</div></div>
-          <div class="stat-row"><strong>Moves</strong><div id="nav-moves">30</div></div>
-          <div class="btn-row-col">
-            <button id="btn-restart-level">🔁 Restart</button>
-            <button id="btn-end-level">⏹️ End</button>
+          <div class="stat-row"><div>Score</div><div id="nav-score">0</div></div>
+          <div class="stat-row"><div>Moves</div><div id="nav-moves">30</div></div>
+          <div class="btn-row-col" style="margin-top:12px">
+            <button id="btn-restart-level">Restart</button>
+            <button id="btn-end-level">End</button>
           </div>
         </aside>
       </main>
@@ -94,14 +88,11 @@
     <section id="screen-gameover" class="screen">
       <div class="center-card go-card">
         <div class="go-illustration">
-          <!-- star burst -->
-          <svg width="120" height="120" viewBox="0 0 24 24">
-            <path d="M12 2l1.9 4.3L18.7 8l-4.1 2.8L15 15l-3-1.9L9 15l.4-4.2L5.3 8l4.8-1.7L12 2z" fill="#ffb86b"/>
-          </svg>
+          <svg width="96" height="96" viewBox="0 0 24 24"><path d="M12 2l1.9 4.3L18.7 8l-4.1 2.8L15 15l-3-1.9L9 15l.4-4.2L5.3 8l4.8-1.7L12 2z" fill="#ffb86b"/></svg>
         </div>
         <h2 id="go-title">Level Complete!</h2>
-        <p id="go-sub">Score: <span id="go-score">0</span></p>
-        <div class="btn-row">
+        <p id="go-sub" class="muted">Score: <span id="go-score">0</span></p>
+        <div class="btn-row" style="margin-top:14px">
           <button id="btn-replay">Replay</button>
           <button id="btn-next">Next</button>
           <button id="btn-to-map">Map</button>
@@ -112,7 +103,7 @@
   </div>
 
   <script src="js/main.js" defer></script>
-  <!-- optionally include game-core below -->
+  <!-- optionally include your game-core below if present -->
   <!-- <script src="js/game-core.js" defer></script> -->
 </body>
   </html>
