@@ -1,7 +1,6 @@
 // js/game.js
-// Candy Match — image-based (tap to swap) prototype
 const ROWS = 8, COLS = 8;
-const TYPES = 5; // uses images candy1..candy5
+const TYPES = 5; // images: candy1..candy5
 const boardEl = document.getElementById('board');
 const scoreEl = document.getElementById('score');
 const movesEl = document.getElementById('moves');
@@ -17,12 +16,12 @@ let selected = null;
 let animating = false;
 
 function rand(n){ return Math.floor(Math.random()*n); }
-function candySrc(type){ return `images/candy${type+1}.png`; } // type:0..4 -> candy1.png..candy5.png
+function candySrc(type){ return `images/candy${type+1}.png`; } // 0->candy1.png
 
-function createEmpty(){
-  grid = Array.from({length:ROWS}, ()=> Array(COLS).fill(null));
-}
+// create empty grid structure
+function createEmpty(){ grid = Array.from({length:ROWS}, ()=> Array(COLS).fill(null)); }
 
+// fill grid ensuring no immediate 3+ matches
 function fillNoInitialMatches(){
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
@@ -33,11 +32,12 @@ function fillNoInitialMatches(){
         (c>=2 && grid[r][c-1] && grid[r][c-2] && grid[r][c-1].type === val && grid[r][c-2].type === val) ||
         (r>=2 && grid[r-1][c] && grid[r-2][c] && grid[r-1][c].type === val && grid[r-2][c].type === val)
       );
-      grid[r][c] = {type: val, special: null};
+      grid[r][c] = { type: val, special: null };
     }
   }
 }
 
+// build DOM cells and event listeners
 function buildDOM(){
   boardEl.innerHTML = '';
   cells = [];
@@ -48,10 +48,16 @@ function buildDOM(){
       el.dataset.r = r; el.dataset.c = c;
       const img = document.createElement('img');
       img.className = 'candy-img';
+      img.alt = `candy ${r},${c}`;
       el.appendChild(img);
       boardEl.appendChild(el);
       cells.push(el);
       el.addEventListener('click', onCellClick);
+      // accessibility: keyboard support
+      el.tabIndex = 0;
+      el.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter' || e.key === ' ') onCellClick({ currentTarget: el });
+      });
     }
   }
   renderAll();
@@ -59,9 +65,7 @@ function buildDOM(){
 
 function renderAll(){
   for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      renderCell(r,c);
-    }
+    for(let c=0;c<COLS;c++) renderCell(r,c);
   }
   scoreEl.textContent = score;
   movesEl.textContent = moves;
@@ -93,7 +97,7 @@ function onCellClick(e){
   const target = {r,c};
   if(selected.r===target.r && selected.c===target.c){ selected = null; renderAll(); return; }
   if(!coordsAdjacent(selected,target)){ selected = target; renderAll(); return; }
-  attemptSwap(selected,target);
+  attemptSwap(selected, target);
 }
 
 function swapCells(a,b){
@@ -106,9 +110,9 @@ function swapCells(a,b){
 
 function findMatches(){
   const toRemove = [];
-  // horizontal runs
+  // horizontal
   for(let r=0;r<ROWS;r++){
-    let runType=-1, runStart=0, runLen=0;
+    let runType = -1, runStart = 0, runLen = 0;
     for(let c=0;c<=COLS;c++){
       const t = c<COLS && grid[r][c] ? grid[r][c].type : -1;
       if(t === runType) runLen++;
@@ -118,9 +122,9 @@ function findMatches(){
       }
     }
   }
-  // vertical runs
+  // vertical
   for(let c=0;c<COLS;c++){
-    let runType=-1, runStart=0, runLen=0;
+    let runType = -1, runStart = 0, runLen = 0;
     for(let r=0;r<=ROWS;r++){
       const t = r<ROWS && grid[r][c] ? grid[r][c].type : -1;
       if(t === runType) runLen++;
@@ -144,19 +148,19 @@ async function clearMatchesThenCollapse(){
   animating = true;
   while(true){
     const matches = findMatches();
-    if(matches.length===0) break;
+    if(matches.length === 0) break;
     score += matches.length * 60;
     msgEl.textContent = `Cleared ${matches.length} candies!`;
-    // clear
+    // clear matches
     for(const m of matches) grid[m.r][m.c] = null;
     renderAll();
-    await sleep(200);
+    await sleep(180);
     collapseGrid();
     renderAll();
     await sleep(160);
     refillGrid();
     renderAll();
-    await sleep(180);
+    await sleep(160);
   }
   animating = false;
 }
@@ -177,7 +181,7 @@ function collapseGrid(){
 function refillGrid(){
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
-      if(!grid[r][c]) grid[r][c] = {type: rand(TYPES), special: null};
+      if(!grid[r][c]) grid[r][c] = { type: rand(TYPES), special: null };
     }
   }
 }
@@ -189,7 +193,7 @@ async function attemptSwap(a,b){
   swapCells(a,b);
   const matches = findMatches();
   if(matches.length === 0){
-    await sleep(180);
+    await sleep(160);
     swapCells(a,b); // revert
     msgEl.textContent = 'No match — swap reverted';
     selected = null;
@@ -208,7 +212,7 @@ async function attemptSwap(a,b){
 }
 
 function findHint(){
-  // brute-force swap check
+  // brute force: try neighboring swaps
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
       const dirs = [{r:r,c:c+1},{r:r+1,c:c}];
@@ -237,12 +241,14 @@ btnHint.addEventListener('click', ()=>{
   }
 });
 
-/* Init */
+/* initialization */
 function initGame(){
   score = 0; moves = 30; selected = null; animating = false;
-  createEmpty(); fillNoInitialMatches(); buildDOM(); renderAll();
+  createEmpty();
+  fillNoInitialMatches();
+  buildDOM();
+  renderAll();
   msgEl.textContent = 'Tap one candy then tap adjacent candy to swap.';
 }
-
 // start
 initGame();
