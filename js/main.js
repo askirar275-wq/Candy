@@ -1,4 +1,4 @@
-// js/main.js - Navigation + small flow manager (with improved pause modal handling)
+// js/main.js - Navigation + improved pause modal with swipe-to-close
 (function(){
   const screens = {
     home: document.getElementById('screen-home'),
@@ -7,33 +7,27 @@
     gameover: document.getElementById('screen-gameover')
   };
 
+  // controls
   const btnPlay = document.getElementById('btn-play');
   const btnOpenMap = document.getElementById('btn-open-map');
   const mapGrid = document.getElementById('map-grid');
   const gameTitle = document.getElementById('game-title');
-  const boardPlaceholder = document.getElementById('board-placeholder');
-  const goTitle = document.getElementById('go-title');
-  const goScore = document.getElementById('go-score');
 
+  // HUD
   const navScore = document.getElementById('nav-score');
   const navMoves = document.getElementById('nav-moves');
   const navTarget = document.getElementById('nav-target');
   const navCombo = document.getElementById('nav-combo');
 
-  const btnRestart = document.getElementById('btn-restart-level');
-  const btnEnd = document.getElementById('btn-end-level');
-  const btnReplay = document.getElementById('btn-replay');
-  const btnNext = document.getElementById('btn-next');
-  const btnToMap = document.getElementById('btn-to-map');
-
-  // Pause modal elements
+  // pause modal
   const btnPause = document.getElementById('btn-pause');
   const pauseModal = document.getElementById('pause-modal');
+  const pauseCard = document.getElementById('pause-card');
   const btnResume = document.getElementById('btn-resume');
   const btnRestart2 = document.getElementById('btn-restart2');
   const btnQuit = document.getElementById('btn-quit');
 
-  // Settings & small controls
+  // other controls
   const btnHint = document.getElementById('btn-hint');
   const btnShuffle = document.getElementById('btn-shuffle');
   const btnBomb = document.getElementById('btn-use-bomb');
@@ -42,9 +36,9 @@
   const btnCloseSettings = document.getElementById('btn-close-settings');
   const btnResetProgress = document.getElementById('btn-reset-progress');
 
+  // basic nav
   document.querySelectorAll('.back').forEach(b => b.addEventListener('click', (e)=>{
-    const target = e.currentTarget.dataset.target || 'home';
-    navigateTo(target);
+    const t = e.currentTarget.dataset.target || 'home'; navigateTo(t);
   }));
 
   function getUnlocked(){ return (window.StorageAPI && window.StorageAPI.getUnlocked) ? window.StorageAPI.getUnlocked() : [1]; }
@@ -52,52 +46,24 @@
 
   const LEVEL_COUNT = 12;
 
-  // preload candy images to avoid flicker
-  function preloadCandyImages() {
-    for(let i=1;i<=5;i++){
-      const img = new Image();
-      img.src = `images/candy${i}.png`;
-    }
+  function preloadCandyImages(){
+    for(let i=1;i<=5;i++){ const im=new Image(); im.src=`images/candy${i}.png`; }
   }
 
   function renderMap(){
     if(!mapGrid) return;
-    mapGrid.innerHTML = '';
+    mapGrid.innerHTML='';
     const unlocked = new Set(getUnlocked());
     for(let i=1;i<=LEVEL_COUNT;i++){
-      const card = document.createElement('div');
-      card.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
-      card.dataset.level = i;
-
-      const thumb = document.createElement('div');
-      thumb.className = 'level-thumb';
-      const candyRow = document.createElement('div');
-      candyRow.className = 'candies';
-      for(let c=0;c<5;c++){
-        const img = document.createElement('img');
-        img.src = `images/candy${(c%5)+1}.png`;
-        img.alt = 'candy';
-        candyRow.appendChild(img);
-      }
+      const card=document.createElement('div'); card.className='level-card'+(unlocked.has(i)?'':' locked'); card.dataset.level=i;
+      const thumb=document.createElement('div'); thumb.className='level-thumb';
+      const candyRow=document.createElement('div'); candyRow.className='candies';
+      for(let c=0;c<5;c++){ const img=document.createElement('img'); img.src=`images/candy${(c%5)+1}.png`; candyRow.appendChild(img); }
       thumb.appendChild(candyRow);
-
-      const lvl = document.createElement('div');
-      lvl.className = 'lvl';
-      lvl.textContent = `Level ${i}`;
-
-      const desc = document.createElement('div');
-      desc.className = 'desc';
-      desc.textContent = unlocked.has(i) ? 'Play' : 'Locked';
-
-      card.appendChild(thumb);
-      card.appendChild(lvl);
-      card.appendChild(desc);
-
-      card.addEventListener('click', ()=> {
-        if(!unlocked.has(i)){ alert('Level locked — complete previous levels to unlock.'); return; }
-        startLevel(i);
-      });
-
+      const lvl=document.createElement('div'); lvl.className='lvl'; lvl.textContent=`Level ${i}`;
+      const desc=document.createElement('div'); desc.className='desc'; desc.textContent=unlocked.has(i)?'Play':'Locked';
+      card.appendChild(thumb); card.appendChild(lvl); card.appendChild(desc);
+      card.addEventListener('click', ()=>{ if(!unlocked.has(i)){ alert('Level locked — complete previous levels.'); return;} startLevel(i); });
       mapGrid.appendChild(card);
     }
   }
@@ -107,8 +73,8 @@
     if(screens[name]) screens[name].classList.add('active');
   }
 
-  function navigateTo(name, state = {}){
-    history.pushState({screen:name, state}, '', `#${name}`);
+  function navigateTo(name){
+    history.pushState({screen:name}, '', `#${name}`);
     showScreen(name);
   }
 
@@ -117,78 +83,115 @@
     showScreen('game');
     if(window.GameAPI && typeof window.GameAPI.initGame === 'function'){
       window.GameAPI.initGame(level);
-      updateHUDLoop();
+      startHUDUpdater();
     } else {
-      if(boardPlaceholder) boardPlaceholder.style.display = 'block';
-      const b = document.getElementById('board'); if(b) b.style.display = 'none';
-      fakePlayDemo(level);
+      // fallback demo
+      setTimeout(()=>{ window.Nav && window.Nav.showGameOver && window.Nav.showGameOver(true, 900, level); }, 800);
     }
   }
 
-  function fakePlayDemo(level){
-    navScore.textContent = 0;
-    navMoves.textContent = 30;
-    setTimeout(()=>{
-      const fakeScore = 800 + level*100;
-      showGameOver(true, fakeScore, level);
-      unlockLevel(level+1);
-      renderMap();
-    }, 1600);
+  // ===== Pause modal: open/close with swipe-to-close support =====
+  function openPause(){
+    if(!pauseModal) return;
+    pauseModal.hidden = false;
+    document.body.classList.add('modal-open');
+    // optional: call game pause if implemented
+    if(window.GameAPI && typeof window.GameAPI.pause === 'function') try{ window.GameAPI.pause(); }catch(e){}
+    // ensure card reset transform
+    resetPauseCard();
   }
 
-  function showGameOver(win, score, level){
-    goTitle.textContent = win ? `Level ${level} Complete!` : `Level ${level} Failed`;
-    goScore.textContent = score;
-    showScreen('gameover');
+  function closePause(){
+    if(!pauseModal) return;
+    pauseModal.hidden = true;
+    document.body.classList.remove('modal-open');
+    if(window.GameAPI && typeof window.GameAPI.resume === 'function') try{ window.GameAPI.resume(); }catch(e){}
+    resetPauseCard();
   }
 
-  // ===== Pause modal behavior (improved) =====
-  // open pause: lock scrolling / show modal
-  if(btnPause){
-    btnPause.addEventListener('click', ()=>{
-      if(!pauseModal) return;
-      pauseModal.hidden = false;
-      // lock body scroll & touch
-      document.body.classList.add('modal-open');
-      // if GameAPI has a pause/timer, stop it (optional)
-      if(window.GameAPI && window.GameAPI.pause) try{ window.GameAPI.pause(); }catch(e){}
-    });
+  function resetPauseCard(){
+    if(!pauseCard) return;
+    pauseCard.style.transition = 'transform .18s cubic-bezier(.22,.9,.32,1), opacity .12s';
+    pauseCard.style.transform = 'translateY(0)'; pauseCard.style.opacity = '1';
   }
 
-  if(btnResume){
-    btnResume.addEventListener('click', ()=>{
-      if(!pauseModal) return;
-      pauseModal.hidden = true;
-      document.body.classList.remove('modal-open');
-      if(window.GameAPI && window.GameAPI.resume) try{ window.GameAPI.resume(); }catch(e){}
-    });
-  }
+  if(btnPause) btnPause.addEventListener('click', ()=> openPause());
+  if(btnResume) btnResume.addEventListener('click', ()=> closePause());
+  if(btnRestart2) btnRestart2.addEventListener('click', ()=> {
+    closePause();
+    if(window.GameAPI && typeof window.GameAPI.reset === 'function') window.GameAPI.reset();
+  });
+  if(btnQuit) btnQuit.addEventListener('click', ()=> {
+    closePause();
+    navigateTo('map');
+  });
 
-  if(btnRestart2){
-    btnRestart2.addEventListener('click', ()=>{
-      if(!pauseModal) return;
-      pauseModal.hidden = true;
-      document.body.classList.remove('modal-open');
-      if(window.GameAPI && window.GameAPI.reset) window.GameAPI.reset();
-    });
-  }
+  // Swipe-to-close implementation (touch)
+  (function attachSwipeToClose(){
+    if(!pauseCard || !pauseModal) return;
+    let startY = 0, currentY = 0, dragging=false, lastTime=0;
+    const threshold = 80; // px to dismiss
+    const velocityThreshold = 0.45; // px/ms fast flick
 
-  if(btnQuit){
-    btnQuit.addEventListener('click', ()=>{
-      if(!pauseModal) return;
-      pauseModal.hidden = true;
-      document.body.classList.remove('modal-open');
-      // navigate back to map
-      navigateTo('map');
-    });
-  }
-  // ===== end pause modal =====
+    function onStart(e){
+      dragging = true;
+      startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : (e.clientY || 0);
+      currentY = startY;
+      lastTime = Date.now();
+      pauseCard.style.transition = 'none';
+    }
+    function onMove(e){
+      if(!dragging) return;
+      const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : (e.clientY || 0);
+      const dy = Math.max(0, y - startY);
+      currentY = y;
+      // apply translation but with resistance
+      const translate = dy * (dy < 140 ? 0.85 : 0.6);
+      pauseCard.style.transform = `translateY(${translate}px)`;
+      // reduce backdrop opacity slightly for feel
+      pauseModal.style.background = `rgba(0,0,0,${Math.max(0.12, 0.42 - (translate/600))})`;
+      e.preventDefault && e.preventDefault();
+    }
+    function onEnd(e){
+      if(!dragging) return;
+      dragging = false;
+      const endY = currentY;
+      const dy = endY - startY;
+      const dt = Math.max(1, Date.now() - lastTime);
+      const velocity = dy / dt; // px per ms
+      pauseCard.style.transition = 'transform .18s cubic-bezier(.22,.9,.32,1), opacity .12s';
+
+      // if pulled far enough OR flicked quickly -> dismiss
+      if(dy > threshold || velocity > velocityThreshold){
+        // animate out
+        pauseCard.style.transform = `translateY(120vh)`; // huge translate down
+        pauseCard.style.opacity = '0';
+        setTimeout(()=> {
+          closePause(); // fully hide & reset
+          pauseModal.style.background = 'rgba(0,0,0,0.42)';
+        }, 220);
+      } else {
+        // reset to center
+        pauseCard.style.transform = 'translateY(0)';
+        pauseModal.style.background = 'rgba(0,0,0,0.42)';
+      }
+    }
+
+    // attach listeners (touch)
+    pauseCard.addEventListener('touchstart', onStart, {passive:true});
+    pauseCard.addEventListener('touchmove', onMove, {passive:false});
+    pauseCard.addEventListener('touchend', onEnd);
+    // also support mouse drag for desktop testing
+    pauseCard.addEventListener('mousedown', (e)=>{ onStart(e); const mm = (ev)=>onMove(ev); const mu = (ev)=>{ onEnd(ev); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu);} ; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); });
+  })();
+  // ===== end swipe-to-close =====
+
 
   // Settings drawer
   if(btnSettings) btnSettings.addEventListener('click', ()=> { if(settingsDrawer) settingsDrawer.hidden = !settingsDrawer.hidden; });
   if(btnCloseSettings) btnCloseSettings.addEventListener('click', ()=> { if(settingsDrawer) settingsDrawer.hidden = true; });
 
-  // Hint / shuffle / bomb actions
+  // Hint / shuffle / bomb
   if(btnHint) btnHint.addEventListener('click', ()=> {
     if(window.GameAPI && window.GameAPI.getHint){
       const h = window.GameAPI.getHint();
@@ -199,21 +202,15 @@
         const idx = a.r*8 + a.c, jdx = b.r*8 + b.c;
         const el = cells[idx], el2 = cells[jdx];
         if(el && el2){
-          el.style.outline = '3px solid #ffd166';
-          el2.style.outline = '3px solid #ffd166';
+          el.style.outline = '3px solid #ffd166'; el2.style.outline = '3px solid #ffd166';
           setTimeout(()=>{ el.style.outline=''; el2.style.outline=''; }, 900);
         }
       }
     }
   });
 
-  if(btnShuffle) btnShuffle.addEventListener('click', ()=> {
-    if(window.GameAPI && window.GameAPI.applyShuffle) window.GameAPI.applyShuffle();
-  });
-
-  if(btnBomb) btnBomb.addEventListener('click', ()=> {
-    if(window.GameAPI && window.GameAPI.applyBomb) window.GameAPI.applyBomb();
-  });
+  if(btnShuffle) btnShuffle.addEventListener('click', ()=> { if(window.GameAPI && window.GameAPI.applyShuffle) window.GameAPI.applyShuffle(); });
+  if(btnBomb) btnBomb.addEventListener('click', ()=> { if(window.GameAPI && window.GameAPI.applyBomb) window.GameAPI.applyBomb(); });
 
   if(btnResetProgress) btnResetProgress.addEventListener('click', ()=> {
     if(confirm('Reset progress?')){
@@ -223,66 +220,52 @@
     }
   });
 
+  // HUD updater
   let hudInterval = null;
-  function updateHUDLoop(){
+  function startHUDUpdater(){
     if(hudInterval) clearInterval(hudInterval);
     hudInterval = setInterval(()=>{
       if(window.GameAPI && window.GameAPI.getState){
-        const st = window.GameAPI.getState();
-        navScore.textContent = st.score || 0;
-        navMoves.textContent = st.moves || 0;
-        if(navCombo) navCombo.textContent = 'x' + (st.combo || 1);
-        if(navTarget) {
-          const meta = window.LevelMap && window.LevelMap.getMeta ? window.LevelMap.getMeta(st.level || 1) : null;
+        const s = window.GameAPI.getState();
+        navScore && (navScore.textContent = s.score || 0);
+        navMoves && (navMoves.textContent = s.moves || 0);
+        navCombo && (navCombo.textContent = 'x' + (s.combo || 1));
+        if(navTarget && window.LevelMap && window.LevelMap.getMeta) {
+          const meta = window.LevelMap.getMeta(s.level || 1);
           navTarget.textContent = meta ? meta.target : '';
         }
       }
     }, 300);
   }
 
-  window.addEventListener('popstate', (ev)=>{
-    const state = ev.state;
-    if(state && state.screen) showScreen(state.screen);
-    else showScreen('home');
-  });
+  // Nav.showGameOver integration (calls confetti when win)
+  window.Nav = {
+    showGameOver(win, score, level){
+      if(win && window.Confetti && typeof window.Confetti.launch === 'function'){
+        const count = Math.min(160, Math.floor(window.innerWidth / 6) + 40);
+        window.Confetti.launch({ count: count, spread: 90, lifetime: 2000 });
+      }
+      const goTitle = document.getElementById('go-title');
+      const goScore = document.getElementById('go-score');
+      const goBest = document.getElementById('go-best-score');
+      if(goTitle) goTitle.textContent = win? `Level ${level} Complete!` : `Level ${level} Over`;
+      if(goScore) goScore.textContent = score;
+      if(goBest && window.StorageAPI && window.StorageAPI.getBest) goBest.textContent = window.StorageAPI.getBest(level) || 0;
+      if(win) window.StorageAPI && window.StorageAPI.unlock && window.StorageAPI.unlock(level+1);
+      showScreen('gameover');
+    }
+  };
 
+  // init
   function init(){
     preloadCandyImages();
     renderMap();
     const h = location.hash.replace('#','');
-    if(h && screens[h]) showScreen(h);
-    else showScreen('home');
+    if(h && screens[h]) showScreen(h); else showScreen('home');
   }
-
-  window.Nav = {
-    startLevel(level){ startLevel(level); },
-    showGameOver(win, score, level){
-      // call confetti if present and win
-      if(win && window.Confetti && typeof window.Confetti.launch === 'function'){
-        const count = Math.min(160, Math.floor(window.innerWidth / 6) + 40);
-        window.Confetti.launch({ count: count, spread: 90, lifetime: 2200 });
-      }
-      // show screen and update texts
-      const goTitleEl = document.getElementById('go-title');
-      const goScoreEl = document.getElementById('go-score');
-      const goBestEl = document.getElementById('go-best-score');
-      if(goTitleEl) goTitleEl.textContent = win ? `Level ${level} Complete!` : `Level ${level} Over`;
-      if(goScoreEl) goScoreEl.textContent = score;
-      if(goBestEl && window.StorageAPI && window.StorageAPI.getBest) goBestEl.textContent = window.StorageAPI.getBest(level) || 0;
-      // unlock next level if win
-      if(win) window.StorageAPI && window.StorageAPI.unlock && window.StorageAPI.unlock(level+1);
-      showScreen('gameover');
-    },
-    renderMap(){ renderMap(); }
-  };
-
-  function preloadCandyImages() {
-    for(let i=1;i<=5;i++){
-      const img = new Image();
-      img.src = `images/candy${i}.png`;
-    }
-  }
-
   document.addEventListener('DOMContentLoaded', init);
+
+  // expose for debugging
+  window.AppNav = { openPause, closePause };
 
 })();
