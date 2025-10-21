@@ -128,3 +128,20 @@
   <script src="js/main.js" defer></script>
 </body>
           </html>
+<!-- DEBUG: paste this at bottom of index.html, after all other <script> includes -->
+<script>
+  // यह alert और console message बताएगा कि main.js लोड हुआ या नहीं
+  setTimeout(()=> {
+    try {
+      // अगर main.js का init() मौजूद है तो call कर के भी check कर लेगा
+      if (window.AppNav) {
+        console.log('AppNav object exists');
+      } else {
+        console.log('AppNav missing');
+      }
+      alert('DEBUG: scripts loaded. AppNav exists? ' + !!window.AppNav);
+    } catch(e) {
+      alert('DEBUG: error checking scripts: ' + e.message);
+    }
+  }, 600);
+</script>
