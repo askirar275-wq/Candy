@@ -24,14 +24,26 @@
     <button id="backHome">← Back</button>
   </section>
 
-  <!-- Game Screen -->
-  <section id="game" class="screen hidden">
-    <h2 id="levelTitle">Level 1</h2>
-    <p>Score: <span id="score">0</span></p>
-    <p>Moves: <span id="moves">30</span></p>
-    <div id="gameGrid"></div>
+<!-- Replace / update the HUD inside your #game section -->
+<section id="game" class="screen hidden">
+  <h2 id="levelTitle">Level 1</h2>
+
+  <div class="hud-row">
+    <div>Score: <span id="score">0</span></div>
+    <div>Moves: <span id="moves">30</span></div>
+    <div>Target: <span id="target">1200</span></div>
+    <div class="stars" id="stars">
+      <span class="star" data-index="1">☆</span>
+      <span class="star" data-index="2">☆</span>
+      <span class="star" data-index="3">☆</span>
+    </div>
+  </div>
+
+  <div id="gameGrid" class="board"></div>
+  <div style="text-align:center;margin-top:10px">
     <button id="endBtn">End</button>
-  </section>
+  </div>
+</section>
 
   <!-- Game Over -->
   <section id="gameOver" class="screen hidden">
