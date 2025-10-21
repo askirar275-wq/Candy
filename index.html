@@ -1,175 +1,51 @@
-<!doctype html>
-<html lang="hi">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Candy Match — Mobile</title>
-  <link rel="stylesheet" href="css/style.css">
-  <!-- optional candy font -->
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Candy Match 🍬</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div id="app">
-    <!-- HOME -->
-    <section id="screen-home" class="screen active">
-      <div class="center-card home-card">
-        <div class="logo-row">
-          <div class="logo-badge"></div>
-          <div class="title-block">
-            <h1>🍬 Candy Match</h1>
-            <div class="tag muted">Match. Pop. Smile!</div>
-          </div>
-        </div>
-        <p class="home-sub muted">Tap Play → Open Map → Choose Level.</p>
-        <div class="btn-row">
-          <button id="btn-play">Play</button>
-          <button id="btn-open-map">Map</button>
-        </div>
-        <div class="small-actions">
-          <button id="btn-settings" class="ghost">Settings</button>
-          <button id="btn-about" class="ghost">About</button>
-        </div>
-      </div>
-    </section>
 
-    <!-- MAP -->
-    <section id="screen-map" class="screen">
-      <div class="screen-header">
-        <button class="back" data-target="home">&larr; Back</button>
-        <h2>Level Map</h2>
-        <div class="map-tools">
-          <button id="btn-reset-progress" class="ghost">Reset Progress</button>
-        </div>
-      </div>
-      <div class="map-grid" id="map-grid"></div>
-    </section>
+  <!-- Home Screen -->
+  <section id="home" class="screen active">
+    <h1>🍬 Candy Match</h1>
+    <p>Match. Pop. Smile!</p>
+    <button id="playBtn">Play</button>
+    <button id="mapBtn">Map</button>
+  </section>
 
-    <!-- GAME -->
-    <section id="screen-game" class="screen">
-      <div class="screen-header">
-        <button class="back" data-target="map">&larr; Back</button>
-        <h2 id="game-title">Level 1</h2>
-        <div class="header-actions">
-          <button id="btn-pause" class="ghost">Pause</button>
-        </div>
-      </div>
-      <main class="game-area">
-        <div id="game-container" class="game-board-wrap">
-          <div id="board" class="board" aria-label="game board"></div>
-          <div id="board-placeholder" class="board-placeholder" style="display:none">
-            <div class="ph-text muted">Game loading…</div>
-          </div>
-        </div>
-        <aside class="game-sidebar">
-          <div class="stat-row"><div>Score</div><div id="nav-score">0</div></div>
-          <div class="stat-row"><div id="moves-label">Moves</div><div id="nav-moves">30</div></div>
-          <div class="stat-row"><div>Target</div><div id="nav-target">1200</div></div>
-          <div class="stat-row"><div>Combo</div><div id="nav-combo">x1</div></div>
-          <div class="btn-row-col" style="margin-top:12px">
-            <button id="btn-hint">Hint</button>
-            <button id="btn-shuffle">Shuffle</button>
-          </div>
-          <div class="btn-row-col" style="margin-top:8px">
-            <button id="btn-use-bomb">Use Bomb</button>
-            <button id="btn-restart-level">Restart</button>
-          </div>
-        </aside>
-      </main>
-    </section>
+  <!-- Level Map -->
+  <section id="map" class="screen hidden">
+    <h2>Level Map</h2>
+    <button id="resetProgress">Reset Progress</button>
+    <div id="levelGrid"></div>
+    <button id="backHome">← Back</button>
+  </section>
 
-    <!-- PAUSE Modal (hidden by default) -->
-    <div id="pause-modal" class="modal" hidden>
-      <div class="modal-card" id="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
-        <h3 id="pause-title">Paused</h3>
-        <div class="modal-actions">
-          <button id="btn-resume">Resume</button>
-          <button id="btn-restart2">Restart</button>
-          <button id="btn-quit">Quit</button>
-        </div>
-      </div>
-    </div>
+  <!-- Game Screen -->
+  <section id="game" class="screen hidden">
+    <h2 id="levelTitle">Level 1</h2>
+    <p>Score: <span id="score">0</span></p>
+    <p>Moves: <span id="moves">30</span></p>
+    <div id="gameGrid"></div>
+    <button id="endBtn">End</button>
+  </section>
 
-    <!-- GAME OVER -->
-    <section id="screen-gameover" class="screen">
-      <div class="center-card go-card">
-        <div class="go-illustration"></div>
-        <h2 id="go-title">Level Complete!</h2>
-        <p id="go-sub" class="muted">Score: <span id="go-score">0</span></p>
-        <p id="go-best" class="muted">Best: <span id="go-best-score">0</span></p>
-        <div class="btn-row" style="margin-top:14px">
-          <button id="btn-replay">Replay</button>
-          <button id="btn-next">Next</button>
-          <button id="btn-to-map">Map</button>
-        </div>
-      </div>
-    </section>
+  <!-- Game Over -->
+  <section id="gameOver" class="screen hidden">
+    <h2 id="levelComplete">Level Complete!</h2>
+    <p>Score: <span id="finalScore">0</span></p>
+    <button id="replayBtn">Replay</button>
+    <button id="nextBtn">Next</button>
+    <button id="mapReturn">Map</button>
+  </section>
 
-    <!-- Settings drawer placeholder -->
-    <div id="settings-drawer" class="drawer" hidden>
-      <div class="drawer-card">
-        <h3>Settings</h3>
-        <label><input type="checkbox" id="opt-sound"> Sound</label>
-        <label><input type="checkbox" id="opt-music"> Music</label>
-        <label><input type="checkbox" id="opt-timer"> Timer Mode</label>
-        <div style="margin-top:8px">
-          <button id="btn-close-settings">Close</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- scripts: keep game-core/storage etc. before main.js -->
-  <script src="js/storage.js" defer></script>
-  <script src="js/level-map.js" defer></script>
-  <script src="js/sound.js" defer></script>
-  <script src="js/game-core.js" defer></script>
-  <script src="js/confetti.js" defer></script>
-  <script src="js/main.js" defer></script>
+  <script src="js/storage.js"></script>
+  <script src="js/level-map.js"></script>
+  <script src="js/game-core.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
 </body>
-          </html>
-<!-- DEBUG: paste this at bottom of index.html, after all other <script> includes -->
-<script>
-  // यह alert और console message बताएगा कि main.js लोड हुआ या नहीं
-  setTimeout(()=> {
-    try {
-      // अगर main.js का init() मौजूद है तो call कर के भी check कर लेगा
-      if (window.AppNav) {
-        console.log('AppNav object exists');
-      } else {
-        console.log('AppNav missing');
-      }
-      alert('DEBUG: scripts loaded. AppNav exists? ' + !!window.AppNav);
-    } catch(e) {
-      alert('DEBUG: error checking scripts: ' + e.message);
-    }
-  }, 600);
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(function(){
-    try {
-      // prefer API if available
-      if(window.Nav && typeof window.Nav.renderMap === 'function'){
-        window.Nav.renderMap();
-      } else if (window.Nav && typeof window.Nav.startLevel === 'function'){
-        // just render map if startLevel exists
-        // no-op
-      } else if(window.AppNav && typeof window.AppNav.renderMap === 'function'){
-        window.AppNav.renderMap();
-      }
-      // show map screen (fallbacks)
-      if(typeof navigateTo === 'function') navigateTo('map');
-      else if(typeof showScreen === 'function') showScreen('map');
-      else {
-        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-        const mg = document.getElementById('screen-map');
-        mg && mg.classList.add('active');
-      }
-    } catch(err){
-      console.error('AUTO MAP ERROR', err);
-      alert('AUTO MAP ERROR: ' + err.message);
-    }
-  }, 300);
-});
-</script>
+</html>
