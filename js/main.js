@@ -269,3 +269,103 @@
   window.AppNav = { openPause, closePause };
 
 })();
+<script>
+(function(){
+  // safety: wait until DOM ready
+  document.addEventListener('DOMContentLoaded', function(){
+    // small helper to parse current level from UI if window._currentLevel not set
+    function getCurrentLevelFromUI(){
+      if(window._currentLevel) return window._currentLevel;
+      const title = document.getElementById('go-title') || document.getElementById('game-title');
+      if(title){
+        const m = title.textContent.match(/Level\s*(\d+)/i);
+        if(m) return parseInt(m[1],10);
+      }
+      return 1;
+    }
+
+    // expose current level setter (call from your startLevel if possible)
+    window.setCurrentLevel = function(n){ window._currentLevel = Number(n); };
+
+    // attach handlers (id must match your HTML)
+    const btnReplay = document.getElementById('btn-replay');
+    const btnNext   = document.getElementById('btn-next');
+    const btnToMap  = document.getElementById('btn-to-map');
+
+    // helper: navigate to map (tries many fallbacks)
+    function goToMap(){
+      if(typeof navigateTo === 'function') return navigateTo('map');
+      if(typeof showScreen === 'function') return showScreen('map');
+      if(window.Nav && typeof window.Nav.renderMap === 'function'){ window.Nav.renderMap(); }
+      // fallback: toggle class
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+      const mg = document.getElementById('screen-map'); if(mg) mg.classList.add('active');
+    }
+
+    // handler implementations
+    function handleReplay(){
+      const lvl = getCurrentLevelFromUI();
+      console.log('REPLAY level', lvl);
+      // prefer GameAPI.reset()
+      if(window.GameAPI && typeof window.GameAPI.reset === 'function'){
+        try{ window.GameAPI.reset(); return; } catch(e){ console.warn(e); }
+      }
+      // fallback: re-init same level
+      if(window.GameAPI && typeof window.GameAPI.initGame === 'function'){
+        window.GameAPI.initGame(lvl); return;
+      }
+      // fallback UI: just show game screen and call Nav.startLevel if exists
+      if(window.Nav && typeof window.Nav.startLevel === 'function'){ window.Nav.startLevel(lvl); return; }
+      // last fallback: navigate to game screen
+      showScreen && showScreen('game');
+    }
+
+    function handleNext(){
+      const lvl = getCurrentLevelFromUI();
+      const next = Number(lvl)+1;
+      console.log('NEXT ->', next);
+      // unlock next if StorageAPI available
+      if(window.StorageAPI && typeof window.StorageAPI.unlock === 'function'){
+        try{ window.StorageAPI.unlock(next); } catch(e){ console.warn(e); }
+      }
+      // start next if possible
+      if(window.GameAPI && typeof window.GameAPI.initGame === 'function'){
+        window.GameAPI.initGame(next); return;
+      }
+      if(window.Nav && typeof window.Nav.startLevel === 'function'){ window.Nav.startLevel(next); return; }
+      // otherwise go to map so user can tap level
+      goToMap();
+      setTimeout(()=>{ // optionally highlight card
+        const card = document.querySelector(`.level-card[data-level="${next}"]`);
+        if(card) card.style.boxShadow = '0 12px 30px rgba(66,165,245,0.22)';
+      },200);
+    }
+
+    function handleMap(){
+      console.log('MAP pressed');
+      goToMap();
+    }
+
+    // attach with safety checks and a small debug feedback
+    if(btnReplay) btnReplay.addEventListener('click', function(e){ e.preventDefault(); handleReplay(); });
+    else console.warn('btn-replay not found');
+
+    if(btnNext) btnNext.addEventListener('click', function(e){ e.preventDefault(); handleNext(); });
+    else console.warn('btn-next not found');
+
+    if(btnToMap) btnToMap.addEventListener('click', function(e){ e.preventDefault(); handleMap(); });
+    else console.warn('btn-to-map not found');
+
+    // quick visual debug: flash buttons to show listeners attached
+    [btnReplay, btnNext, btnToMap].forEach(b=>{
+      if(!b) return;
+      b.style.transition = 'transform .12s';
+      b.addEventListener('click', ()=>{ b.style.transform = 'scale(.98)'; setTimeout(()=>b.style.transform='scale(1)',120); });
+    });
+
+    // Optional: if your startLevel doesn't set current level, auto-set when game screen opens
+    // If your code calls startLevel(level) somewhere, try to call window.setCurrentLevel(level) there.
+    console.log('Game buttons handler attached (replay/next/map). CurrentLevel:', window._currentLevel || getCurrentLevelFromUI());
+  });
+})();
+</script>
