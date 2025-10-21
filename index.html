@@ -2,37 +2,29 @@
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Pro</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Candy Match — Mobile</title>
   <link rel="stylesheet" href="css/style.css">
+  <!-- optional candy font -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="app">
-
     <!-- HOME -->
     <section id="screen-home" class="screen active">
       <div class="center-card home-card">
         <div class="logo-row">
-          <div class="logo-badge">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="7" width="18" height="10" rx="5" fill="#FFD166"/>
-              <circle cx="7.5" cy="12" r="3.2" fill="#FF6B6B"/>
-              <circle cx="16.5" cy="12" r="3.2" fill="#8A63FF"/>
-            </svg>
-          </div>
+          <div class="logo-badge"></div>
           <div class="title-block">
-            <h1>🍬 Candy Match Pro</h1>
-            <div class="tag muted">Match. Pop. Combo!</div>
+            <h1>🍬 Candy Match</h1>
+            <div class="tag muted">Match. Pop. Smile!</div>
           </div>
         </div>
-
-        <p class="home-sub muted">Tap Play → Open Map → Choose Level. Special candies, boosters & achievements included.</p>
-
+        <p class="home-sub muted">Tap Play → Open Map → Choose Level.</p>
         <div class="btn-row">
           <button id="btn-play">Play</button>
           <button id="btn-open-map">Map</button>
         </div>
-
         <div class="small-actions">
           <button id="btn-settings" class="ghost">Settings</button>
           <button id="btn-about" class="ghost">About</button>
@@ -49,7 +41,6 @@
           <button id="btn-reset-progress" class="ghost">Reset Progress</button>
         </div>
       </div>
-
       <div class="map-grid" id="map-grid"></div>
     </section>
 
@@ -62,16 +53,13 @@
           <button id="btn-pause" class="ghost">Pause</button>
         </div>
       </div>
-
       <main class="game-area">
         <div id="game-container" class="game-board-wrap">
           <div id="board" class="board" aria-label="game board"></div>
           <div id="board-placeholder" class="board-placeholder" style="display:none">
-            <svg width="120" height="120" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd166"/></svg>
             <div class="ph-text muted">Game loading…</div>
           </div>
         </div>
-
         <aside class="game-sidebar">
           <div class="stat-row"><div>Score</div><div id="nav-score">0</div></div>
           <div class="stat-row"><div id="moves-label">Moves</div><div id="nav-moves">30</div></div>
@@ -89,10 +77,10 @@
       </main>
     </section>
 
-    <!-- PAUSE Modal -->
+    <!-- PAUSE Modal (hidden by default) -->
     <div id="pause-modal" class="modal" hidden>
-      <div class="modal-card">
-        <h3>Paused</h3>
+      <div class="modal-card" id="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <h3 id="pause-title">Paused</h3>
         <div class="modal-actions">
           <button id="btn-resume">Resume</button>
           <button id="btn-restart2">Restart</button>
@@ -104,9 +92,7 @@
     <!-- GAME OVER -->
     <section id="screen-gameover" class="screen">
       <div class="center-card go-card">
-        <div class="go-illustration">
-          <svg width="96" height="96" viewBox="0 0 24 24"><path d="M12 2l1.9 4.3L18.7 8l-4.1 2.8L15 15l-3-1.9L9 15l.4-4.2L5.3 8l4.8-1.7L12 2z" fill="#ffb86b"/></svg>
-        </div>
+        <div class="go-illustration"></div>
         <h2 id="go-title">Level Complete!</h2>
         <p id="go-sub" class="muted">Score: <span id="go-score">0</span></p>
         <p id="go-best" class="muted">Best: <span id="go-best-score">0</span></p>
@@ -118,13 +104,13 @@
       </div>
     </section>
 
-    <!-- SETTINGS Drawer -->
+    <!-- Settings drawer placeholder -->
     <div id="settings-drawer" class="drawer" hidden>
       <div class="drawer-card">
         <h3>Settings</h3>
-        <label><input type="checkbox" id="opt-sound" checked> Sound</label>
+        <label><input type="checkbox" id="opt-sound"> Sound</label>
         <label><input type="checkbox" id="opt-music"> Music</label>
-        <label><input type="checkbox" id="opt-timer"> Timer Mode (instead of Moves)</label>
+        <label><input type="checkbox" id="opt-timer"> Timer Mode</label>
         <div style="margin-top:8px">
           <button id="btn-close-settings">Close</button>
         </div>
@@ -133,11 +119,12 @@
 
   </div>
 
-  <!-- scripts -->
+  <!-- scripts: keep game-core/storage etc. before main.js -->
   <script src="js/storage.js" defer></script>
   <script src="js/level-map.js" defer></script>
-  <script src="js/sound.js" defer></script> <!-- optional -->
+  <script src="js/sound.js" defer></script>
   <script src="js/game-core.js" defer></script>
+  <script src="js/confetti.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>
-</html>
+          </html>
