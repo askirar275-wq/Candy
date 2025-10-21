@@ -1,6 +1,5 @@
 // js/main.js - Navigation + small flow manager (with enhanced renderMap)
 (function(){
-  // Screen elements
   const screens = {
     home: document.getElementById('screen-home'),
     map: document.getElementById('screen-map'),
@@ -8,7 +7,6 @@
     gameover: document.getElementById('screen-gameover')
   };
 
-  // UI elements
   const btnPlay = document.getElementById('btn-play');
   const btnOpenMap = document.getElementById('btn-open-map');
   const mapGrid = document.getElementById('map-grid');
@@ -17,7 +15,6 @@
   const goTitle = document.getElementById('go-title');
   const goScore = document.getElementById('go-score');
 
-  // game sidebar controls
   const navScore = document.getElementById('nav-score');
   const navMoves = document.getElementById('nav-moves');
   const btnRestart = document.getElementById('btn-restart-level');
@@ -26,20 +23,24 @@
   const btnNext = document.getElementById('btn-next');
   const btnToMap = document.getElementById('btn-to-map');
 
-  // back buttons (declared in markup)
   document.querySelectorAll('.back').forEach(b => b.addEventListener('click', (e)=>{
     const target = e.currentTarget.dataset.target || 'home';
     navigateTo(target);
   }));
 
-  // STORAGE API convenience (wraps window.StorageAPI if present)
   function getUnlocked(){ return (window.StorageAPI && window.StorageAPI.getUnlocked) ? window.StorageAPI.getUnlocked() : [1]; }
   function unlockLevel(n){ window.StorageAPI && window.StorageAPI.unlock && window.StorageAPI.unlock(n); }
 
-  // sample number of levels
   const LEVEL_COUNT = 12;
 
-  // render map/grid of levels (enhanced visuals)
+  // preload candy images to avoid flicker
+  function preloadCandyImages() {
+    for(let i=1;i<=5;i++){
+      const img = new Image();
+      img.src = `images/candy${i}.png`;
+    }
+  }
+
   function renderMap(){
     if(!mapGrid) return;
     mapGrid.innerHTML = '';
@@ -49,11 +50,8 @@
       card.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
       card.dataset.level = i;
 
-      // thumbnail area
       const thumb = document.createElement('div');
       thumb.className = 'level-thumb';
-
-      // candy row inside thumbnail
       const candyRow = document.createElement('div');
       candyRow.className = 'candies';
       for(let c=0;c<5;c++){
@@ -85,7 +83,6 @@
     }
   }
 
-  // navigation
   function showScreen(name){
     Object.values(screens).forEach(s=> s.classList.remove('active'));
     if(screens[name]) screens[name].classList.add('active');
@@ -96,7 +93,6 @@
     showScreen(name);
   }
 
-  // Start gameplay - calls GameAPI if available
   function startLevel(level){
     gameTitle.textContent = `Level ${level}`;
     showScreen('game');
@@ -127,7 +123,6 @@
     showScreen('gameover');
   }
 
-  // Link buttons
   btnPlay && btnPlay.addEventListener('click', ()=> { renderMap(); navigateTo('map'); });
   btnOpenMap && btnOpenMap.addEventListener('click', ()=> { renderMap(); navigateTo('map'); });
 
@@ -144,7 +139,6 @@
   });
   if(btnToMap) btnToMap.addEventListener('click', ()=> { renderMap(); navigateTo('map'); });
 
-  // HUD update loop
   let hudInterval = null;
   function updateHUDLoop(){
     if(hudInterval) clearInterval(hudInterval);
@@ -157,7 +151,6 @@
     }, 300);
   }
 
-  // popstate
   window.addEventListener('popstate', (ev)=>{
     const state = ev.state;
     if(state && state.screen) showScreen(state.screen);
@@ -165,6 +158,7 @@
   });
 
   function init(){
+    preloadCandyImages();
     renderMap();
     const h = location.hash.replace('#','');
     if(h && screens[h]) showScreen(h);
