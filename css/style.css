@@ -1,216 +1,64 @@
-/* =============================
-   CANDY MATCH - Full Style File
-   ============================= */
+/* --- game grid & cell styling (replace/append in css/style.css) --- */
 
-/* Root Variables */
-:root {
-  --bg: #f7fbfc;
-  --card: #fff;
-  --accent: #29a6ff;
-  --muted: #777;
-  --radius: 14px;
+.card { overflow:hidden; }
+
+/* container to center the grid */
+.game-grid-container {
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
-/* Global Reset */
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue";
-  background: url("../images/bg-gradient.png") center/cover no-repeat fixed,
-              linear-gradient(#f7fbff,#f1fbfb);
-  color: #111;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* App Layout */
-.app {
-  max-width: 720px;
-  margin: 8px auto;
-  padding: 12px;
-}
-.card {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 18px;
-  box-shadow: 0 10px 30px rgba(20,30,50,0.06);
-  margin-bottom: 18px;
-  overflow: hidden; /* ✅ ensure card doesn't overflow */
-}
-.home-card {
-  text-align: center;
-}
-.app-logo {
-  font-size: 34px;
-}
-h1 {
-  margin: 8px 0 4px;
-  font-size: 28px;
-}
-.sub {
-  color: var(--muted);
-  margin: 0 0 12px;
-}
-
-/* Buttons */
-.btn-row {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin: 12px 0;
-}
-.btn {
-  background: #fff;
-  border: 1px solid #d8e6f8;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-.btn.primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: transparent;
-}
-.btn.small {
-  padding: 6px 10px;
-}
-
-/* Links */
-.links {
-  margin-top: 8px;
-}
-.links a {
-  color: var(--accent);
-  text-decoration: underline;
-  margin: 0 8px;
-}
-
-/* Pages */
-.page {
-  display: none;
-}
-.page.active {
-  display: block;
-}
-
-/* MAP PAGE */
-.map-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 12px;
-}
-.level-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(10,20,40,0.04);
-  transition: 0.2s ease;
-}
-.level-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(10,20,40,0.08);
-}
-.level-card.locked {
-  opacity: 0.45;
-  filter: grayscale(0.3);
-  cursor: not-allowed;
-}
-.level-card .thumb img {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-}
-
-/* --- GAME PAGE STYLING --- */
-
-/* Game Grid Container */
+/* main grid */
 .game-grid {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
-  /* grid-template-columns set dynamically in JS */
   padding: 8px;
-  touch-action: none; /* allow swipe/touch handling */
+  touch-action: none; /* very important for touch swipe handling */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-/* Candy Cell */
+/* cell box */
 .game-grid .cell {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 6px 18px rgba(10,20,40,0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
   -webkit-user-drag: none;
   position: relative;
   overflow: visible;
+  width: 64px;  /* fallback size, JS will set actual column size */
+  height: 64px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-/* Candy Image */
+/* candy image inside cell */
 .game-grid .cell img {
   width: 72%;
   height: 72%;
   object-fit: contain;
   pointer-events: none;
   -webkit-user-drag: none;
+  display:block;
+  transition: transform 0.12s ease;
 }
 
-/* Dragging Clone Effect */
-.dragging-clone {
-  position: fixed;
-  z-index: 9999;
-  width: 56px;
-  height: 56px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  transition: transform 0.08s linear;
+/* small highlight while pressing */
+.game-grid .cell:active {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(10,20,40,0.12);
 }
 
-/* Responsive */
+/* when a swap happens we can temporarily scale */
+.cell.swap-anim img { transform: scale(1.06); }
+
+/* small screens: scale down */
 @media (max-width: 520px) {
-  .game-grid .cell img { width: 80%; height: 80%; }
-}
-
-/* Ensure grid centered */
-.game-grid-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* HUD Row */
-.stats-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 12px 0;
-}
-.stat {
-  background: #fff;
-  padding: 10px;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(10,20,40,0.04);
-}
-
-/* Stars */
-.stars {
-  font-size: 20px;
-  color: #f9d64c;
-  margin: 8px 0;
-  text-align: center;
-}
-
-/* Over Page Buttons */
-#page-over .btn-row {
-  justify-content: center;
-}
-
-/* Smooth transition for fade-outs */
-.fade-out {
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  .game-grid .cell { width: 54px; height: 54px; }
+  .game-grid .cell img { width: 78%; height: 78%; }
 }
