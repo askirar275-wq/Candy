@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- header -->
+  <!-- Header -->
   <header class="app-header">
     <a class="logo" href="#home">🍬 Candy Match</a>
     <nav class="mini-nav">
@@ -17,7 +17,7 @@
     </nav>
   </header>
 
-  <main id="app" class="container">
+  <main id="app">
     <!-- HOME -->
     <section id="page-home" class="page active">
       <div class="card home-card">
@@ -37,7 +37,7 @@
         <a class="back" href="#home">← Home</a>
         <h2>Level Map</h2>
         <button id="resetProgress" class="btn">Reset Progress</button>
-        <div id="mapGrid" class="map-grid" style="margin-top:12px;"></div>
+        <div id="mapGrid" class="map-grid"></div>
       </div>
     </section>
 
@@ -57,21 +57,21 @@
         <div id="stars" class="stars">☆ ☆ ☆</div>
 
         <div class="game-grid-container">
-          <div id="gameGrid" class="game-grid" aria-label="Game grid"></div>
+          <div id="gameGrid" class="game-grid"></div>
         </div>
 
-        <div class="controls" style="margin-top:14px;">
+        <div class="controls">
           <button id="btnRestart" class="btn">Restart</button>
           <button id="btnEnd" class="btn">End</button>
         </div>
 
-        <div id="levelComplete" class="card modal hidden" style="margin-top:16px;">
+        <div id="levelComplete" class="card modal hidden">
           <h3 id="completeTitle">Level Complete!</h3>
           <p>Score: <span id="completeScore">0</span></p>
           <div class="buttons">
             <button id="btnReplay" class="btn">Replay</button>
             <button id="btnNext" class="btn primary">Next</button>
-            <a id="btnMap" class="btn" href="#map">Map</a>
+            <a class="btn" href="#map">Map</a>
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@
 
   <footer class="footer">© Candy Match</footer>
 
-  <!-- Required scripts (keep filenames same as in your repo) -->
+  <!-- Scripts -->
   <script src="js/storage.js"></script>
   <script src="js/sound.js"></script>
   <script src="js/game-core.js"></script>
@@ -106,58 +106,44 @@
   <script src="js/game.js"></script>
 
   <script>
-    // Router: show sections by hash
-    function showPageByHash(){
+    function showPageByHash() {
       const raw = location.hash || '#home';
       const path = raw.split('?')[0];
-      const pageMap = { '#home':'page-home', '#map':'page-map', '#game':'page-game', '#settings':'page-settings', '#about':'page-about' };
-      Object.values(pageMap).forEach(id => document.getElementById(id).classList.remove('active'));
-      const id = pageMap[path] || 'page-home';
-      document.getElementById(id).classList.add('active');
+      const map = {
+        '#home': 'page-home',
+        '#map': 'page-map',
+        '#game': 'page-game',
+        '#settings': 'page-settings',
+        '#about': 'page-about'
+      };
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const id = map[path] || 'page-home';
+      document.getElementById(id)?.classList.add('active');
 
-      // if map open -> render map
-      if(path === '#map') {
-        if(window.LevelMap && typeof LevelMap.render === 'function') LevelMap.render();
-      }
-
-      // if game open -> start level from query
-      if(path === '#game'){
-        const qs = (location.hash.split('?')[1] || '');
-        const params = new URLSearchParams(qs);
-        const level = parseInt(params.get('level') || 1,10) || 1;
-        // Start the game via Game facade (ensures Game exists)
-        if(window.Game && typeof Game.start === 'function'){
-          Game.start(level);
-        } else {
-          // if Game not loaded yet wait a bit
-          window.addEventListener('load', ()=> { if(window.Game) Game.start(level); }, {once:true});
-        }
+      if (path === '#map' && window.LevelMap) LevelMap.render();
+      if (path === '#game') {
+        const qs = new URLSearchParams(location.hash.split('?')[1] || '');
+        const lvl = parseInt(qs.get('level') || 1, 10);
+        if (window.Game && typeof Game.start === 'function') Game.start(lvl);
       }
     }
 
     window.addEventListener('hashchange', showPageByHash);
     window.addEventListener('load', showPageByHash);
 
-    // Reset progress button
-    const resetBtn = document.getElementById('resetProgress');
-    if(resetBtn) resetBtn.addEventListener('click', ()=> {
-      if(confirm('Reset progress?')){ Storage.reset(); if(window.LevelMap) LevelMap.render(); alert('Progress reset'); }
+    document.getElementById('resetProgress').addEventListener('click', () => {
+      if (confirm('Reset all progress?')) {
+        Storage.reset();
+        LevelMap.render();
+      }
     });
 
-    // mute checkbox
     const muteBox = document.getElementById('muteSound');
-    if(muteBox){
-      muteBox.checked = Storage.prefs().soundMuted || false;
-      muteBox.addEventListener('change', (e)=> {
-        if(window.Sound) Sound.setMuted(e.target.checked);
-        Storage.setPref('soundMuted', e.target.checked);
-      });
-    }
-
-    // ensure map is rendered on load if user opens #map directly
-    if(location.hash && location.hash.startsWith('#map')) {
-      window.addEventListener('load', ()=> { if(window.LevelMap) LevelMap.render(); }, {once:true});
-    }
+    muteBox.checked = Storage.prefs().soundMuted;
+    muteBox.addEventListener('change', e => {
+      Sound.setMuted(e.target.checked);
+      Storage.setPref('soundMuted', e.target.checked);
+    });
   </script>
 </body>
-</html>
+          </html>
