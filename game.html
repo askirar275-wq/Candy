@@ -1,56 +1,65 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="google" content="notranslate" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Game</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Candy Match — Game Play</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div class="container card">
-    <a class="btn back" href="map.html">← Map</a>
-    <h2 id="levelTitle">Level 1</h2>
+  <div class="container card center">
+    <h1 id="levelTitle">Level</h1>
 
-    <div id="hud" class="hud">
+    <!-- HUD (Score, Moves, Target) -->
+    <div class="hud">
       <div>Score: <span id="score">0</span></div>
       <div>Moves: <span id="moves">30</span></div>
       <div>Target: <span id="target">0</span></div>
     </div>
 
-    <div id="stars" class="stars">
-      <span class="star" data-index="1">☆</span>
-      <span class="star" data-index="2">☆</span>
-      <span class="star" data-index="3">☆</span>
+    <!-- Stars indicator -->
+    <div class="stars" id="stars">
+      <span class="star">★</span>
+      <span class="star">★</span>
+      <span class="star">★</span>
     </div>
 
-    <div id="gameGrid" class="board" aria-hidden="false"></div>
+    <!-- Game Grid -->
+    <div id="gameGrid" class="board"></div>
 
-    <div style="text-align:center;margin-top:12px">
-      <a id="endBtn" class="btn" href="#">End</a>
+    <!-- Buttons -->
+    <div class="btn-row">
+      <a href="map.html" class="btn back">Back</a>
+      <a id="endBtn" href="#" class="btn">End</a>
     </div>
   </div>
 
-  <!-- scripts -->
+  <!-- scripts (keep this order) -->
   <script src="js/storage.js"></script>
+  <script src="js/confetti.js"></script>
   <script src="js/game-core.js"></script>
   <script src="js/game.js"></script>
   <script>
-    // read ?level=n
-    function getParam(name){
-      const u = new URL(location.href);
-      return u.searchParams.get(name);
-    }
-    const level = parseInt(getParam('level') || '1',10);
-    // start game when DOM and scripts ready
-    document.addEventListener('DOMContentLoaded', ()=>{
-      Game.start(level);
-      document.getElementById('endBtn').addEventListener('click', ()=>{
-        // go to gameover with score param
-        const s = Game.getState();
-        location.href = `gameover.html?level=${s.level}&score=${s.score}`;
-      });
-    });
+    // start level from query param e.g. ?level=1
+    (function(){
+      try {
+        const urlParams = new URLSearchParams(location.search);
+        const lvl = urlParams.get('level') || 1;
+        // tiny safety: wait for DOM & Game to be available
+        function startWhenReady(){
+          if(typeof Game !== 'undefined' && document.readyState === 'complete'){
+            Game.start(lvl);
+          } else if(typeof Game !== 'undefined' && document.readyState !== 'loading'){
+            Game.start(lvl);
+          } else {
+            window.addEventListener('load', ()=> { if(typeof Game !== 'undefined') Game.start(lvl); });
+          }
+        }
+        startWhenReady();
+      } catch(e){
+        console.error('Game start failed', e);
+      }
+    })();
   </script>
 </body>
-  </html>
+</html>
