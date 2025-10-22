@@ -1,352 +1,254 @@
-/* js/game-core.js
-   Core board logic: board state, match detection, collapse + refill,
-   and UI rendering of grid cells. Exposes helpers used by game.js.
-*/
-
+// js/game-core.js
+// Simple match-3 core engine (grid-based)
 const GameCore = (function(){
-  // CONFIG
-  const ROWS = 7;
-  const COLS = 7;
-  const CANDY_TYPES = 5; // images candy1..candy5.png
-  const CELL_SIZE = 52; // for clone positioning (approx)
-
-  // STATE
-  let board = [];
+  const ROWS = 6;
+  const COLS = 6;
+  const CANDY_TYPES = 6; // candy1..candy6 images
+  let grid = []; // 2D array [r][c] => type (1..CANDY_TYPES)
   let score = 0;
   let moves = 30;
   let target = 600;
   let currentLevel = 1;
-  let canInteract = true;
+  let onChange = ()=>{};
+  let onComplete = ()=>{};
+  let lock = false;
 
-  // DOM
-  const gridEl = () => document.getElementById('gameGrid');
-  const scoreEl = () => document.getElementById('score');
-  const movesEl = () => document.getElementById('moves');
-  const targetEl = () => document.getElementById('target');
-  const levelTitleEl = () => document.getElementById('levelTitle');
+  function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-  // Initialize empty board
-  function createEmptyBoard(){
-    board = new Array(ROWS);
+  function makeEmptyGrid(){
+    grid = [];
     for(let r=0;r<ROWS;r++){
-      board[r] = new Array(COLS).fill(null);
+      const row = new Array(COLS).fill(0);
+      grid.push(row);
     }
   }
 
-  // Fill board randomly (no immediate matches ideally)
-  function fillBoardNoInitialMatches(){
-    // naive approach: fill and re-roll if immediate match present
-    do {
-      for(let r=0;r<ROWS;r++){
-        for(let c=0;c<COLS;c++){
-          board[r][c] = randomCandyId();
-        }
-      }
-    } while(findMatches().length > 0);
-  }
-
-  function randomCandyId(){
-    return Math.floor(Math.random() * CANDY_TYPES) + 1;
-  }
-
-  // Render grid UI from board[][]
-  function updateUI(){
-    // remove any debug overlays left
-    document.querySelectorAll('.cell .count, .cell .badge-number, .cell .overlay-count').forEach(n=>n.remove());
-
-    const grid = gridEl();
-    if(!grid) return;
-    // set columns grid-template according to COLS
-    grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
-    grid.innerHTML = '';
+  // fill random but avoid immediate matches (simple retries)
+  function fillInitial(){
     for(let r=0;r<ROWS;r++){
       for(let c=0;c<COLS;c++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.id = `cell-${r}-${c}`;
-        // image
-        const img = document.createElement('img');
-        const id = board[r][c];
-        img.src = id ? `images/candy${id}.png` : `images/candy1.png`;
-        img.alt = 'candy';
-        cell.appendChild(img);
-
-        // attach pointer handlers (fresh each render)
-        attachCellPointer(cell, r, c);
-        grid.appendChild(cell);
+        let t;
+        do {
+          t = randInt(1,CANDY_TYPES);
+        } while (formsMatchAt(r,c,t));
+        grid[r][c] = t;
       }
     }
-
-    // update HUD
-    if(scoreEl()) scoreEl().textContent = score;
-    if(movesEl()) movesEl().textContent = moves;
-    if(targetEl()) targetEl().textContent = target;
-    if(levelTitleEl()) levelTitleEl().textContent = `Level ${currentLevel}`;
-
-    // ensure canInteract is true only if not animating (caller manages it)
   }
 
-  // Attach pointer logic to each cell (uses pointerdown + pointerup on document)
-  function attachCellPointer(cellEl, r, c){
-    // remove previous listeners just in case
-    cellEl.onpointerdown = null;
-
-    cellEl.addEventListener('pointerdown', function(e){
-      if(!canInteract) return;
-      e.preventDefault && e.preventDefault();
-
-      const startX = e.clientX;
-      const startY = e.clientY;
-      let released = false;
-
-      function onUp(ev){
-        if(released) return;
-        released = true;
-        document.removeEventListener('pointerup', onUp);
-        document.removeEventListener('pointercancel', onUp);
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        const absX = Math.abs(dx), absY = Math.abs(dy);
-
-        if(Math.max(absX, absY) < 8){
-          // small tap => no swap
-          return;
-        }
-        let toR = r, toC = c;
-        if(absX > absY){
-          toC = dx > 0 ? c + 1 : c - 1;
-        } else {
-          toR = dy > 0 ? r + 1 : r - 1;
-        }
-        // bounds check
-        if(toR < 0 || toR >= ROWS || toC < 0 || toC >= COLS) return;
-
-        // perform swap pipeline via GameCore.swapCells
-        swapCells(r, c, toR, toC);
-      }
-      document.addEventListener('pointerup', onUp);
-      document.addEventListener('pointercancel', onUp);
-    });
+  // check if placing type 't' at r,c would create a 3-in-row (used while generating)
+  function formsMatchAt(r,c,t){
+    // check left two
+    if(c>=2 && grid[r][c-1]===t && grid[r][c-2]===t) return true;
+    // check up two
+    if(r>=2 && grid[r-1][c]===t && grid[r-2][c]===t) return true;
+    return false;
   }
 
-  // Swap in board array
-  function swapBoard(r1,c1,r2,c2){
-    const tmp = board[r1][c1];
-    board[r1][c1] = board[r2][c2];
-    board[r2][c2] = tmp;
+  function getState(){
+    return {
+      grid: JSON.parse(JSON.stringify(grid)),
+      score, moves, target, currentLevel
+    };
   }
 
-  // Visual animate swap using clones, resolves when done
-  function animateSwapDOM(r1,c1,r2,c2){
-    return new Promise(resolve=>{
-      const el1 = document.getElementById(`cell-${r1}-${c1}`);
-      const el2 = document.getElementById(`cell-${r2}-${c2}`);
-      if(!el1 || !el2){ resolve(); return; }
-
-      const rect1 = el1.getBoundingClientRect();
-      const rect2 = el2.getBoundingClientRect();
-
-      const clone1 = el1.querySelector('img').cloneNode();
-      const clone2 = el2.querySelector('img').cloneNode();
-      clone1.className = 'dragging-clone';
-      clone2.className = 'dragging-clone';
-
-      Object.assign(clone1.style, {
-        position: 'fixed', left: (rect1.left + rect1.width/2 - 22) + 'px',
-        top: (rect1.top + rect1.height/2 - 22) + 'px', width:'44px', height:'44px',
-        transition: 'transform 220ms ease'
-      });
-      Object.assign(clone2.style, {
-        position: 'fixed', left: (rect2.left + rect2.width/2 - 22) + 'px',
-        top: (rect2.top + rect2.height/2 - 22) + 'px', width:'44px', height:'44px',
-        transition: 'transform 220ms ease'
-      });
-
-      document.body.appendChild(clone1);
-      document.body.appendChild(clone2);
-
-      const dx = rect2.left - rect1.left;
-      const dy = rect2.top - rect1.top;
-
-      requestAnimationFrame(()=> {
-        clone1.style.transform = `translate(${dx}px, ${dy}px)`;
-        clone2.style.transform = `translate(${-dx}px, ${-dy}px)`;
-      });
-
-      setTimeout(()=> {
-        clone1.remove(); clone2.remove(); resolve();
-      }, 260);
-    });
+  // swap two cells (adjacent) and return true if swapped
+  function swap(r1,c1,r2,c2){
+    if(lock) return false;
+    if(!isAdj(r1,c1,r2,c2)) return false;
+    // swap
+    const tmp = grid[r1][c1];
+    grid[r1][c1] = grid[r2][c2];
+    grid[r2][c2] = tmp;
+    moves = Math.max(0, moves-1);
+    onChange(getState());
+    // check matches: if no matches, revert after small delay (handled by caller)
+    return true;
   }
 
-  // Find all matches (returns array of positions objects)
+  function isAdj(r1,c1,r2,c2){
+    const dr = Math.abs(r1-r2), dc = Math.abs(c1-c2);
+    return (dr+dc)===1;
+  }
+
+  // Find matches: returns array of positions grouped
   function findMatches(){
-    const matched = [];
-    // Horizontal
+    const seen = Array.from({length:ROWS}, ()=> new Array(COLS).fill(false));
+    const groups = [];
+
+    // horizontal
     for(let r=0;r<ROWS;r++){
-      let runStart = 0;
+      let runStart=0;
       for(let c=1;c<=COLS;c++){
-        const prev = board[r][c-1];
-        const cur = (c < COLS) ? board[r][c] : null;
-        if(c < COLS && cur !== null && prev !== null && cur === prev){
-          // continue
-        } else {
-          const runLen = c - runStart;
-          if(runLen >= 3){
-            for(let k=runStart;k<c;k++) matched.push({r, c:k});
-          }
-          runStart = c;
-        }
+        if(c<Cols? false:false){} // nop
       }
     }
-    // Vertical
+    // simpler approach: iterate each cell and expand right/down
+    // We'll find horizontal runs
+    for(let r=0;r<ROWS;r++){
+      let start = 0;
+      while(start < COLS){
+        const t = grid[r][start];
+        if(!t){ start++; continue; }
+        let end = start+1;
+        while(end<COLS && grid[r][end]===t) end++;
+        const len = end-start;
+        if(len>=3){
+          const group = [];
+          for(let c=start;c<end;c++) group.push([r,c]);
+          groups.push(group);
+        }
+        start = end;
+      }
+    }
+    // vertical runs
     for(let c=0;c<COLS;c++){
-      let runStart = 0;
-      for(let r=1;r<=ROWS;r++){
-        const prev = (r-1 >= 0) ? board[r-1][c] : null;
-        const cur = (r < ROWS) ? board[r][c] : null;
-        if(r < ROWS && cur !== null && prev !== null && cur === prev){
-          // continue
-        } else {
-          const runLen = r - runStart;
-          if(runLen >= 3){
-            for(let k=runStart;k<r;k++) matched.push({r:k, c});
-          }
-          runStart = r;
+      let start = 0;
+      while(start < ROWS){
+        const t = grid[start][c];
+        if(!t){ start++; continue; }
+        let end = start+1;
+        while(end<ROWS && grid[end][c]===t) end++;
+        const len = end-start;
+        if(len>=3){
+          const group = [];
+          for(let r=start;r<end;r++) group.push([r,c]);
+          groups.push(group);
         }
+        start = end;
       }
     }
-    // dedupe
-    const set = new Set();
-    const result = [];
-    matched.forEach(p => {
-      const key = `${p.r},${p.c}`;
-      if(!set.has(key)){ set.add(key); result.push(p); }
-    });
-    return result;
-  }
 
-  // Remove matches visually and from board
-  function removeMatchesAndAnimate(matches){
-    return new Promise(resolve=>{
-      if(matches.length === 0){ resolve(); return; }
-      // mark null and add fade class
-      matches.forEach(pos=>{
-        board[pos.r][pos.c] = null;
-        const cell = document.getElementById(`cell-${pos.r}-${pos.c}`);
-        if(cell) cell.classList.add('fade-out');
+    // deduplicate positions (if overlapped groups will both appear — we will merge by marking)
+    const mark = Array.from({length:ROWS}, ()=> new Array(COLS).fill(false));
+    const merged = [];
+    groups.forEach(g=>{
+      const unique = [];
+      g.forEach(([r,c])=>{
+        if(!mark[r][c]){
+          mark[r][c] = true;
+          unique.push([r,c]);
+        }
       });
-      // wait for visual fade
-      setTimeout(()=>{
-        updateUI();
-        resolve();
-      }, 200);
+      if(unique.length) merged.push(unique);
     });
+
+    return merged; // array of groups (each group array of [r,c])
   }
 
-  // Gravity collapse columns and refill
-  function collapseAndRefill(){
-    return new Promise(resolve=>{
-      for(let c=0;c<COLS;c++){
-        let write = ROWS - 1;
-        for(let r=ROWS-1;r>=0;r--){
-          if(board[r][c] !== null){
-            board[write][c] = board[r][c];
-            if(write !== r) board[r][c] = null;
-            write--;
-          }
-        }
-        for(let r=write;r>=0;r--){
-          board[r][c] = randomCandyId();
-        }
-      }
-      // small delay for visual refill
-      updateUI();
-      setTimeout(resolve, 220);
+  // remove groups (set to 0) and award score
+  function removeMatches(groups){
+    let removed = 0;
+    groups.forEach(g=>{
+      removed += g.length;
+      g.forEach(([r,c])=> grid[r][c] = 0);
     });
+    // score rules: e.g., 100 per candy
+    score += removed * 100;
+    onChange(getState());
+    return removed;
   }
 
-  // Public swap flow: animate swap, check match, revert if no match, else run match-loop
-  async function swapCells(r1,c1,r2,c2){
-    if(!canInteract) return;
-    canInteract = false;
-    try {
-      // animate swap
-      await animateSwapDOM(r1,c1,r2,c2);
-      // update board
-      swapBoard(r1,c1,r2,c2);
-      updateUI();
-
-      let matches = findMatches();
-      if(matches.length === 0){
-        // revert after a small pause
-        await new Promise(res => setTimeout(res, 120));
-        await animateSwapDOM(r1,c1,r2,c2); // animate back (positions changed in board, but ids in DOM are moved by updateUI)
-        swapBoard(r1,c1,r2,c2); // revert data
-        updateUI();
-        canInteract = true;
-        return;
-      }
-
-      // matches found: loop removing, collapsing until no matches
-      while(matches.length > 0){
-        // scoring: 100 per candy matched (example)
-        score += matches.length * 100;
-        if(scoreEl()) scoreEl().textContent = score;
-
-        await removeMatchesAndAnimate(matches);
-        await collapseAndRefill();
-        matches = findMatches();
-      }
-
-      // decrement moves and update
-      moves = Math.max(0, moves - 1);
-      if(movesEl()) movesEl().textContent = moves;
-
-      // check win condition
-      if(score >= target){
-        // notify Game layer to finish level
-        if(typeof onLevelComplete === 'function'){
-          onLevelComplete({score, level: currentLevel});
+  // collapse columns: for each column, shift non-zero down, fill upper with 0
+  function collapse(){
+    for(let c=0;c<COLS;c++){
+      let write = ROWS-1;
+      for(let r=ROWS-1;r>=0;r--){
+        if(grid[r][c]!==0){
+          grid[write][c] = grid[r][c];
+          write--;
         }
       }
-    } catch(err){
-      console.error('swapCells error', err);
-    } finally {
-      canInteract = true;
+      // fill remaining
+      for(let r=write;r>=0;r--){
+        grid[r][c] = 0;
+      }
     }
   }
 
-  // simple public helpers for Game wrapper
-  let onLevelComplete = null;
-  function setOnComplete(fn){ onLevelComplete = fn; }
+  // refill zeros from top with random candies
+  function refill(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        if(grid[r][c]===0){
+          grid[r][c] = randInt(1, CANDY_TYPES);
+        }
+      }
+    }
+    onChange(getState());
+  }
 
-  // Public API: start level
-  function start(level = 1, opts = {}){
+  // run full resolution: findMatches -> remove -> collapse -> refill, repeat until no matches
+  async function resolveMatchesLoop(){
+    lock = true;
+    let totalRemoved = 0;
+    while(true){
+      const groups = findMatches();
+      if(!groups.length) break;
+      const removed = removeMatches(groups);
+      totalRemoved += removed;
+      // allow UI to animate (caller can re-render between these steps)
+      await new Promise(r=> setTimeout(r, 220));
+      collapse();
+      await new Promise(r=> setTimeout(r, 150));
+      refill();
+      await new Promise(r=> setTimeout(r, 180));
+    }
+    lock = false;
+    onChange(getState());
+    return totalRemoved;
+  }
+
+  // public API
+  function start(level=1){
     currentLevel = Number(level) || 1;
-    // choose target & moves based on level (simple scaling)
-    target = opts.target || (600 + (currentLevel-1)*300);
-    moves = opts.moves || 30;
     score = 0;
-    canInteract = true;
-    // create board
-    createEmptyBoard();
-    fillBoardNoInitialMatches();
-    updateUI();
+    moves = 30;
+    target = 600 + (currentLevel-1)*200;
+    makeEmptyGrid();
+    fillInitial();
+    // resolve any accidental matches (just in case)
+    resolveMatchesLoop().then(()=>{ onChange(getState()); });
+    return getState();
   }
 
-  function restart(){
-    start(currentLevel);
+  function trySwapAndResolve(r1,c1,r2,c2){
+    if(lock) return false;
+    if(!isAdj(r1,c1,r2,c2)) return false;
+    // swap
+    const tmp = grid[r1][c1];
+    grid[r1][c1] = grid[r2][c2];
+    grid[r2][c2] = tmp;
+    onChange(getState());
+    // check if swap created any matches
+    const groups = findMatches();
+    if(groups.length){
+      // resolve loop (async) but caller doesn't need await
+      resolveMatchesLoop();
+      return true;
+    } else {
+      // revert after short delay (to allow animation)
+      setTimeout(()=>{
+        const t = grid[r1][c1];
+        grid[r1][c1] = grid[r2][c2];
+        grid[r2][c2] = t;
+        moves = Math.max(0, moves-1); // even invalid swap consumes a move? you may prefer not to; change if needed
+        onChange(getState());
+      }, 180);
+      return false;
+    }
   }
 
-  // expose
+  // expose hooks
+  function onUpdate(cb){ onChange = cb || (()=>{}); }
+  function onFinish(cb){ onComplete = cb || (()=>{}); }
+
+  // Expose functions
   return {
-    start,
-    restart,
-    swapCells,
-    updateUI,
-    getState: ()=> ({board, score, moves, target, currentLevel}),
-    setOnComplete,
-    setCanInteract: (v)=> { canInteract = !!v; },
+    start, getState, trySwapAndResolve, onUpdate, onFinish,
+    // constants for UI
+    ROWS, COLS, CANDY_TYPES
   };
 })();
+
+window.GameCore = GameCore;
