@@ -1,114 +1,63 @@
-/* Global reset */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-
-/* Body background with image + gradient fallback */
-body{
-  font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background-image: url('../images/bg-gradient.png'), linear-gradient(180deg,#fdfbfb,#eef6f8);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-  color:#222;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-}
-
-/* container / cards */
-.container{max-width:760px;margin:18px auto;padding:18px}
-.card{
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(6px);
-  border-radius:14px;
-  padding:18px;
-  box-shadow:0 16px 40px rgba(19,34,51,0.06);
-}
-.center{text-align:center}
-
-/* buttons */
-.btn{display:inline-block;background:#2196f3;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}
-.btn.back{background:#2b9bd7}
-.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-
-/* map/level cards */
-.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
-.level-card{width:140px;height:110px;border-radius:12px;background:#fbfcfe;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(20,40,60,0.04);cursor:pointer}
-.level-card.locked{opacity:.45}
-.level-thumb{display:flex;gap:6px;align-items:center;justify-content:center}
-.level-thumb img{width:32px;height:32px;object-fit:contain}
-.label{margin-top:8px;font-weight:600}
-
-/* HUD */
-.hud{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
-.hud div{background:#fff;padding:8px 12px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.04)}
-.stars{font-size:20px;color:#f0c419;margin:8px 0}
-.star{opacity:.35}
-.star.on{opacity:1;color:gold}
-
-/* board / tiles */
+/* basic mobile-friendly style */
 :root{
-  --cell-size:64px;
-  --cell-gap:8px;
+  --bg: #f7fbfc;
+  --card: #fff;
+  --accent: #29a6ff;
+  --muted: #777;
+  --radius: 14px;
 }
-@media (max-width:420px){
-  :root{--cell-size:52px;--cell-gap:6px}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue"; background: url("../images/bg-gradient.png") center/cover no-repeat fixed, linear-gradient(#f7fbff,#f1fbfb); color:#111; -webkit-font-smoothing:antialiased}
+.app{max-width:720px;margin:8px auto;padding:12px}
+.card{background:var(--card); border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(20,30,50,0.06); margin-bottom:18px}
+.home-card{text-align:center}
+.app-logo{font-size:34px}
+h1{margin:8px 0 4px;font-size:28px}
+.sub{color:var(--muted); margin:0 0 12px}
+.btn-row{display:flex;gap:12px;justify-content:center;margin:12px 0}
+.btn{background:#fff;border:1px solid #d8e6f8;padding:10px 14px;border-radius:10px;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn.small{padding:6px 10px}
+.links{margin-top:8px}
+.links a{color:var(--accent); text-decoration:underline;margin:0 8px}
+
+/* pages */
+.page{display:none}
+.page.active{display:block}
+
+/* map grid */
+.map-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-top:12px}
+.level-card{background:#fff;border-radius:12px;padding:10px;text-align:center; box-shadow:0 6px 18px rgba(10,20,40,0.04)}
+.level-card.locked{opacity:0.45;filter:grayscale(0.1)}
+.level-card .thumb img{width:80px;height:80px;object-fit:contain}
+
+/* game grid */
+.game-grid{display:grid; gap:10px; margin-top:18px; align-items:center; justify-items:center}
+.game-grid .cell{background:#fff;border-radius:10px;padding:6px; width:56px; height:56px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(10,20,40,0.04)}
+.game-grid .cell img{width:44px;height:44px;user-select:none; pointer-events:none;}
+
+/* responsive set cols */
+@media(min-width:560px){
+  .game-grid{grid-template-columns:repeat(7,56px)}
+}
+@media(max-width:559px){
+  .game-grid{grid-template-columns:repeat(6,48px)}
+  .game-grid .cell{width:48px;height:48px}
+  .game-grid .cell img{width:40px;height:40px}
 }
 
-.board{
-  margin:14px auto;
-  display:grid;
-  grid-template-columns:repeat(5, var(--cell-size));
-  gap: var(--cell-gap);
-  width: calc(var(--cell-size)*5 + var(--cell-gap)*4);
-  justify-content:center;
-  touch-action: none;
-}
-
-/* tile */
-.cell{
-  width:var(--cell-size);
-  height:var(--cell-size);
-  border-radius:10px;
-  overflow:hidden;
-  background:linear-gradient(180deg,#ffffff,#f7fbff);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 6px 16px rgba(0,0,0,0.06);
-  transition: transform 200ms cubic-bezier(.22,.9,.3,1), opacity 160ms linear;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  -webkit-user-select:none;
-  touch-action:none;
-  position:relative;
-}
-
-/* candy image */
-.cell img{
-  width:86%;
-  height:86%;
-  object-fit:contain;
-  pointer-events:none;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-
-/* animations */
-.cell.fade-out{opacity:0;transform:scale(.75);transition:transform 180ms ease,opacity 180ms ease;}
-.cell.drop-in{ transform: translateY(-26px); opacity:0; }
-.cell.drop-in.show{ transform: translateY(0); opacity:1; transition: transform 320ms cubic-bezier(.22,.9,.3,1), opacity 200ms linear; }
+/* fade out animation */
+.fade-out{opacity:0; transition:opacity .18s ease}
 
 /* dragging clone style */
-.dragging-clone{
-  box-shadow:0 12px 30px rgba(0,0,0,0.18);
-  border-radius:10px;
-  transform: scale(1.04);
-  transition: transform 120ms ease;
-  pointer-events:none;
-}
+.dragging-clone{pointer-events:none;border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,0.12)}
 
-/* selected outline */
-.cell.selected{ outline: 4px solid rgba(33,150,243,0.12); }
+/* HUD */
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.stat{background:#fff;padding:10px;border-radius:10px;box-shadow:0 6px 18px rgba(10,20,40,0.04)}
 
-/* responsive small note text */
-small{color:#666}
+/* stars */
+.stars{font-size:20px;color:#f9d64c;margin:8px 0}
+
+/* page over */
+#page-over .btn-row{justify-content:center}
