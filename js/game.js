@@ -1,286 +1,214 @@
-// js/game.js
-// UI + game flow: render, touch/swipe, swap animation, match/remove loop
-// Depends on GameCore
+// game.js
+// UI + touch/pointer handling + using Core engine
 
-(function(global){
-  const GC = global.GameCore;
-  if(!GC) { console.error('GameCore not loaded'); return; }
-
-  // DOM ids
-  const gridEl = document.getElementById('grid');
-  const scoreEl = document.getElementById('score');
-  const movesEl = document.getElementById('moves');
-  const targetEl = document.getElementById('target');
-
-  // state
+const Game = (function(Core){
+  const gridEl = document.querySelector('.game-grid');
+  let grid = [];
+  let animating = false;
+  let selected = null; // {r,c,el}
   let score = 0;
   let moves = 30;
-  let target = 600;
-  let level = 1;
-  let busy = false; // prevents concurrent actions
-  let rows = GC.ROWS, cols = GC.COLS;
+  const IMAGE_PATH = i => `images/candy${i}.png`;
 
-  // initialize & start
-  function start(lvl=1){
-    level = Number(lvl) || 1;
-    // simple level tuning
-    moves = Math.max(10, 30 - (level-1)*2);
-    target = 600 + (level-1)*300;
-    score = 0;
-    scoreEl && (scoreEl.textContent = score);
-    movesEl && (movesEl.textContent = moves);
-    targetEl && (targetEl.textContent = target);
-    // create grid and render
-    GC.initGrid();
+  function init(){
+    grid = Core.createInitial();
     renderGrid();
-    bindEvents();
-    // auto-check any initial matches (should not exist) then done
+    attachHandlers();
+    updateUI();
   }
 
-  // render cells
-  function renderGrid(){
-    const grid = GC.getGrid();
-    gridEl.innerHTML = '';
-    // ensure CSS grid-template-columns updated for cols
-    gridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(44px, 56px))`;
+  function updateUI(){
+    const sc = document.getElementById('score'); if(sc) sc.textContent = score;
+    const mv = document.getElementById('moves'); if(mv) mv.textContent = moves;
+    const tg = document.getElementById('target'); if(tg) tg.textContent = 600;
+  }
 
-    for(let r=0;r<rows;r++){
-      for(let c=0;c<cols;c++){
-        const v = grid[r][c];
+  function renderGrid(){
+    gridEl.innerHTML = '';
+    gridEl.style.gridTemplateColumns = `repeat(${Core.COLS}, 64px)`;
+    for(let r=0;r<Core.ROWS;r++){
+      for(let c=0;c<Core.COLS;c++){
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.dataset.r = r;
-        cell.dataset.c = c;
-
+        cell.dataset.r = r; cell.dataset.c = c;
         const img = document.createElement('img');
         img.draggable = false;
+        img.src = IMAGE_PATH(grid[r][c]);
         img.alt = 'candy';
-        img.src = `images/candy${v}.png`;
-
         cell.appendChild(img);
         gridEl.appendChild(cell);
       }
     }
   }
 
-  // helper to get cell element by r,c
-  function getCellEl(r,c){
-    return gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  // helper: get coords from element
+  function coordsFromEl(el){
+    return { r: parseInt(el.dataset.r,10), c: parseInt(el.dataset.c,10) };
   }
 
-  // animate swap visually by moving img srcs and small transform
-  function animateSwap(aR,aC,bR,bC, cb){
-    // swap srcs
-    const aEl = getCellEl(aR,aC), bEl = getCellEl(bR,bC);
-    if(!aEl || !bEl){ if(cb) cb(); return; }
+  // check adjacency
+  function adjacent(a,b){
+    const dr = Math.abs(a.r-b.r), dc = Math.abs(a.c-b.c);
+    return (dr + dc) === 1;
+  }
+
+  // perform animated swap, then check matches
+  async function performSwap(aEl, bEl){
+    if(animating) return;
+    animating = true;
+    const a = coordsFromEl(aEl), b = coordsFromEl(bEl);
+
+    // swap in model
+    Core.swap(grid, a, b);
+    // swap visuals quickly
     const aImg = aEl.querySelector('img'), bImg = bEl.querySelector('img');
-    // quick transform animation
-    aEl.style.transition = 'transform 180ms ease';
-    bEl.style.transition = 'transform 180ms ease';
-    const dx = (bEl.getBoundingClientRect().left - aEl.getBoundingClientRect().left);
-    const dy = (bEl.getBoundingClientRect().top - aEl.getBoundingClientRect().top);
-    aEl.style.transform = `translate(${dx}px, ${dy}px)`;
-    bEl.style.transform = `translate(${-dx}px, ${-dy}px)`;
-    // after animation swap images & reset transform
-    setTimeout(()=> {
-      // swap src values
-      const tmp = aImg.src;
-      aImg.src = bImg.src;
-      bImg.src = tmp;
-      aEl.style.transition = '';
-      bEl.style.transition = '';
-      aEl.style.transform = '';
-      bEl.style.transform = '';
-      if(cb) cb();
-    }, 200);
-  }
+    const tmpSrc = aImg.src;
+    aImg.src = bImg.src;
+    bImg.src = tmpSrc;
 
-  // perform remove->collapse->refill loop until no matches
-  function resolveMatchesChain(){
-    if(busy) return;
-    busy = true;
-    let chainScore = 0;
-    (function loop(){
-      const matches = GC.detectMatches();
-      if(matches.length === 0){
-        busy = false;
-        // update UI score etc
-        scoreEl && (scoreEl.textContent = score);
-        movesEl && (movesEl.textContent = moves);
-        return;
-      }
-      // remove marked (visual fade)
-      const unique = {};
-      matches.forEach(p => { unique[`${p.r},${p.c}`]=true; });
-      // animate fade out
-      matches.forEach(p=>{
-        const el = getCellEl(p.r,p.c);
-        if(el) el.querySelector('img').style.opacity = '0.15';
-      });
-      // score add
-      const n = Object.keys(unique).length;
-      chainScore += n*10;
-      score += n*10;
-      // wait a bit then remove in data & refill visually
-      setTimeout(()=>{
-        GC.removeMatches(matches);
-        // collapse + refill
-        GC.collapseAndRefill();
-        // re-render entire grid with small animation (fade-in)
-        renderGridWithDropAnimation( () => {
-          // chain continue
-          setTimeout(loop, 180);
-        });
-      }, 220);
-    })();
-  }
+    // animate a small scale/bounce for feedback
+    aEl.classList.add('swapping'); bEl.classList.add('swapping');
+    await new Promise(r => setTimeout(r, 180));
+    aEl.classList.remove('swapping'); bEl.classList.remove('swapping');
 
-  // render grid but animate 'dropping' effect after refill
-  function renderGridWithDropAnimation(cb){
-    const old = gridEl.innerHTML;
-    renderGrid();
-    // set small transform for each cell from -20px to 0 randomized
-    const cells = Array.from(gridEl.children);
-    cells.forEach((cell,i)=>{
-      cell.style.transition = 'transform 260ms cubic-bezier(.2,.8,.2,1), opacity 200ms';
-      cell.style.transform = 'translateY(-14px)';
-      cell.style.opacity = '0.0';
-    });
-    // trigger
-    requestAnimationFrame(()=> {
-      cells.forEach((cell,i)=>{
-        setTimeout(()=> {
-          cell.style.transform = '';
-          cell.style.opacity = '';
-        }, i*12);
-      });
-    });
-    setTimeout(()=>{
-      cells.forEach(cell=>{ cell.style.transition=''; });
-      if(cb) cb();
-    }, 420 + cells.length*6);
-  }
-
-  // attempt swap triggered by touch/drag or click
-  function attemptSwap(aR,aC,bR,bC){
-    if(busy) return;
-    // bounds
-    if(bR<0||bR>=rows||bC<0||bC>=cols) return;
-    // only adjacent
-    const dr = Math.abs(aR-bR), dc = Math.abs(aC-bC);
-    if((dr+dc)!==1) return;
-    // check if swap would produce a match
-    if(!GC.swapCreatesMatch(aR,aC,bR,bC)){
-      // small shake animation to indicate invalid
-      const aEl = getCellEl(aR,aC), bEl = getCellEl(bR,bC);
-      if(aEl && bEl){
-        aEl.style.transition='transform 120ms';
-        bEl.style.transition='transform 120ms';
-        aEl.style.transform='translateX(6px)';
-        bEl.style.transform='translateX(-6px)';
-        setTimeout(()=>{ aEl.style.transform=''; bEl.style.transform=''; setTimeout(()=>{ aEl.style.transition=''; bEl.style.transition=''; },100); },120);
-      }
-      // still count move? typical games do count only on successful swap. we'll not decrement moves.
+    // check matches
+    let removed = [];
+    const matchCoords = Core.findMatches(grid);
+    if(matchCoords.length === 0){
+      // no match: swap back (revert)
+      Core.swap(grid, a, b);
+      // revert visuals
+      const tmp = aImg.src; aImg.src = bImg.src; bImg.src = tmp;
+      // small shake to show invalid
+      aEl.classList.add('invalid'); bEl.classList.add('invalid');
+      await new Promise(r => setTimeout(r,160));
+      aEl.classList.remove('invalid'); bEl.classList.remove('invalid');
+      animating = false;
       return;
     }
 
-    // perform visual swap then update data, resolve chain
-    busy = true;
-    animateSwap(aR,aC,bR,bC, ()=> {
-      // update data
-      GC.swapPositions(aR,aC,bR,bC);
-      // decrement move
-      moves = Math.max(0, moves-1);
-      movesEl && (movesEl.textContent = moves);
-      // play swap sound if available
-      if(global.Sound && typeof global.Sound.play === 'function') { try { global.Sound.play('swap'); } catch(e){} }
-      // now resolve matches chain
-      resolveMatchesChain();
-    });
-  }
+    // matched: handle removal -> collapse -> refill loop until no matches
+    moves = Math.max(0, moves-1);
+    updateUI();
 
-  // swipe/touch handling
-  let touchStart = null;
-  function bindEvents(){
-    // remove previous listeners; simplified by replacing gridEl reference
-    gridEl.ontouchstart = gridEl.onpointerdown = function(e){
-      if(busy) return;
-      const isTouch = e.touches && e.touches[0];
-      const clientX = isTouch ? e.touches[0].clientX : (e.clientX || e.touches && e.touches[0] && e.touches[0].clientX);
-      const clientY = isTouch ? e.touches[0].clientY : (e.clientY || e.touches && e.touches[0] && e.touches[0].clientY);
-      const target = e.target.closest('.cell');
-      if(!target) return;
-      const r = Number(target.dataset.r), c = Number(target.dataset.c);
-      touchStart = {x: clientX, y: clientY, r, c, time: Date.now()};
-      e.preventDefault?.(); // avoid page scroll
-    };
-
-    gridEl.ontouchmove = gridEl.onpointermove = function(e){
-      if(!touchStart) return;
-      e.preventDefault?.();
-    };
-
-    gridEl.ontouchend = gridEl.onpointerup = function(e){
-      if(!touchStart) return;
-      const isTouch = e.changedTouches && e.changedTouches[0];
-      const clientX = isTouch ? e.changedTouches[0].clientX : (e.clientX || 0);
-      const clientY = isTouch ? e.changedTouches[0].clientY : (e.clientY || 0);
-      const dx = clientX - touchStart.x;
-      const dy = clientY - touchStart.y;
-      const absX = Math.abs(dx), absY = Math.abs(dy);
-      const threshold = 18; // min pixels to count as swipe
-      let toR = touchStart.r, toC = touchStart.c;
-
-      if(absX < threshold && absY < threshold){
-        // treat as tap — do nothing
-        touchStart = null;
-        return;
+    while(true){
+      const matches = Core.findMatches(grid);
+      if(matches.length === 0) break;
+      // remove
+      Core.removeMatches(grid, matches);
+      // update visuals: set blank by replacing img to transparent (fade)
+      for(const p of matches){
+        const el = gridEl.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"] img`);
+        if(el){
+          el.style.opacity = '0';
+        }
       }
-      if(absX > absY){
-        // horizontal
-        if(dx > 0) toC = touchStart.c + 1; else toC = touchStart.c - 1;
-      } else {
-        // vertical
-        if(dy > 0) toR = touchStart.r + 1; else toR = touchStart.r - 1;
+      await new Promise(r=>setTimeout(r,200));
+      // collapse & refill in model
+      Core.collapse(grid);
+      // re-render visuals to reflect new grid (smooth)
+      // We'll animate re-render by updating srcs and fade-in
+      for(let r=0;r<Core.ROWS;r++){
+        for(let c=0;c<Core.COLS;c++){
+          const el = gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"] img`);
+          if(el){
+            el.src = IMAGE_PATH(grid[r][c]);
+            el.style.opacity = '0';
+          }
+        }
       }
-
-      attemptSwap(touchStart.r, touchStart.c, toR, toC);
-      touchStart = null;
-    };
-
-    // also support desktop click-to-swap (select one then another)
-    let selected = null;
-    gridEl.onclick = function(e){
-      if(busy) return;
-      const cell = e.target.closest('.cell');
-      if(!cell) return;
-      const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
-      if(!selected){
-        selected = {r,c,el:cell};
-        cell.classList.add('selected');
-        setTimeout(()=>{ if(selected && selected.el) selected.el.classList.remove('selected'); selected = null; }, 1200);
-      } else {
-        // attempt swap
-        const a = selected; selected.el.classList.remove('selected'); selected = null;
-        attemptSwap(a.r,a.c,r,c);
+      await new Promise(r=>setTimeout(r,50));
+      // fade-in
+      for(let r=0;r<Core.ROWS;r++){
+        for(let c=0;c<Core.COLS;c++){
+          const el = gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"] img`);
+          if(el) el.style.opacity = '1';
+        }
       }
-    };
-  }
-
-  // expose Game global for easy start
-  global.Game = {
-    start: start,
-    getState: ()=> ({score,moves,target,level}),
-    // utility to unlock next level
-    unlockNextLevel: function(){
-      const key = 'candy_unlocked';
-      const cur = parseInt(localStorage.getItem(key) || '1',10);
-      const next = Math.max(cur, level+1);
-      localStorage.setItem(key, String(next));
+      // increment score for removed candies
+      score += matches.length * 50;
+      updateUI();
+      await new Promise(r=>setTimeout(r,220));
     }
-  };
 
-  // auto-start if page includes ?level=N via simple script in HTML or call Game.start manually
-  global.GameCore = GC;
+    animating = false;
+  }
 
-})(window);
+  // pointer/touch handling: we allow tap then tap-to-swap or drag-to-swap
+  function attachHandlers(){
+    let pointerDownEl = null;
+    let startPoint = null;
+
+    gridEl.addEventListener('pointerdown', (ev)=>{
+      if(animating) return;
+      const cell = ev.target.closest('.cell');
+      if(!cell) return;
+      ev.preventDefault();
+      pointerDownEl = cell;
+      startPoint = {x: ev.clientX, y: ev.clientY};
+      cell.classList.add('active');
+    });
+
+    gridEl.addEventListener('pointerup', (ev)=>{
+      if(!pointerDownEl) return;
+      const cellUp = ev.target.closest('.cell');
+      pointerDownEl.classList.remove('active');
+      // if releasing over different cell and adjacent -> swap
+      if(cellUp && cellUp !== pointerDownEl){
+        const a = coordsFromEl(pointerDownEl), b = coordsFromEl(cellUp);
+        if(adjacent(a,b)){
+          performSwap(pointerDownEl, cellUp);
+        }
+      }
+      pointerDownEl = null;
+      startPoint = null;
+    });
+
+    // also support pointercancel / leave
+    gridEl.addEventListener('pointercancel', ()=>{ if(pointerDownEl) pointerDownEl.classList.remove('active'); pointerDownEl = null; });
+
+    // support quick swipes: pointermove detect direction and swap with neighbor
+    gridEl.addEventListener('pointermove', (ev)=>{
+      if(!pointerDownEl || animating) return;
+      const dx = ev.clientX - startPoint.x;
+      const dy = ev.clientY - startPoint.y;
+      const absx = Math.abs(dx), absy = Math.abs(dy);
+      const THRESH = 24; // min px to consider swipe
+      if(Math.max(absx,absy) < THRESH) return;
+      // determine direction
+      let dir = null;
+      if(absx > absy){
+        dir = dx > 0 ? 'right' : 'left';
+      } else {
+        dir = dy > 0 ? 'down' : 'up';
+      }
+      // compute neighbor cell
+      const {r,c} = coordsFromEl(pointerDownEl);
+      let nr = r, nc = c;
+      if(dir === 'right') nc = c+1;
+      if(dir === 'left') nc = c-1;
+      if(dir === 'down') nr = r+1;
+      if(dir === 'up') nr = r-1;
+      if(nr<0||nr>=Core.ROWS||nc<0||nc>=Core.COLS) return;
+      const neighbor = gridEl.querySelector(`.cell[data-r="${nr}"][data-c="${nc}"]`);
+      if(neighbor){
+        // perform swap and clear pointerDown to avoid repeated swaps
+        pointerDownEl.classList.remove('active');
+        pointerDownEl = null;
+        startPoint = null;
+        performSwap(pointerDownEl || gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`), neighbor);
+      }
+    });
+
+    // disable native touch scrolling when interacting grid
+    gridEl.addEventListener('touchstart', (e)=>{ if(e.cancelable) e.preventDefault(); }, {passive:false});
+  }
+
+  return { init, startFromLevel: (l)=>init() };
+})(Core);
+
+// auto-init if DOM ready
+window.addEventListener('load', ()=>{ 
+  const g = document.querySelector('.game-grid');
+  if(g) Game.init();
+});
