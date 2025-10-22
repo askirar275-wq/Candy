@@ -26,12 +26,9 @@
       <div class="stat">Score: <span id="score">0</span></div>
       <div class="stat">Moves: <span id="moves">30</span></div>
       <div class="stat">Target: <span id="target">600</span></div>
-      <div class="stat">Timer: <span id="timer">--:--</span></div>
     </div>
 
-    <div id="stars" class="stars">☆☆☆</div>
-
-    <div id="gameGrid" class="game-grid-container"></div>
+    <div id="grid" class="game-grid"></div>
 
     <div class="controls">
       <button id="btnRestart" class="btn">Restart</button>
@@ -39,7 +36,7 @@
     </div>
 
     <div id="levelComplete" class="card hidden">
-      <h2>Level Complete!</h2>
+      <h2>🎉 Level Complete!</h2>
       <p>Score: <span id="completeScore">0</span></p>
       <div class="controls">
         <button id="btnReplay" class="btn">Replay</button>
@@ -50,6 +47,8 @@
   </section>
 </main>
 
+<footer class="site-footer">© Candy Match</footer>
+
 <!-- scripts -->
 <script src="js/storage.js"></script>
 <script src="js/sound.js"></script>
@@ -59,18 +58,26 @@
 <script>
   // start level from query param e.g. ?level=1
   (function(){
-    try {
-      const urlParams = new URLSearchParams(location.search);
-      const lvl = parseInt(urlParams.get('level')) || 1;
-      window.addEventListener('load', ()=> {
-        if(typeof Game !== 'undefined' && typeof Game.start === 'function'){
-          Game.start(lvl);
-        } else {
-          console.error('Game object missing.');
-        }
-      });
-    } catch(e){ console.error(e); }
+    const urlParams = new URLSearchParams(location.search);
+    const lvl = parseInt(urlParams.get('level')) || 1;
+    window.addEventListener('load', ()=>{
+      if(window.Game && typeof Game.start==='function') Game.start(lvl);
+      document.getElementById('levelTitle').textContent = "Level " + lvl;
+    });
+
+    // restart + next buttons
+    document.getElementById('btnRestart').addEventListener('click', ()=> Game.start(lvl));
+    document.getElementById('btnReplay').addEventListener('click', ()=> Game.start(lvl));
+    document.getElementById('btnNext').addEventListener('click', ()=>{
+      const next = lvl + 1;
+      Game.start(next);
+      const url = new URL(location);
+      url.searchParams.set('level', next);
+      history.replaceState({},'',url);
+      document.getElementById('levelTitle').textContent = "Level " + next;
+    });
   })();
 </script>
+
 </body>
-  </html>
+</html>
