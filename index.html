@@ -30,6 +30,22 @@
 </main>
 
 <footer class="site-footer">© Candy Match</footer>
+<!-- Game Over Modal (paste near end of <body>) -->
+<div id="gameOverModal" class="modal hidden" aria-hidden="true" role="dialog" aria-labelledby="goTitle">
+  <div class="modal-backdrop" id="goBackdrop"></div>
+  <div class="modal-card" role="document">
+    <h2 id="goTitle">Level <span id="go-level">1</span> Complete!</h2>
+    <p class="go-score">Score: <strong id="go-score">0</strong></p>
 
+    <div class="go-actions">
+      <button id="go-replay" class="btn btn-primary">Replay</button>
+      <button id="go-next" class="btn btn-primary">Next</button>
+      <button id="go-map" class="btn">Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- include the modal script (after other game scripts) -->
+<script src="js/game-over.js"></script>
 </body>
 </html>
