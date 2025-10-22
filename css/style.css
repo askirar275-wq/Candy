@@ -1,18 +1,28 @@
-/* css/style.css - updated for smooth tile animations + mobile touch */
-*{box-sizing:border-box}
+/* Global reset */
+*{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
+
+/* Body background with image + gradient fallback */
 body{
-  margin:0;
   font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background:linear-gradient(180deg,#fdfbfb,#eef6f8);
+  background-image: url('../images/bg-gradient.png'), linear-gradient(180deg,#fdfbfb,#eef6f8);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
   color:#222;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
 
 /* container / cards */
-.container{max-width:760px;margin:18px auto;padding:14px}
-.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 16px 40px rgba(19,34,51,0.06)}
+.container{max-width:760px;margin:18px auto;padding:18px}
+.card{
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(6px);
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 16px 40px rgba(19,34,51,0.06);
+}
 .center{text-align:center}
 
 /* buttons */
@@ -35,7 +45,7 @@ body{
 .star{opacity:.35}
 .star.on{opacity:1;color:gold}
 
-/* board / tiles - responsive sizes */
+/* board / tiles */
 :root{
   --cell-size:64px;
   --cell-gap:8px;
@@ -51,7 +61,7 @@ body{
   gap: var(--cell-gap);
   width: calc(var(--cell-size)*5 + var(--cell-gap)*4);
   justify-content:center;
-  touch-action: none; /* important for pointer/touch */
+  touch-action: none;
 }
 
 /* tile */
@@ -69,11 +79,11 @@ body{
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select:none;
-  touch-action:none; /* allow pointer events to handle swipes */
+  touch-action:none;
   position:relative;
 }
 
-/* image inside tile - ignore pointer events so parent gets events */
+/* candy image */
 .cell img{
   width:86%;
   height:86%;
@@ -84,11 +94,7 @@ body{
 }
 
 /* animations */
-.cell.fade-out{
-  opacity:0;
-  transform:scale(.75);
-  transition:transform 180ms ease,opacity 180ms ease;
-}
+.cell.fade-out{opacity:0;transform:scale(.75);transition:transform 180ms ease,opacity 180ms ease;}
 .cell.drop-in{ transform: translateY(-26px); opacity:0; }
 .cell.drop-in.show{ transform: translateY(0); opacity:1; transition: transform 320ms cubic-bezier(.22,.9,.3,1), opacity 200ms linear; }
 
@@ -104,6 +110,5 @@ body{
 /* selected outline */
 .cell.selected{ outline: 4px solid rgba(33,150,243,0.12); }
 
-/* utility */
-.center{text-align:center}
+/* responsive small note text */
 small{color:#666}
