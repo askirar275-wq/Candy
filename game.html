@@ -136,6 +136,50 @@
   })();
 </script>
 <!-- ===== end Eruda + Sound debug helper ===== -->
+  <!-- TEMP SOUND STUB — paste just before </body> to avoid Sound not found errors -->
+<script>
+  if(typeof window.Sound === 'undefined'){
+    window.Sound = (function(){
+      console.warn('[SoundStub] using fallback stub — no real sounds will play. Add js/sound.js to enable audio.');
+      const mutedKey = 'prefs_sound_muted';
+      let muted = localStorage.getItem(mutedKey) === '1';
+      function play(name){
+        // just log attempts (safe)
+        console.log('[SoundStub] play(',name,') muted=',muted);
+        // quick fallback: try to play a tiny beep via Web Audio if unmuted (optional)
+        if(muted) return;
+        try {
+          if(!window._sound_stub_ctx){
+            const C = window.AudioContext || window.webkitAudioContext;
+            if(C) window._sound_stub_ctx = new C();
+          }
+          const ctx = window._sound_stub_ctx;
+          if(ctx){
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = 800;
+            g.gain.value = 0.0008; // extremely quiet, just to init
+            o.connect(g); g.connect(ctx.destination);
+            o.start();
+            setTimeout(()=>{ try{ o.stop(); }catch(e){} }, 40);
+          }
+        } catch(e){}
+      }
+      function toggleMute(val){
+        if(typeof val === 'boolean') muted = val;
+        else muted = !muted;
+        localStorage.setItem(mutedKey, muted ? '1' : '0');
+        console.log('[SoundStub] mute=',muted);
+      }
+      function isMuted(){ return !!muted; }
+      function stopBg(){ console.log('[SoundStub] stopBg'); }
+      return { play, toggleMute, isMuted, stopBg };
+    })();
+  } else {
+    console.log('[SoundStub] Sound already exists, stub skipped.');
+  }
+</script>
 <body>
   <div class="container card center">
     <h1 id="levelTitle">Level</h1>
