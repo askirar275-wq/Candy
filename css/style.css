@@ -1,114 +1,141 @@
-/* Global reset */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+/* Home card / hero style (paste into css/style.css) */
 
-/* Body background with image + gradient fallback */
-body{
-  font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+/* keep existing resets above (do not remove) */
+body {
+  /* preserve your background image or gradient */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  margin: 0;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-image: url('../images/bg-gradient.png'), linear-gradient(180deg,#fdfbfb,#eef6f8);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
-  color:#222;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
 }
 
-/* container / cards */
-.container{max-width:760px;margin:18px auto;padding:18px}
-.card{
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(6px);
-  border-radius:14px;
-  padding:18px;
-  box-shadow:0 16px 40px rgba(19,34,51,0.06);
-}
-.center{text-align:center}
-
-/* buttons */
-.btn{display:inline-block;background:#2196f3;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}
-.btn.back{background:#2b9bd7}
-.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-
-/* map/level cards */
-.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
-.level-card{width:140px;height:110px;border-radius:12px;background:#fbfcfe;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(20,40,60,0.04);cursor:pointer}
-.level-card.locked{opacity:.45}
-.level-thumb{display:flex;gap:6px;align-items:center;justify-content:center}
-.level-thumb img{width:32px;height:32px;object-fit:contain}
-.label{margin-top:8px;font-weight:600}
-
-/* HUD */
-.hud{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
-.hud div{background:#fff;padding:8px 12px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.04)}
-.stars{font-size:20px;color:#f0c419;margin:8px 0}
-.star{opacity:.35}
-.star.on{opacity:1;color:gold}
-
-/* board / tiles */
-:root{
-  --cell-size:64px;
-  --cell-gap:8px;
-}
-@media (max-width:420px){
-  :root{--cell-size:52px;--cell-gap:6px}
+/* center the top card and give roomy spacing */
+.container.card.center {
+  max-width: 720px;
+  margin: 28px auto;
+  padding: 36px 22px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 20px 50px rgba(14,30,50,0.08);
 }
 
-.board{
-  margin:14px auto;
-  display:grid;
-  grid-template-columns:repeat(5, var(--cell-size));
-  gap: var(--cell-gap);
-  width: calc(var(--cell-size)*5 + var(--cell-gap)*4);
-  justify-content:center;
-  touch-action: none;
+/* logo/candy icon left of title */
+.container h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  font-size: 34px;
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.4px;
 }
 
-/* tile */
-.cell{
-  width:var(--cell-size);
-  height:var(--cell-size);
-  border-radius:10px;
-  overflow:hidden;
-  background:linear-gradient(180deg,#ffffff,#f7fbff);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 6px 16px rgba(0,0,0,0.06);
-  transition: transform 200ms cubic-bezier(.22,.9,.3,1), opacity 160ms linear;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  -webkit-user-select:none;
-  touch-action:none;
-  position:relative;
+/* small candy emoji icon style (if inline emoji) */
+.h1-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg,#fff,#fffbfd);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  font-size: 20px;
 }
 
-/* candy image */
-.cell img{
-  width:86%;
-  height:86%;
-  object-fit:contain;
-  pointer-events:none;
-  user-select:none;
-  -webkit-user-drag:none;
+/* subtitle under title */
+.lead {
+  margin: 6px 0 16px;
+  color: #6b6f76;
+  text-align: center;
+  font-size: 15px;
 }
 
-/* animations */
-.cell.fade-out{opacity:0;transform:scale(.75);transition:transform 180ms ease,opacity 180ms ease;}
-.cell.drop-in{ transform: translateY(-26px); opacity:0; }
-.cell.drop-in.show{ transform: translateY(0); opacity:1; transition: transform 320ms cubic-bezier(.22,.9,.3,1), opacity 200ms linear; }
-
-/* dragging clone style */
-.dragging-clone{
-  box-shadow:0 12px 30px rgba(0,0,0,0.18);
-  border-radius:10px;
-  transform: scale(1.04);
-  transition: transform 120ms ease;
-  pointer-events:none;
+/* main action buttons row, centered and slightly spaced */
+.btn-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 8px;
 }
 
-/* selected outline */
-.cell.selected{ outline: 4px solid rgba(33,150,243,0.12); }
+/* primary rounded buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg,#1e90ff,#0b79e6);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(14,77,165,0.12);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  min-width: 110px;
+  text-align: center;
+  font-size: 16px;
+}
 
-/* responsive small note text */
-small{color:#666}
+/* secondary style (if needed) */
+.btn.secondary {
+  background: #e9f5ff;
+  color: #0b63a8;
+  box-shadow: 0 6px 18px rgba(11,99,168,0.06);
+}
+
+/* hover/tap effects */
+.btn:active { transform: translateY(2px) scale(.995); }
+.btn:focus { outline: none; box-shadow: 0 10px 24px rgba(14,77,165,0.18); }
+
+/* small link row under buttons */
+.link-row {
+  margin-top: 14px;
+  text-align: center;
+}
+.link-row a {
+  color: #6a2ea0; /* purple-ish link color from screenshot */
+  text-decoration: underline;
+  margin: 0 10px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* responsive: tighten spacing on small screens */
+@media (max-width:480px){
+  .container.card.center {
+    margin: 18px 12px;
+    padding: 20px;
+    border-radius: 14px;
+  }
+  .container h1 { font-size: 28px; }
+  .btn { padding: 10px 14px; min-width: 92px; font-size: 15px; border-radius: 12px; }
+  .h1-icon { width: 32px; height: 32px; font-size: 18px; }
+  .lead { font-size: 14px; }
+  .link-row a { display:inline-block; margin:6px 8px; font-size:14px; }
+}
+
+/* subtle bottom space so hero card doesn't stick to top */
+body > .container { margin-top: 22px; }
+
+/* optional: small accent under the card like screenshot faint shadow */
+.container.card.center::after {
+  content: "";
+  display:block;
+  width: 80%;
+  height: 28px;
+  margin: 24px auto 0;
+  border-radius: 50%;
+  filter: blur(18px);
+  background: linear-gradient(180deg, rgba(10,30,60,0.06), rgba(10,30,60,0.02));
+  pointer-events: none;
+  z-index: -1;
+  }
