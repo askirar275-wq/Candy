@@ -1,5 +1,5 @@
-// js/game.js (updated: combo scoring, special candies, confetti)
-// Requires game-core.js and confetti.js loaded first.
+// js/game.js (final) — includes Sound.play and Particles.burstAt integration
+// Requires: storage.js, sound.js (optional), particles.js (optional), confetti.js (optional), game-core.js
 
 const Game = (function(){
   const LEVEL_META = {
@@ -28,6 +28,7 @@ const Game = (function(){
 
   function getMeta(l){ return LEVEL_META[l] || LEVEL_META.default; }
 
+  /* ---------- render ---------- */
   function render(){
     if(!boardEl) return;
     boardEl.innerHTML = '';
@@ -42,7 +43,7 @@ const Game = (function(){
       img.draggable = false;
       cell.appendChild(img);
 
-      // show special overlay icon small
+      // special badge
       if(t.s){
         const badge = document.createElement('div');
         badge.style.position='absolute';
@@ -61,14 +62,16 @@ const Game = (function(){
         cell.appendChild(badge);
       }
 
-      // pointer / touch handlers
+      // pointer events
       cell.addEventListener('pointerdown', onPointerDown);
       cell.addEventListener('pointermove', onPointerMove);
       cell.addEventListener('pointerup', onPointerUp);
       cell.addEventListener('pointercancel', onPointerCancel);
+      // touch fallback
       cell.addEventListener('touchstart', onTouchStart, { passive:false });
       cell.addEventListener('touchmove', onTouchMove, { passive:false });
       cell.addEventListener('touchend', onTouchEnd, { passive:false });
+      // click fallback
       cell.addEventListener('click', onCellClick);
 
       if(selected === i) cell.classList.add('selected');
@@ -93,6 +96,7 @@ const Game = (function(){
     });
   }
 
+  /* ---------- click fallback ---------- */
   function onCellClick(e){
     if(isProcessing) return;
     if(dragState && dragState.dragging) return;
@@ -103,35 +107,38 @@ const Game = (function(){
     attemptSwap(selected, idx);
   }
 
+  /* ---------- attempt swap ---------- */
   async function attemptSwap(a,b){
     if(isProcessing) return;
     isProcessing = true;
-    // check if either is color-bomb and other is color -> special handling
+
+    // color-bomb activation detection (swap color-bomb with a normal candy)
     const ta = grid[a], tb = grid[b];
     let colorBombActivation = null;
-    if(ta.s === 'color' && tb){
-      // ta is color-bomb: removes all of color tb.c
+    if(ta && ta.s === 'color' && tb){
       colorBombActivation = { bombIdx: a, color: tb.c };
-    } else if(tb.s === 'color' && ta){
+    } else if(tb && tb.s === 'color' && ta){
       colorBombActivation = { bombIdx: b, color: ta.c };
     }
 
+    // check possible matches on swap
     const possible = GameCore.trySwapAndFindMatches(grid, a, b);
+
     if(!possible || possible.length === 0){
-      // if color bomb activation, still allow activation without standard match? We'll allow: color bomb + swap with a color triggers.
+      // allow color-bomb activation without regular match
       if(colorBombActivation){
+        try { await animateSwap(a,b,false); } catch(e){}
         // remove all of that color
         const targets = [];
         for(let i=0;i<grid.length;i++) if(grid[i].c === colorBombActivation.color) targets.push(i);
-        await animateSwap(a,b,false);
-        // clear targets
         await processRemovalsWithSpecials(targets, colorBombActivation.bombIdx);
-        isProcessing = false;
         selected = null;
         render();
+        isProcessing = false;
         checkEndConditions();
         return;
       }
+      // invalid swap — animate and revert (play swap sound too)
       await animateSwap(a,b,true);
       selected = null;
       render();
@@ -140,31 +147,31 @@ const Game = (function(){
     }
 
     // valid swap
-    await animateSwap(a,b,false);
-    GameCore.swap(grid, a, b);
+    try { await animateSwap(a,b,false); } catch(e){}
+    try { GameCore.swap(grid, a, b); } catch(e){}
+    // play swap sound
+    try { if(typeof Sound !== 'undefined') Sound.play('swap'); } catch(e){}
+
+    // decrement moves
     moves = Math.max(0, moves - 1);
 
-    // after swap, check if special should be created based on matching groups:
-    // find matches with specials return structure
-    let matchInfo = GameCore.findMatchesWithSpecials(grid);
-    // create specials for lengths detected (the core returns suggested specials)
+    // find matches and create suggested specials
+    const matchInfo = GameCore.findMatchesWithSpecials(grid);
     if(matchInfo.specials && matchInfo.specials.length){
       for(const sp of matchInfo.specials){
-        // create special only if tile at pos still exists and not already special
         if(grid[sp.pos]) grid[sp.pos].s = sp.kind;
       }
     }
 
-    // process cascades with combo scoring
     combo = 0;
     await processCascadeWithAnimations();
     selected = null;
     render();
-    checkEndConditions();
     isProcessing = false;
+    checkEndConditions();
   }
 
-  // animate swap visually (same as earlier)
+  /* ---------- animate swap (visual) ---------- */
   function animateSwap(a,b,revert){
     return new Promise(resolve => {
       const elA = boardEl.querySelector(`[data-index="${a}"]`);
@@ -193,58 +200,62 @@ const Game = (function(){
       setTimeout(()=> {
         cloneA.remove(); cloneB.remove();
         elA.style.visibility=''; elB.style.visibility='';
-        if(revert){ elA.style.transform='scale(.96)'; elB.style.transform='scale(.96)';
-          setTimeout(()=>{ elA.style.transform=''; elB.style.transform=''; resolve(); },140);
+        if(revert){
+          elA.style.transform='scale(.96)'; elB.style.transform='scale(.96)';
+          setTimeout(()=>{ elA.style.transform=''; elB.style.transform=''; resolve(); }, 140);
         } else resolve();
       }, 260);
     });
   }
 
-  // process removals including special triggered clears; combo multiplier applied
+  /* ---------- process cascade + animations (includes specials & particles & sfx) ---------- */
   async function processCascadeWithAnimations(){
     combo = 0;
     while(true){
-      let m = GameCore.findMatchesWithSpecials(grid);
-      let removed = m.removed || [];
+      let info = GameCore.findMatchesWithSpecials(grid);
+      let removed = info.removed || [];
       if(removed.length === 0) break;
 
-      // expand removals due to special tiles present inside removed
+      // expand removed due to specials (row/bomb) present
       removed = GameCore.expandRemovedBySpecials(grid, removed);
 
-      // apply fade class to matched DOM nodes
+      // remove color-bomb triggers that may be in removed (we'll handle below)
+      // animate fade and particle for each removed cell
       removed.forEach(i => {
         const el = boardEl.querySelector(`[data-index="${i}"]`);
         if(el) el.classList.add('fade-out');
+        try { if(typeof Particles !== 'undefined' && el) Particles.burstAt(el, { count: 6 }); } catch(e){}
       });
+
+      // play pop sound once per batch
+      try { if(typeof Sound !== 'undefined') Sound.play('pop'); } catch(e){}
+
       await wait(180);
 
-      // remove specials which were consumed: if a special tile removed, it may have its own effect (colorbomb handled earlier)
-      // compute special activations: if any removed index had s==='color' and it wasn't triggered earlier, trigger as full-color remove
-      let colorBombTriggers = [];
+      // handle any color-bomb tiles inside removed: remove all of that color
+      const colorBombTriggers = [];
       for(const i of removed){
         if(grid[i] && grid[i].s === 'color'){
           colorBombTriggers.push({ idx: i, color: grid[i].c });
         }
       }
-      // apply color-bomb effects (remove that color across board)
       for(const trig of colorBombTriggers){
         for(let j=0;j<grid.length;j++){
           if(grid[j].c === trig.color) removed.push(j);
         }
       }
-      // dedup removed
       removed = Array.from(new Set(removed));
 
-      // scoring with combo:
+      // scoring with combo multiplier
       combo++;
       const addScore = removed.length * 60 * combo;
       score += addScore;
 
-      // collapse
+      // collapse & refill
       const result = GameCore.collapseAndRefill(grid, removed);
       grid = result.grid;
 
-      // rerender and animate drop-in
+      // rerender and show drop-in
       render();
       const cells = Array.from(boardEl.querySelectorAll('.cell'));
       cells.forEach(c => c.classList.add('drop-in'));
@@ -259,22 +270,58 @@ const Game = (function(){
 
   function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+  /* ---------- helper for removals triggered directly (e.g., color-bomb swap) ---------- */
+  async function processRemovalsWithSpecials(removedIndices, originBombIdx){
+    // unified removal flow: animate, particles, scoring, collapse
+    let removed = Array.from(new Set(removedIndices));
+    if(removed.length === 0) return;
+    // animate
+    removed.forEach(i => {
+      const el = boardEl.querySelector(`[data-index="${i}"]`);
+      if(el) el.classList.add('fade-out');
+      try { if(typeof Particles !== 'undefined' && el) Particles.burstAt(el, { count: 8 }); } catch(e){}
+    });
+    try { if(typeof Sound !== 'undefined') Sound.play('pop'); } catch(e){}
+
+    await wait(180);
+
+    // if originBombIdx exists and is a color bomb, we already removed color set; otherwise check specials expansion
+    removed = GameCore.expandRemovedBySpecials(grid, removed);
+
+    // scoring (single big combo)
+    combo++;
+    score += removed.length * 60 * combo;
+
+    const result = GameCore.collapseAndRefill(grid, removed);
+    grid = result.grid;
+    render();
+    const cells = Array.from(boardEl.querySelectorAll('.cell'));
+    cells.forEach(c => c.classList.add('drop-in'));
+    requestAnimationFrame(()=> requestAnimationFrame(()=> cells.forEach(c => c.classList.add('show'))));
+    await wait(360);
+    cells.forEach(c => c.classList.remove('drop-in','show','fade-out'));
+
+    if(scoreEl) scoreEl.textContent = score;
+  }
+
+  /* ---------- check end ---------- */
   function checkEndConditions(){
     const meta = getMeta(level);
     if(score >= meta.target){
       Storage.unlock(level + 1);
-      // celebration
-      try{ Confetti.burst({count:80}); }catch(e){}
-      // navigate to gameover
-      setTimeout(()=> location.href = `gameover.html?level=${level}&score=${score}`, 700);
+      // celebration: confetti + win sound
+      try { if(typeof Confetti !== 'undefined') Confetti.burst({count:80}); } catch(e){}
+      try { if(typeof Sound !== 'undefined') Sound.play('win'); } catch(e){}
+      // small delay so player sees confetti
+      setTimeout(()=> { location.href = `gameover.html?level=${level}&score=${score}`; }, 700);
       return;
     }
     if(moves <= 0){
-      setTimeout(()=> location.href = `gameover.html?level=${level}&score=${score}`, 200);
+      setTimeout(()=> { location.href = `gameover.html?level=${level}&score=${score}`; }, 180);
     }
   }
 
-  /* ---------- pointer/touch handlers (same as earlier) ---------- */
+  /* ---------- pointer/touch handlers ---------- */
   function onPointerDown(e){
     if(isProcessing) return;
     e.preventDefault();
@@ -283,17 +330,26 @@ const Game = (function(){
     try { el.setPointerCapture && el.setPointerCapture(e.pointerId); } catch(e){}
     dragState = { startIdx: idx, currentIdx: idx, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, originEl: el, clone: null, dragging: false };
   }
+
   function onPointerMove(e){
     if(!dragState || dragState.pointerId !== e.pointerId) return;
-    const dx = e.clientX - dragState.startX; const dy = e.clientY - dragState.startY;
-    const dist = Math.sqrt(dx*dx+dy*dy);
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
     if(!dragState.dragging && dist > 8){
       dragState.dragging = true;
       const rect = dragState.originEl.getBoundingClientRect();
-      const clone = dragState.originEl.cloneNode(true); clone.classList.add('dragging-clone');
-      clone.style.position='fixed'; clone.style.left = rect.left + 'px'; clone.style.top = rect.top + 'px';
-      clone.style.width = rect.width + 'px'; clone.style.height = rect.height + 'px'; clone.style.zIndex = 9999;
-      document.body.appendChild(clone); dragState.clone = clone; dragState.originEl.style.visibility = 'hidden';
+      const clone = dragState.originEl.cloneNode(true);
+      clone.classList.add('dragging-clone');
+      clone.style.position = 'fixed';
+      clone.style.left = rect.left + 'px';
+      clone.style.top  = rect.top  + 'px';
+      clone.style.width = rect.width + 'px';
+      clone.style.height = rect.height + 'px';
+      clone.style.zIndex = 9999;
+      document.body.appendChild(clone);
+      dragState.clone = clone;
+      dragState.originEl.style.visibility = 'hidden';
     }
     if(dragState.dragging && dragState.clone){
       dragState.clone.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -308,39 +364,75 @@ const Game = (function(){
       }
     }
   }
+
   function onPointerUp(e){
     if(!dragState || dragState.pointerId !== e.pointerId) return;
-    const start = dragState.startIdx, end = dragState.currentIdx;
+    const start = dragState.startIdx;
+    const end = dragState.currentIdx;
     if(dragState.clone){ dragState.clone.remove(); dragState.clone = null; }
     if(dragState.originEl) dragState.originEl.style.visibility = '';
-    if(dragState.dragging && end !== start && GameCore.areAdjacent(start,end)){
-      attemptSwap(start,end);
+    if(dragState.dragging && end !== start && GameCore.areAdjacent(start, end)){
+      attemptSwap(start, end);
     } else {
       if(!dragState.dragging){
         if(selected === null){ selected = start; render(); }
         else if(selected === start){ selected = null; render(); }
-        else if(GameCore.areAdjacent(selected,start)) attemptSwap(selected,start);
+        else if(GameCore.areAdjacent(selected, start)) attemptSwap(selected, start);
         else { selected = start; render(); }
       }
     }
     dragState = null;
   }
-  function onPointerCancel(e){ if(!dragState || dragState.pointerId !== e.pointerId) return; if(dragState.clone) dragState.clone.remove(); if(dragState.originEl) dragState.originEl.style.visibility = ''; dragState = null; }
-  function onTouchStart(ev){ if(!ev.touches || ev.touches.length===0) return; ev.preventDefault(); const touch = ev.touches[0]; const el = ev.currentTarget; onPointerDown({ currentTarget: el, clientX: touch.clientX, clientY: touch.clientY, pointerId: (Date.now()%100000) }); }
-  function onTouchMove(ev){ if(!ev.touches || ev.touches.length===0) return; ev.preventDefault(); const touch = ev.touches[0]; if(!dragState) return; onPointerMove({ clientX: touch.clientX, clientY: touch.clientY, pointerId: dragState.pointerId }); }
-  function onTouchEnd(ev){ if(!dragState) return; onPointerUp({ pointerId: dragState.pointerId }); }
 
-  // public API
+  function onPointerCancel(e){
+    if(!dragState || dragState.pointerId !== e.pointerId) return;
+    if(dragState.clone) dragState.clone.remove();
+    if(dragState.originEl) dragState.originEl.style.visibility = '';
+    dragState = null;
+  }
+
+  function onTouchStart(ev){
+    if(!ev.touches || ev.touches.length===0) return;
+    ev.preventDefault();
+    const touch = ev.touches[0];
+    const el = ev.currentTarget;
+    onPointerDown({ currentTarget: el, clientX: touch.clientX, clientY: touch.clientY, pointerId: (Date.now()%100000) });
+  }
+  function onTouchMove(ev){
+    if(!ev.touches || ev.touches.length===0) return;
+    ev.preventDefault();
+    const touch = ev.touches[0];
+    if(!dragState) return;
+    onPointerMove({ clientX: touch.clientX, clientY: touch.clientY, pointerId: dragState.pointerId });
+  }
+  function onTouchEnd(ev){
+    if(!dragState) return;
+    onPointerUp({ pointerId: dragState.pointerId });
+  }
+
+  /* ---------- public API ---------- */
   function start(lvl){
     level = Number(lvl) || 1;
-    score = 0; moves = 30; selected = null; isProcessing = false; combo = 0;
+    score = 0;
+    moves = 30;
+    selected = null;
+    isProcessing = false;
+    combo = 0;
     grid = GameCore.generateGrid();
     render();
+    // process accidental initial matches
     setTimeout(()=> processCascadeWithAnimations().then(()=> render()), 60);
-    if(endBtn) endBtn.onclick = (ev)=>{ ev.preventDefault(); const s = getState(); location.href = `gameover.html?level=${s.level}&score=${s.score}`; };
+
+    // End button handler
+    if(endBtn) endBtn.onclick = (ev) => { ev.preventDefault(); const s = getState(); location.href = `gameover.html?level=${s.level}&score=${s.score}`; };
+
+    // autoplay background if available and not muted (attempt)
+    try { if(typeof Sound !== 'undefined' && !Sound.isMuted()) Sound.play('bg'); } catch(e){}
   }
+
   function restart(){ start(level); }
   function getState(){ return { level, score, moves }; }
 
+  // expose for debugging if needed
   return { start, restart, getState };
 })();
