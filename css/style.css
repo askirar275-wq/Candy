@@ -1,43 +1,109 @@
-/* css/style.css - shared, mobile friendly */
+/* css/style.css - updated for smooth tile animations + mobile touch */
 *{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Poppins",sans-serif;margin:0;background:linear-gradient(180deg,#fdfbfb,#eef6f8);color:#222}
-.container{max-width:760px;margin:18px auto;padding:18px}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background:linear-gradient(180deg,#fdfbfb,#eef6f8);
+  color:#222;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* container / cards */
+.container{max-width:760px;margin:18px auto;padding:14px}
 .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 16px 40px rgba(19,34,51,0.06)}
 .center{text-align:center}
-.lead{color:#666;margin-top:6px}
-.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-.btn{display:inline-block;background:#2196f3;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}
-.link-btn{display:inline-block;background:#f5f8fb;color:#333;padding:8px 12px;border-radius:8px;margin:6px;text-decoration:none;border:1px solid #e6eef7}
 
-/* map / level cards */
-.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;justify-items:center}
+/* buttons */
+.btn{display:inline-block;background:#2196f3;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}
+.btn.back{background:#2b9bd7}
+.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+
+/* map/level cards */
+.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
 .level-card{width:140px;height:110px;border-radius:12px;background:#fbfcfe;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(20,40,60,0.04);cursor:pointer}
 .level-card.locked{opacity:.45}
-.level-thumb{width:120px;height:48px;display:flex;gap:6px;align-items:center;justify-content:center}
-.level-thumb img{width:28%;height:100%;object-fit:contain;border-radius:6px}
+.level-thumb{display:flex;gap:6px;align-items:center;justify-content:center}
+.level-thumb img{width:32px;height:32px;object-fit:contain}
 .label{margin-top:8px;font-weight:600}
 
-/* board / tiles */
-.board{margin:14px auto;display:grid;grid-template-columns:repeat(5,64px);gap:8px;width:calc(64px*5 + 8px*4);justify-content:center}
-.cell{width:64px;height:64px;border-radius:8px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,0.06);transition:transform 250ms cubic-bezier(.22,.9,.3,1),opacity 180ms linear}
-.cell img{width:90%;height:90%;object-fit:contain;user-select:none;pointer-events:none}
-
-/* animations */
-.cell.pop{transform:scale(1.06)}
-.cell.fade-out{transition:transform 160ms ease, opacity 160ms ease;opacity:0;transform:scale(.8)}
-.cell.drop-in{transform:translateY(-28px);opacity:0.01}
-.cell.drop-in.show{transform:translateY(0);opacity:1;transition:transform 320ms cubic-bezier(.22,.9,.3,1),opacity 220ms linear}
-
-/* HUD & stars */
-.hud{display:flex;gap:14px;justify-content:center;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.hud div{background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.04)}
+/* HUD */
+.hud{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.hud div{background:#fff;padding:8px 12px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.04)}
 .stars{font-size:20px;color:#f0c419;margin:8px 0}
-.star{margin:0 6px;opacity:.35}
+.star{opacity:.35}
 .star.on{opacity:1;color:gold}
 
-/* responsive */
-@media (max-width:480px){
-  .board{grid-template-columns:repeat(5,52px);gap:6px;width:calc(52px*5 + 6px*4)}
-  .cell{width:52px;height:52px}
-  .level-card{width:120px;height:100px}
-      }
+/* board / tiles - responsive sizes */
+:root{
+  --cell-size:64px;
+  --cell-gap:8px;
+}
+@media (max-width:420px){
+  :root{--cell-size:52px;--cell-gap:6px}
+}
+
+.board{
+  margin:14px auto;
+  display:grid;
+  grid-template-columns:repeat(5, var(--cell-size));
+  gap: var(--cell-gap);
+  width: calc(var(--cell-size)*5 + var(--cell-gap)*4);
+  justify-content:center;
+  touch-action: none; /* important for pointer/touch */
+}
+
+/* tile */
+.cell{
+  width:var(--cell-size);
+  height:var(--cell-size);
+  border-radius:10px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#ffffff,#f7fbff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 6px 16px rgba(0,0,0,0.06);
+  transition: transform 200ms cubic-bezier(.22,.9,.3,1), opacity 160ms linear;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select:none;
+  touch-action:none; /* allow pointer events to handle swipes */
+  position:relative;
+}
+
+/* image inside tile - ignore pointer events so parent gets events */
+.cell img{
+  width:86%;
+  height:86%;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+/* animations */
+.cell.fade-out{
+  opacity:0;
+  transform:scale(.75);
+  transition:transform 180ms ease,opacity 180ms ease;
+}
+.cell.drop-in{ transform: translateY(-26px); opacity:0; }
+.cell.drop-in.show{ transform: translateY(0); opacity:1; transition: transform 320ms cubic-bezier(.22,.9,.3,1), opacity 200ms linear; }
+
+/* dragging clone style */
+.dragging-clone{
+  box-shadow:0 12px 30px rgba(0,0,0,0.18);
+  border-radius:10px;
+  transform: scale(1.04);
+  transition: transform 120ms ease;
+  pointer-events:none;
+}
+
+/* selected outline */
+.cell.selected{ outline: 4px solid rgba(33,150,243,0.12); }
+
+/* utility */
+.center{text-align:center}
+small{color:#666}
