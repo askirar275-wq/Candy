@@ -4,146 +4,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="app-header">
-    <a class="logo" href="#home">🍬 Candy Match</a>
-    <nav class="mini-nav">
-      <a href="#home">Home</a>
-      <a href="#map">Map</a>
-      <a href="#game?level=1">Play</a>
-    </nav>
-  </header>
 
-  <main id="app">
-    <!-- HOME -->
-    <section id="page-home" class="page active">
-      <div class="card home-card">
-        <h1 class="title">कैंडी मैच</h1>
-        <p class="subtitle">Match. Pop. Smile!</p>
-        <div class="buttons">
-          <a class="btn primary" href="#game?level=1">Play</a>
-          <a class="btn" href="#map">Map</a>
-        </div>
-        <p class="links"><a href="#settings">Settings</a> · <a href="#about">About</a></p>
-      </div>
-    </section>
+<header class="site-header">
+  <div class="brand">🍬 <strong>कैंडी मैच</strong></div>
+  <nav class="top-nav">
+    <a href="index.html">Home</a>
+    <a href="map.html">Map</a>
+    <a href="play.html">Play</a>
+  </nav>
+</header>
 
-    <!-- MAP -->
-    <section id="page-map" class="page">
-      <div class="card">
-        <a class="back" href="#home">← Home</a>
-        <h2>Level Map</h2>
-        <button id="resetProgress" class="btn">Reset Progress</button>
-        <div id="mapGrid" class="map-grid"></div>
-      </div>
-    </section>
+<main class="container">
+  <section class="card hero">
+    <h1>कैंडी मैच</h1>
+    <p class="lead">Match. Pop. Smile!</p>
+    <div class="controls-row">
+      <a class="btn primary" href="play.html">Play</a>
+      <a class="btn" href="map.html">Map</a>
+    </div>
+    <p class="links"><a href="map.html">Level Map</a> · <a href="play.html?level=1">Play Level 1</a></p>
+  </section>
+</main>
 
-    <!-- GAME -->
-    <section id="page-game" class="page">
-      <div class="card">
-        <a class="back" href="#map">← Map</a>
-        <h2 id="levelTitle">Level 1</h2>
+<footer class="site-footer">© Candy Match</footer>
 
-        <div class="stats-row">
-          <div class="stat">Score: <span id="score">0</span></div>
-          <div class="stat">Moves: <span id="moves">30</span></div>
-          <div class="stat">Target: <span id="target">600</span></div>
-          <div class="stat">Timer: <span id="timer">--:--</span></div>
-        </div>
-
-        <div id="stars" class="stars">☆ ☆ ☆</div>
-
-        <div class="game-grid-container">
-          <div id="gameGrid" class="game-grid"></div>
-        </div>
-
-        <div class="controls">
-          <button id="btnRestart" class="btn">Restart</button>
-          <button id="btnEnd" class="btn">End</button>
-        </div>
-
-        <div id="levelComplete" class="card modal hidden">
-          <h3 id="completeTitle">Level Complete!</h3>
-          <p>Score: <span id="completeScore">0</span></p>
-          <div class="buttons">
-            <button id="btnReplay" class="btn">Replay</button>
-            <button id="btnNext" class="btn primary">Next</button>
-            <a class="btn" href="#map">Map</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SETTINGS -->
-    <section id="page-settings" class="page">
-      <div class="card">
-        <a class="back" href="#home">← Back</a>
-        <h2>Settings</h2>
-        <label><input id="muteSound" type="checkbox"> Mute Sound</label>
-      </div>
-    </section>
-
-    <!-- ABOUT -->
-    <section id="page-about" class="page">
-      <div class="card">
-        <a class="back" href="#home">← Back</a>
-        <h2>About</h2>
-        <p>Simple Candy Match demo game.</p>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">© Candy Match</footer>
-
-  <!-- Scripts -->
-  <script src="js/storage.js"></script>
-  <script src="js/sound.js"></script>
-  <script src="js/game-core.js"></script>
-  <script src="js/level-map.js"></script>
-  <script src="js/game.js"></script>
-
-  <script>
-    function showPageByHash() {
-      const raw = location.hash || '#home';
-      const path = raw.split('?')[0];
-      const map = {
-        '#home': 'page-home',
-        '#map': 'page-map',
-        '#game': 'page-game',
-        '#settings': 'page-settings',
-        '#about': 'page-about'
-      };
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      const id = map[path] || 'page-home';
-      document.getElementById(id)?.classList.add('active');
-
-      if (path === '#map' && window.LevelMap) LevelMap.render();
-      if (path === '#game') {
-        const qs = new URLSearchParams(location.hash.split('?')[1] || '');
-        const lvl = parseInt(qs.get('level') || 1, 10);
-        if (window.Game && typeof Game.start === 'function') Game.start(lvl);
-      }
-    }
-
-    window.addEventListener('hashchange', showPageByHash);
-    window.addEventListener('load', showPageByHash);
-
-    document.getElementById('resetProgress').addEventListener('click', () => {
-      if (confirm('Reset all progress?')) {
-        Storage.reset();
-        LevelMap.render();
-      }
-    });
-
-    const muteBox = document.getElementById('muteSound');
-    muteBox.checked = Storage.prefs().soundMuted;
-    muteBox.addEventListener('change', e => {
-      Sound.setMuted(e.target.checked);
-      Storage.setPref('soundMuted', e.target.checked);
-    });
-  </script>
 </body>
-          </html>
+</html>
