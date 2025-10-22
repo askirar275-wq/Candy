@@ -1,49 +1,56 @@
 // js/game.js
-// Render & input handling for GameCore (swap on swipe/touch or mouse)
+// Robust pointer-based input + rendering for GameCore
+// Replace your current js/game.js with this file.
 
 (function(){
   const gridEl = document.getElementById('gameGrid');
   const scoreEl = document.getElementById('score');
   const movesEl = document.getElementById('moves');
   const targetEl = document.getElementById('target');
-  const timerEl = document.getElementById('timer');
   const starsEl = document.getElementById('stars');
   const levelTitle = document.getElementById('levelTitle');
 
-  if(!gridEl) {
-    console.error('gameGrid element missing');
+  if(!gridEl){
+    console.error('gameGrid element not found (id="gameGrid")');
     return;
   }
 
-  const ROWS = GameCore.ROWS, COLS = GameCore.COLS;
+  const ROWS = GameCore.ROWS;
+  const COLS = GameCore.COLS;
 
+  // Layout: compute cell size to fit width
   function adjustGridCols(){
-    const containerW = Math.min(window.innerWidth - 40, 720);
+    const maxW = Math.min(window.innerWidth - 40, 720);
     const totalGap = (COLS - 1) * 10;
-    const cell = Math.floor((containerW - totalGap) / COLS);
+    const cell = Math.floor((maxW - totalGap) / COLS);
     gridEl.style.gridTemplateColumns = `repeat(${COLS}, ${cell}px)`;
   }
   window.addEventListener('resize', adjustGridCols);
   adjustGridCols();
 
+  // Render function
   function render(state){
     gridEl.innerHTML = '';
-    const grid = state.grid;
     for(let r=0;r<ROWS;r++){
       for(let c=0;c<COLS;c++){
         const cell = document.createElement('div');
         cell.className = 'cell';
         cell.dataset.r = r;
         cell.dataset.c = c;
-        const t = grid[r][c] || 1;
+
         const img = document.createElement('img');
+        const t = (state && state.grid && state.grid[r] && state.grid[r][c]) || 1;
         img.src = `images/candy${t}.png`;
         img.alt = 'candy';
         img.draggable = false;
         cell.appendChild(img);
+
+        // pointerdown handler attached to cell
+        cell.addEventListener('pointerdown', onCellPointerDown);
         gridEl.appendChild(cell);
       }
     }
+
     if(levelTitle) levelTitle.textContent = `Level ${state.level || 1}`;
     if(scoreEl) scoreEl.textContent = state.score;
     if(movesEl) movesEl.textContent = state.moves;
@@ -56,94 +63,189 @@
     }
   }
 
-  // drag/swipe handling
-  let dragging = null;
+  // Subscribe to GameCore updates
+  GameCore.onUpdate((s)=> {
+    render(s);
+    // ensure grid layout is correct after render
+    setTimeout(adjustGridCols, 20);
+  });
 
-  function getPoint(e){
-    if(e.changedTouches && e.changedTouches.length) {
-      const t = e.changedTouches[0];
-      return { x: t.clientX, y: t.clientY };
-    } else {
-      return { x: e.clientX, y: e.clientY };
-    }
-  }
+  // Drag state
+  let dragState = null;
+  // threshold in px to consider a swipe
+  const SWIPE_THRESHOLD = 12;
 
-  function pointerStart(e){
-    const p = getPoint(e);
-    const el = e.target.closest('.cell');
+  // pointerdown handler attached to each cell on render
+  function onCellPointerDown(e){
+    // use pointer events to capture properly
+    const el = e.currentTarget;
     if(!el) return;
-    const r = Number(el.dataset.r), c = Number(el.dataset.c);
-    dragging = { r, c, startX: p.x, startY: p.y, moved:false };
-    // prevent page scroll while touching grid
-    if(e.cancelable) e.preventDefault();
+    // prevent default to stop page scroll during touch drag
+    try { if(e.cancelable) e.preventDefault(); } catch(_) {}
+    // capture the pointer
+    try { el.setPointerCapture && el.setPointerCapture(e.pointerId); } catch(_) {}
+
+    const r = Number(el.dataset.r);
+    const c = Number(el.dataset.c);
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    // create clone visual
+    const img = el.querySelector('img');
+    const clone = img ? img.cloneNode(true) : null;
+    if(clone){
+      clone.className = 'dragging-clone';
+      clone.style.position = 'fixed';
+      clone.style.left = startX + 'px';
+      clone.style.top = startY + 'px';
+      clone.style.transform = 'translate(-50%,-50%)';
+      document.body.appendChild(clone);
+    }
+
+    dragState = {
+      originEl: el,
+      startR: r,
+      startC: c,
+      pointerId: e.pointerId,
+      startX, startY,
+      lastX: startX,
+      lastY: startY,
+      clone
+    };
+
+    // attach move/up listeners on document for reliability
+    document.addEventListener('pointermove', onDocumentPointerMove);
+    document.addEventListener('pointerup', onDocumentPointerUp);
+    document.addEventListener('pointercancel', onDocumentPointerCancel);
   }
 
-  function pointerMove(e){
-    if(!dragging) return;
-    // optional: visual dragging clone — skipped for simplicity
-    // prevent scrolling
-    if(e.cancelable) e.preventDefault();
+  function onDocumentPointerMove(e){
+    if(!dragState) return;
+    if(e.pointerId !== dragState.pointerId) return;
+    const x = e.clientX, y = e.clientY;
+    dragState.lastX = x; dragState.lastY = y;
+    // move clone
+    if(dragState.clone){
+      dragState.clone.style.left = x + 'px';
+      dragState.clone.style.top = y + 'px';
+    }
+    // optional: highlight hovered neighbor
+    // we won't swap until pointerup
   }
 
-  function pointerEnd(e){
-    if(!dragging) return;
-    const p = getPoint(e);
-    const dx = p.x - dragging.startX, dy = p.y - dragging.startY;
+  function onDocumentPointerUp(e){
+    if(!dragState) return;
+    if(e.pointerId !== dragState.pointerId) return;
+
+    // compute direction using displacement from start
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
     const adx = Math.abs(dx), ady = Math.abs(dy);
-    // threshold
-    if(Math.max(adx, ady) < 12){
-      dragging = null;
+
+    // remove clone
+    if(dragState.clone && dragState.clone.parentNode) dragState.clone.remove();
+
+    // release pointer capture from origin element if set
+    try { dragState.originEl.releasePointerCapture && dragState.originEl.releasePointerCapture(e.pointerId); } catch(_) {}
+
+    // remove document listeners
+    document.removeEventListener('pointermove', onDocumentPointerMove);
+    document.removeEventListener('pointerup', onDocumentPointerUp);
+    document.removeEventListener('pointercancel', onDocumentPointerCancel);
+
+    // if small movement -> treat as tap (no swap)
+    if(Math.max(adx, ady) < SWIPE_THRESHOLD){
+      dragState = null;
       return;
     }
-    let dir;
-    if(adx > ady) dir = dx>0 ? 'right' : 'left';
-    else dir = dy>0 ? 'down' : 'up';
 
-    let nr = dragging.r, nc = dragging.c;
-    if(dir === 'left') nc = dragging.c - 1;
-    if(dir === 'right') nc = dragging.c + 1;
-    if(dir === 'up') nr = dragging.r - 1;
-    if(dir === 'down') nr = dragging.r + 1;
+    // determine direction
+    let dir = null;
+    if(adx > ady) dir = dx > 0 ? 'right' : 'left';
+    else dir = dy > 0 ? 'down' : 'up';
 
-    // bounds
+    let nr = dragState.startR, nc = dragState.startC;
+    if(dir === 'left') nc = dragState.startC - 1;
+    if(dir === 'right') nc = dragState.startC + 1;
+    if(dir === 'up') nr = dragState.startR - 1;
+    if(dir === 'down') nr = dragState.startR + 1;
+
+    // bounds check
     if(nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS){
-      dragging = null;
+      dragState = null;
       return;
     }
 
-    // call core swap
-    const ok = GameCore.trySwap(dragging.r, dragging.c, nr, nc);
-    // small feedback (you can wire Sound here)
-    dragging = null;
-    return ok;
+    // call core swap method
+    try {
+      const ok = GameCore.trySwap(dragState.startR, dragState.startC, nr, nc);
+      // optional: play sound
+      try { if(window.Sound && Sound.play) Sound.play(ok ? 'swap' : 'invalid'); } catch(_){}
+    } catch(err){
+      console.error('trySwap failed', err);
+    }
+
+    dragState = null;
   }
 
-  // listeners
-  gridEl.addEventListener('touchstart', pointerStart, {passive:false});
-  gridEl.addEventListener('touchmove', pointerMove, {passive:false});
-  gridEl.addEventListener('touchend', pointerEnd, {passive:false});
-  gridEl.addEventListener('mousedown', pointerStart);
-  window.addEventListener('mousemove', pointerMove);
-  window.addEventListener('mouseup', pointerEnd);
+  function onDocumentPointerCancel(e){
+    if(!dragState) return;
+    if(e.pointerId !== dragState.pointerId) return;
+    if(dragState.clone && dragState.clone.parentNode) dragState.clone.remove();
+    try { dragState.originEl.releasePointerCapture && dragState.originEl.releasePointerCapture(e.pointerId); } catch(_) {}
+    document.removeEventListener('pointermove', onDocumentPointerMove);
+    document.removeEventListener('pointerup', onDocumentPointerUp);
+    document.removeEventListener('pointercancel', onDocumentPointerCancel);
+    dragState = null;
+  }
 
-  // subscribe to updates
-  GameCore.onUpdate((state)=> render(state));
+  // keyboard support (arrow keys move selected cell)
+  let selected = null;
+  window.addEventListener('keydown', (e)=>{
+    if(!selected) return;
+    let {r,c} = selected;
+    if(e.key === 'ArrowLeft') c = c-1;
+    else if(e.key === 'ArrowRight') c = c+1;
+    else if(e.key === 'ArrowUp') r = r-1;
+    else if(e.key === 'ArrowDown') r = r+1;
+    else return;
+    // bounds
+    if(r<0||r>=ROWS||c<0||c>=COLS) return;
+    GameCore.trySwap(selected.r, selected.c, r, c);
+  });
 
-  // expose Game facade (start)
+  // Expose Game facade
   window.Game = {
-    start(lvl){
-      const st = GameCore.start(lvl);
-      render(st);
-      setTimeout(adjustGridCols,50);
-      // ensure game page shown if you use page system
+    start(level){
+      const st = GameCore.start(level);
+      // ensure rendering triggered by onUpdate; but call render once
+      // GameCore.onUpdate will call render when started; if not, force render:
+      setTimeout(()=> {
+        // render forced via GameCore.onUpdate subscription earlier
+      }, 10);
+      // show game page if available
       const page = document.getElementById('page-game');
       if(page){
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         page.classList.add('active');
       }
+      // adjust grid size after start
+      setTimeout(adjustGridCols, 50);
       return st;
     },
     restart(){ const s = GameCore.getState(); this.start(s.level || 1); }
   };
 
+  // initial render request - in case GameCore already has state
+  try {
+    const s = GameCore.getState();
+    if(s) render(s);
+  } catch(_) {}
+
+  // small debounce to ensure layout correct after first render
+  setTimeout(adjustGridCols, 80);
+
+  // attach GameCore.onUpdate render (make sure only one subscription)
+  // (re-subscribe safely)
+  GameCore.onUpdate((s)=> render(s));
 })();
