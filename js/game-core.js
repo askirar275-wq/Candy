@@ -1,189 +1,352 @@
-// js/game-core.js (updated with specials, obstacles, color-bomb support, timed levels)
+/* js/game-core.js
+   Core board logic: board state, match detection, collapse + refill,
+   and UI rendering of grid cells. Exposes helpers used by game.js.
+*/
+
 const GameCore = (function(){
-  const ROWS = 7, COLS = 7;
-  const COLORS = 6; // 0..5
-  // obstacle types: { type:'ice'|'choco', hits: n } stored in tile.o
-  function randColor(){ return Math.floor(Math.random()*COLORS); }
-  function index(r,c){ return r*COLS + c; }
-  function coords(i){ return { r: Math.floor(i/COLS), c: i%COLS }; }
-  function inBounds(r,c){ return r>=0 && c>=0 && r<ROWS && c<COLS; }
+  // CONFIG
+  const ROWS = 7;
+  const COLS = 7;
+  const CANDY_TYPES = 5; // images candy1..candy5.png
+  const CELL_SIZE = 52; // for clone positioning (approx)
 
-  // create random tile; optionally sometimes include obstacles (for higher levels)
-  function makeTile(opts){
-    opts = opts || {};
-    const t = { c: randColor(), s: null, o: null };
-    if(opts.obstacle){
-      // obstacle example: ice (needs 1 match to break), choco needs 2
-      if(Math.random() < 0.12) t.o = { type:'ice', hits:1 };
-      else if(Math.random() < 0.08) t.o = { type:'choco', hits:2 };
-    }
-    return t;
-  }
+  // STATE
+  let board = [];
+  let score = 0;
+  let moves = 30;
+  let target = 600;
+  let currentLevel = 1;
+  let canInteract = true;
 
-  function generateGrid(opts){
-    opts = opts || {};
-    const g = new Array(ROWS*COLS);
-    for(let i=0;i<g.length;i++) g[i] = makeTile(opts);
-    // remove initial matches
-    while(true){
-      const m = findMatchesWithSpecials(g);
-      if(!m.removed || m.removed.length===0) break;
-      for(const idx of m.removed) g[idx].c = randColor();
-    }
-    return g;
-  }
+  // DOM
+  const gridEl = () => document.getElementById('gameGrid');
+  const scoreEl = () => document.getElementById('score');
+  const movesEl = () => document.getElementById('moves');
+  const targetEl = () => document.getElementById('target');
+  const levelTitleEl = () => document.getElementById('levelTitle');
 
-  function areAdjacent(a,b){
-    const A = coords(a), B = coords(b);
-    const dr = Math.abs(A.r - B.r), dc = Math.abs(A.c - B.c);
-    return (dr + dc) === 1;
-  }
-  function swap(g,a,b){ const t = g[a]; g[a] = g[b]; g[b] = t; }
-
-  // find groups (horizontal + vertical), returns groups as arrays
-  function collectGroups(g){
-    const groups = [];
-    // horizontal
+  // Initialize empty board
+  function createEmptyBoard(){
+    board = new Array(ROWS);
     for(let r=0;r<ROWS;r++){
-      let run = [ index(r,0) ];
-      for(let c=1;c<COLS;c++){
-        const cur = index(r,c), prev = index(r,c-1);
-        if(g[cur].c === g[prev].c) run.push(cur);
-        else { if(run.length>=3) groups.push(run.slice()); run=[cur]; }
-      }
-      if(run.length>=3) groups.push(run.slice());
+      board[r] = new Array(COLS).fill(null);
     }
-    // vertical
-    for(let c=0;c<COLS;c++){
-      let run = [ index(0,c) ];
-      for(let r=1;r<ROWS;r++){
-        const cur = index(r,c), prev = index(r-1,c);
-        if(g[cur].c === g[prev].c) run.push(cur);
-        else { if(run.length>=3) groups.push(run.slice()); run=[cur]; }
-      }
-      if(run.length>=3) groups.push(run.slice());
-    }
-    return groups;
   }
 
-  // produce removed indices + specials creation instructions
-  function findMatchesWithSpecials(g){
-    const groups = collectGroups(g);
-    const removedSet = new Set();
-    const specials = []; // { pos, kind:'stripe'|'color' }
-
-    for(const gr of groups){
-      gr.forEach(i=> removedSet.add(i));
-      if(gr.length === 4){
-        // create stripe (decide later row/col)
-        specials.push({ pos: gr[Math.floor(gr.length/2)], kind:'stripe', length:4 });
-      } else if(gr.length >= 5){
-        specials.push({ pos: gr[Math.floor(gr.length/2)], kind:'color', length:gr.length });
-      }
-    }
-
-    // also check for L/T shapes -> if any cell appears in 2 groups crossing -> treat as color bomb
-    const countMap = {};
-    for(const gidx of groups.flat()){
-      countMap[gidx] = (countMap[gidx]||0) + 1;
-    }
-    for(const k in countMap){
-      if(countMap[k] >= 2){
-        // crossing -> color bomb
-        removedSet.add(Number(k));
-        specials.push({ pos: Number(k), kind:'color', length:5 });
-      }
-    }
-
-    return { removed: Array.from(removedSet), specials };
-  }
-
-  // decide and assign special types into grid (stripe -> row/col)
-  function assignSpecialsFromGroups(grid, specialsList){
-    specialsList.forEach(sp=>{
-      if(!grid[sp.pos]) return;
-      if(sp.kind === 'color'){ grid[sp.pos].s = 'color'; return; }
-      // stripe: check orientation by neighbors
-      const { r, c } = coords(sp.pos);
-      let h=0,v=0;
-      for(let dc=-2;dc<=2;dc++){ if(inBounds(r,c+dc) && grid[index(r,c+dc)].c === grid[sp.pos].c) h++; }
-      for(let dr=-2;dr<=2;dr++){ if(inBounds(r+dr,c) && grid[index(r+dr,c)].c === grid[sp.pos].c) v++; }
-      grid[sp.pos].s = (h >= v) ? 'row' : 'col';
-    });
-  }
-
-  // expand removal due to specials already present on grid (row/col/color) AND obstacles (we will reduce hits instead of immediate remove)
-  function expandRemovedBySpecials(grid, removedList){
-    const set = new Set(removedList);
-    // iterate removedList to also expand for specials on those cells
-    removedList.forEach(idx=>{
-      const tile = grid[idx];
-      if(!tile) return;
-      if(tile.s === 'row'){
-        const rr = coords(idx).r;
-        for(let c=0;c<COLS;c++) set.add(index(rr,c));
-      } else if(tile.s === 'col'){
-        const cc = coords(idx).c;
-        for(let r=0;r<ROWS;r++) set.add(index(r,cc));
-      } else if(tile.s === 'color'){
-        const col = tile.c;
-        for(let i=0;i<grid.length;i++) if(grid[i].c === col) set.add(i);
-      }
-    });
-    return Array.from(set);
-  }
-
-  // handle obstacles: if a tile in removed set has tile.o -> reduce hits and if hits>0 keep tile (not remove)
-  function applyObstaclesBeforeRemoval(grid, removedIndices){
-    const toRemove = [];
-    for(const idx of removedIndices){
-      const t = grid[idx];
-      if(t && t.o){
-        t.o.hits = Math.max(0, t.o.hits - 1);
-        if(t.o.hits <= 0){
-          t.o = null;
-          toRemove.push(idx);
-        } else {
-          // still obstacle remains — do not remove tile; we leave its color intact
+  // Fill board randomly (no immediate matches ideally)
+  function fillBoardNoInitialMatches(){
+    // naive approach: fill and re-roll if immediate match present
+    do {
+      for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+          board[r][c] = randomCandyId();
         }
-      } else {
-        toRemove.push(idx);
       }
-    }
-    return toRemove;
+    } while(findMatches().length > 0);
   }
 
-  // collapse + refill (drops down and new tiles enter from top)
-  function collapseAndRefill(grid, removedIndices, opts){
-    opts = opts || {};
-    const removed = new Set(removedIndices || []);
+  function randomCandyId(){
+    return Math.floor(Math.random() * CANDY_TYPES) + 1;
+  }
+
+  // Render grid UI from board[][]
+  function updateUI(){
+    // remove any debug overlays left
+    document.querySelectorAll('.cell .count, .cell .badge-number, .cell .overlay-count').forEach(n=>n.remove());
+
+    const grid = gridEl();
+    if(!grid) return;
+    // set columns grid-template according to COLS
+    grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    grid.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.id = `cell-${r}-${c}`;
+        // image
+        const img = document.createElement('img');
+        const id = board[r][c];
+        img.src = id ? `images/candy${id}.png` : `images/candy1.png`;
+        img.alt = 'candy';
+        cell.appendChild(img);
+
+        // attach pointer handlers (fresh each render)
+        attachCellPointer(cell, r, c);
+        grid.appendChild(cell);
+      }
+    }
+
+    // update HUD
+    if(scoreEl()) scoreEl().textContent = score;
+    if(movesEl()) movesEl().textContent = moves;
+    if(targetEl()) targetEl().textContent = target;
+    if(levelTitleEl()) levelTitleEl().textContent = `Level ${currentLevel}`;
+
+    // ensure canInteract is true only if not animating (caller manages it)
+  }
+
+  // Attach pointer logic to each cell (uses pointerdown + pointerup on document)
+  function attachCellPointer(cellEl, r, c){
+    // remove previous listeners just in case
+    cellEl.onpointerdown = null;
+
+    cellEl.addEventListener('pointerdown', function(e){
+      if(!canInteract) return;
+      e.preventDefault && e.preventDefault();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let released = false;
+
+      function onUp(ev){
+        if(released) return;
+        released = true;
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        const absX = Math.abs(dx), absY = Math.abs(dy);
+
+        if(Math.max(absX, absY) < 8){
+          // small tap => no swap
+          return;
+        }
+        let toR = r, toC = c;
+        if(absX > absY){
+          toC = dx > 0 ? c + 1 : c - 1;
+        } else {
+          toR = dy > 0 ? r + 1 : r - 1;
+        }
+        // bounds check
+        if(toR < 0 || toR >= ROWS || toC < 0 || toC >= COLS) return;
+
+        // perform swap pipeline via GameCore.swapCells
+        swapCells(r, c, toR, toC);
+      }
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    });
+  }
+
+  // Swap in board array
+  function swapBoard(r1,c1,r2,c2){
+    const tmp = board[r1][c1];
+    board[r1][c1] = board[r2][c2];
+    board[r2][c2] = tmp;
+  }
+
+  // Visual animate swap using clones, resolves when done
+  function animateSwapDOM(r1,c1,r2,c2){
+    return new Promise(resolve=>{
+      const el1 = document.getElementById(`cell-${r1}-${c1}`);
+      const el2 = document.getElementById(`cell-${r2}-${c2}`);
+      if(!el1 || !el2){ resolve(); return; }
+
+      const rect1 = el1.getBoundingClientRect();
+      const rect2 = el2.getBoundingClientRect();
+
+      const clone1 = el1.querySelector('img').cloneNode();
+      const clone2 = el2.querySelector('img').cloneNode();
+      clone1.className = 'dragging-clone';
+      clone2.className = 'dragging-clone';
+
+      Object.assign(clone1.style, {
+        position: 'fixed', left: (rect1.left + rect1.width/2 - 22) + 'px',
+        top: (rect1.top + rect1.height/2 - 22) + 'px', width:'44px', height:'44px',
+        transition: 'transform 220ms ease'
+      });
+      Object.assign(clone2.style, {
+        position: 'fixed', left: (rect2.left + rect2.width/2 - 22) + 'px',
+        top: (rect2.top + rect2.height/2 - 22) + 'px', width:'44px', height:'44px',
+        transition: 'transform 220ms ease'
+      });
+
+      document.body.appendChild(clone1);
+      document.body.appendChild(clone2);
+
+      const dx = rect2.left - rect1.left;
+      const dy = rect2.top - rect1.top;
+
+      requestAnimationFrame(()=> {
+        clone1.style.transform = `translate(${dx}px, ${dy}px)`;
+        clone2.style.transform = `translate(${-dx}px, ${-dy}px)`;
+      });
+
+      setTimeout(()=> {
+        clone1.remove(); clone2.remove(); resolve();
+      }, 260);
+    });
+  }
+
+  // Find all matches (returns array of positions objects)
+  function findMatches(){
+    const matched = [];
+    // Horizontal
+    for(let r=0;r<ROWS;r++){
+      let runStart = 0;
+      for(let c=1;c<=COLS;c++){
+        const prev = board[r][c-1];
+        const cur = (c < COLS) ? board[r][c] : null;
+        if(c < COLS && cur !== null && prev !== null && cur === prev){
+          // continue
+        } else {
+          const runLen = c - runStart;
+          if(runLen >= 3){
+            for(let k=runStart;k<c;k++) matched.push({r, c:k});
+          }
+          runStart = c;
+        }
+      }
+    }
+    // Vertical
     for(let c=0;c<COLS;c++){
-      const stack = [];
-      for(let r=ROWS-1;r>=0;r--){
-        const idx = index(r,c);
-        if(!removed.has(idx)) stack.push(grid[idx]);
-      }
-      while(stack.length < ROWS) stack.push(makeTile(opts));
-      for(let r=ROWS-1, i=0; r>=0; r--, i++){
-        grid[index(r,c)] = stack[i];
+      let runStart = 0;
+      for(let r=1;r<=ROWS;r++){
+        const prev = (r-1 >= 0) ? board[r-1][c] : null;
+        const cur = (r < ROWS) ? board[r][c] : null;
+        if(r < ROWS && cur !== null && prev !== null && cur === prev){
+          // continue
+        } else {
+          const runLen = r - runStart;
+          if(runLen >= 3){
+            for(let k=runStart;k<r;k++) matched.push({r:k, c});
+          }
+          runStart = r;
+        }
       }
     }
-    return { grid };
+    // dedupe
+    const set = new Set();
+    const result = [];
+    matched.forEach(p => {
+      const key = `${p.r},${p.c}`;
+      if(!set.has(key)){ set.add(key); result.push(p); }
+    });
+    return result;
   }
 
-  function trySwapAndFindMatches(grid, a, b){
-    const copy = grid.map(x => ({ ...x }));
-    swap(copy, a, b);
-    const m = findMatchesWithSpecials(copy);
-    // if swap hits obstacle-only positions: still consider matches only if removed non-zero
-    return (m.removed && m.removed.length) ? m.removed : [];
+  // Remove matches visually and from board
+  function removeMatchesAndAnimate(matches){
+    return new Promise(resolve=>{
+      if(matches.length === 0){ resolve(); return; }
+      // mark null and add fade class
+      matches.forEach(pos=>{
+        board[pos.r][pos.c] = null;
+        const cell = document.getElementById(`cell-${pos.r}-${pos.c}`);
+        if(cell) cell.classList.add('fade-out');
+      });
+      // wait for visual fade
+      setTimeout(()=>{
+        updateUI();
+        resolve();
+      }, 200);
+    });
   }
 
+  // Gravity collapse columns and refill
+  function collapseAndRefill(){
+    return new Promise(resolve=>{
+      for(let c=0;c<COLS;c++){
+        let write = ROWS - 1;
+        for(let r=ROWS-1;r>=0;r--){
+          if(board[r][c] !== null){
+            board[write][c] = board[r][c];
+            if(write !== r) board[r][c] = null;
+            write--;
+          }
+        }
+        for(let r=write;r>=0;r--){
+          board[r][c] = randomCandyId();
+        }
+      }
+      // small delay for visual refill
+      updateUI();
+      setTimeout(resolve, 220);
+    });
+  }
+
+  // Public swap flow: animate swap, check match, revert if no match, else run match-loop
+  async function swapCells(r1,c1,r2,c2){
+    if(!canInteract) return;
+    canInteract = false;
+    try {
+      // animate swap
+      await animateSwapDOM(r1,c1,r2,c2);
+      // update board
+      swapBoard(r1,c1,r2,c2);
+      updateUI();
+
+      let matches = findMatches();
+      if(matches.length === 0){
+        // revert after a small pause
+        await new Promise(res => setTimeout(res, 120));
+        await animateSwapDOM(r1,c1,r2,c2); // animate back (positions changed in board, but ids in DOM are moved by updateUI)
+        swapBoard(r1,c1,r2,c2); // revert data
+        updateUI();
+        canInteract = true;
+        return;
+      }
+
+      // matches found: loop removing, collapsing until no matches
+      while(matches.length > 0){
+        // scoring: 100 per candy matched (example)
+        score += matches.length * 100;
+        if(scoreEl()) scoreEl().textContent = score;
+
+        await removeMatchesAndAnimate(matches);
+        await collapseAndRefill();
+        matches = findMatches();
+      }
+
+      // decrement moves and update
+      moves = Math.max(0, moves - 1);
+      if(movesEl()) movesEl().textContent = moves;
+
+      // check win condition
+      if(score >= target){
+        // notify Game layer to finish level
+        if(typeof onLevelComplete === 'function'){
+          onLevelComplete({score, level: currentLevel});
+        }
+      }
+    } catch(err){
+      console.error('swapCells error', err);
+    } finally {
+      canInteract = true;
+    }
+  }
+
+  // simple public helpers for Game wrapper
+  let onLevelComplete = null;
+  function setOnComplete(fn){ onLevelComplete = fn; }
+
+  // Public API: start level
+  function start(level = 1, opts = {}){
+    currentLevel = Number(level) || 1;
+    // choose target & moves based on level (simple scaling)
+    target = opts.target || (600 + (currentLevel-1)*300);
+    moves = opts.moves || 30;
+    score = 0;
+    canInteract = true;
+    // create board
+    createEmptyBoard();
+    fillBoardNoInitialMatches();
+    updateUI();
+  }
+
+  function restart(){
+    start(currentLevel);
+  }
+
+  // expose
   return {
-    ROWS, COLS, COLORS,
-    generateGrid, swap, areAdjacent,
-    findMatchesWithSpecials, expandRemovedBySpecials, collapseAndRefill,
-    trySwapAndFindMatches, assignSpecialsFromGroups,
-    applyObstaclesBeforeRemoval
+    start,
+    restart,
+    swapCells,
+    updateUI,
+    getState: ()=> ({board, score, moves, target, currentLevel}),
+    setOnComplete,
+    setCanInteract: (v)=> { canInteract = !!v; },
   };
 })();
