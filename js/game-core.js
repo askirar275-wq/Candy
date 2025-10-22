@@ -1,196 +1,178 @@
 // js/game-core.js
-// Core engine: grid, match detection, remove, collapse, refill, scoring.
-// (Replace existing file with this)
+// Core mechanics: grid, random fill, match detection, collapse, refill, scoring, moves.
+// Simple event emitter pattern: onUpdate(callback) called with state every time.
 
 const GameCore = (function(){
-  const ROWS = 6;
-  const COLS = 6;
-  const CANDY_TYPES = 6;
-  let grid = [];
-  let score = 0;
-  let moves = 30;
-  let target = 600;
-  let level = 1;
-  let locked = false;
-  let onChange = ()=>{};
+  const ROWS = 7; // you can reduce for small screens
+  const COLS = 7;
+  const TYPES = 6; // candy1..candy6
+  let listeners = [];
+  let state = null;
 
-  const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
-  function makeEmpty(){ grid = Array.from({length: ROWS}, ()=> Array(COLS).fill(0)); }
+  function randomType(){ return Math.floor(Math.random()*TYPES)+1; }
 
-  function wouldMatchAt(r,c,t){
-    // left
-    if(c>=2 && grid[r][c-1]===t && grid[r][c-2]===t) return true;
-    // up
-    if(r>=2 && grid[r-1][c]===t && grid[r-2][c]===t) return true;
-    return false;
-  }
+  function makeEmptyGrid(){ const g=[]; for(let r=0;r<ROWS;r++){ g[r]=[]; for(let c=0;c<COLS;c++) g[r][c]=0; } return g; }
 
-  function initGrid(){
-    makeEmpty();
-    for(let r=0;r<ROWS;r++){
-      for(let c=0;c<COLS;c++){
-        let t, attempts=0;
-        do {
-          t = rand(1, CANDY_TYPES);
-          attempts++;
-          if(attempts>30) break;
-        } while (wouldMatchAt(r,c,t));
-        grid[r][c] = t;
+  function refillGrid(grid){
+    for(let c=0;c<COLS;c++){
+      for(let r=ROWS-1;r>=0;r--){
+        if(grid[r][c] === 0){
+          // find above non-zero
+          let k = r-1;
+          while(k>=0 && grid[k][c]===0) k--;
+          if(k>=0){ grid[r][c] = grid[k][c]; grid[k][c]=0; r++; continue; }
+          else { grid[r][c] = randomType(); }
+        }
       }
     }
+    return grid;
   }
 
-  function getState(){ return { grid: grid.map(r=>r.slice()), score, moves, target, level }; }
-
-  function isAdjacent(r1,c1,r2,c2){
-    const dr = Math.abs(r1-r2), dc = Math.abs(c1-c2);
-    return (dr+dc)===1;
-  }
-
-  // find groups (returns array of arrays of [r,c])
-  function findAllMatches(){
-    const found = [];
+  // find all matches (>=3 in row or col). Return array of positions to clear
+  function findMatches(grid){
+    const toClear = Array.from({length:ROWS},()=>Array(COLS,false));
     // horizontal
     for(let r=0;r<ROWS;r++){
-      let c=0;
-      while(c<COLS){
-        const t = grid[r][c];
-        if(!t){ c++; continue; }
-        let j=c+1;
-        while(j<COLS && grid[r][j]===t) j++;
-        if(j-c >= 3){
-          const g=[];
-          for(let x=c;x<j;x++) g.push([r,x]);
-          found.push(g);
+      let start=0;
+      for(let c=1;c<=COLS;c++){
+        if(c< COLS && grid[r][c] && grid[r][c] === grid[r][start]) continue;
+        const len = c - start;
+        if(len >= 3){
+          for(let x=start;x<c;x++) toClear[r][x]=true;
         }
-        c = j;
+        start = c;
       }
     }
     // vertical
     for(let c=0;c<COLS;c++){
-      let r=0;
-      while(r<ROWS){
-        const t = grid[r][c];
-        if(!t){ r++; continue; }
-        let j=r+1;
-        while(j<ROWS && grid[j][c]===t) j++;
-        if(j-r >= 3){
-          const g=[];
-          for(let x=r;x<j;x++) g.push([x,c]);
-          found.push(g);
+      let start=0;
+      for(let r=1;r<=ROWS;r++){
+        if(r<ROWS && grid[r][c] && grid[r][c] === grid[start][c]) continue;
+        const len = r - start;
+        if(len >= 3){
+          for(let y=start;y<r;y++) toClear[y][c]=true;
         }
-        r = j;
+        start = r;
       }
     }
-    // merge uniques
-    const mark = Array.from({length:ROWS}, ()=> Array(COLS).fill(false));
-    const merged = [];
-    found.forEach(g=>{
-      const uniq=[];
-      g.forEach(([r,c])=>{
-        if(!mark[r][c]){ mark[r][c]=true; uniq.push([r,c]); }
-      });
-      if(uniq.length) merged.push(uniq);
+    // collect
+    const positions = [];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(toClear[r][c]) positions.push([r,c]);
+    return positions;
+  }
+
+  function cloneGrid(g){
+    return g.map(row => row.slice());
+  }
+
+  function emit(){
+    listeners.forEach(fn => {
+      try { fn(state); } catch(e){ console.error('onUpdate handler error', e); }
     });
-    return merged;
   }
 
-  function removeGroups(groups){
-    let cnt=0;
-    groups.forEach(g=>{
-      g.forEach(([r,c])=>{
-        if(grid[r][c] !== 0){ grid[r][c]=0; cnt++; }
-      });
-    });
-    // scoring: 100 per candy * combo multiplier (simple)
-    const add = cnt * 100;
-    score += add;
-    onChange(getState());
-    return cnt;
+  function start(level){
+    // simple level meta: target increases with level
+    const levelNum = Math.max(1, Math.floor(level || 1));
+    const target = 600 + (levelNum-1)*200;
+    const moves = 30;
+    state = {
+      level: levelNum,
+      score: 0,
+      moves: moves,
+      target: target,
+      grid: makeEmptyGrid(),
+      isAnimating: false,
+      status: 'playing'
+    };
+    // fill without initial matches - simple loop
+    do {
+      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) state.grid[r][c] = randomType();
+    } while(findMatches(state.grid).length > 0);
+
+    emit();
+    return state;
   }
 
-  function collapseColumns(){
-    for(let c=0;c<COLS;c++){
-      let write = ROWS-1;
-      for(let r=ROWS-1;r>=0;r--){
-        if(grid[r][c] !== 0){
-          grid[write][c] = grid[r][c];
-          write--;
-        }
-      }
-      for(let r=write;r>=0;r--) grid[r][c] = 0;
-    }
-  }
+  function getState(){ return state; }
 
-  function refillGrid(){
-    for(let r=0;r<ROWS;r++){
-      for(let c=0;c<COLS;c++){
-        if(grid[r][c]===0) grid[r][c] = rand(1,CANDY_TYPES);
-      }
-    }
-    onChange(getState());
-  }
-
-  function sleep(ms){ return new Promise(res=>setTimeout(res, ms)); }
-
-  async function resolveLoop(){
-    locked = true;
-    // loop until no more matches
-    while(true){
-      const groups = findAllMatches();
-      if(!groups.length) break;
-      removeGroups(groups);
-      // small delay to let UI show removal
-      await sleep(200);
-      collapseColumns();
-      await sleep(150);
-      refillGrid();
-      await sleep(200);
-    }
-    locked = false;
-    onChange(getState());
-  }
-
+  // try a swap; returns true if swap accepted (i.e. resulted in clears) else false
   function trySwap(r1,c1,r2,c2){
-    if(locked) return false;
-    if(!isAdjacent(r1,c1,r2,c2)) return false;
-    // swap
-    [grid[r1][c1], grid[r2][c2]] = [grid[r2][c2], grid[r1][c1]];
-    onChange(getState());
-    const groups = findAllMatches();
-    if(groups.length){
-      moves = Math.max(0, moves-1);
-      // resolve
-      resolveLoop();
-      return true;
-    } else {
-      // revert quickly for visual
-      setTimeout(()=>{
-        [grid[r1][c1], grid[r2][c2]] = [grid[r2][c2], grid[r1][c1]];
-        onChange(getState());
-      }, 180);
+    if(!state || state.isAnimating) return false;
+    if(state.moves <= 0) return false;
+    // bounds
+    if(r2<0 || r2>=ROWS || c2<0 || c2>=COLS) return false;
+    // adjacency check
+    const man = Math.abs(r1-r2)+Math.abs(c1-c2);
+    if(man !== 1) return false;
+    // do swap
+    const g = cloneGrid(state.grid);
+    const tmp = g[r1][c1]; g[r1][c1] = g[r2][c2]; g[r2][c2]=tmp;
+
+    // detect matches after swap
+    const matches = findMatches(g);
+    if(matches.length === 0){
+      // no match -> invalid swap (we'll still play swap sound maybe)
+      // but allow swap to animate then revert — here we just return false
+      // emit a small temporary state toggle? Keep simple: return false
+      Sound.play && Sound.play('swap');
       return false;
     }
+    // valid swap -> apply and start cascade
+    state.grid = g;
+    state.moves -= 1;
+    Sound.play && Sound.play('swap');
+    state.isAnimating = true;
+    emit();
+
+    // cascade process (clears -> collapse -> refill -> check again)
+    setTimeout(function cascadeStep(){
+      const clearPos = findMatches(state.grid);
+      if(clearPos.length === 0){
+        state.isAnimating = false;
+        // check for win/lose
+        checkGameEnd();
+        emit();
+        return;
+      }
+      // score: simple +10 per cell
+      state.score += clearPos.length * 10;
+      // clear
+      clearPos.forEach(([r,c]) => state.grid[r][c] = 0);
+      Sound.play && Sound.play('pop');
+      emit();
+
+      // collapse + refill
+      setTimeout(function(){
+        refillGrid(state.grid);
+        emit();
+        // loop again after a short delay
+        setTimeout(cascadeStep, 220);
+      }, 160);
+    }, 160);
+
+    return true;
   }
 
-  function start(newLevel=1){
-    level = Number(newLevel) || 1;
-    score = 0;
-    moves = 30;
-    target = 600 + (level-1)*200;
-    initGrid();
-    // prevent any existing immediate matches by resolving once
-    setTimeout(()=> resolveLoop(), 60);
-    onChange(getState());
-    return getState();
+  function checkGameEnd(){
+    if(state.score >= state.target){
+      state.status = 'won';
+      Storage.unlock(state.level+1);
+      Storage.setBest(state.level, state.score);
+    } else if(state.moves <= 0){
+      state.status = 'lost';
+    } else {
+      state.status = 'playing';
+    }
   }
 
-  function onUpdate(cb){ onChange = cb || (()=>{}); }
+  function onUpdate(fn){ listeners.push(fn); }
+
+  function getMeta(){ return {ROWS, COLS, TYPES}; }
 
   return {
-    ROWS, COLS, CANDY_TYPES,
-    start, trySwap, onUpdate, getState
+    ROWS: ROWS,
+    COLS: COLS,
+    start, getState, trySwap, onUpdate, getMeta
   };
 })();
-
-window.GameCore = GameCore;
