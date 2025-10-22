@@ -1,23 +1,22 @@
-// js/game.js
-// UI + swipe/drag + cascade animations + multi-page friendly (no SPA Nav)
+// js/game.js - UI + pointer/touch handlers + animations + cascade/refill
+// Requires: storage.js and game-core.js to be loaded first.
 
 const Game = (function(){
-  // level meta thresholds (customize)
   const LEVEL_META = {
     1: { target: 600, star2: 1000, star3: 1600 },
     2: { target: 800, star2: 1400, star3: 2000 },
-    3: { target: 1000, star2: 1700, star3: 2500 },
     default: { target: 1200, star2: 2200, star3: 3200 }
   };
 
+  // state
   let grid = [];
   let level = 1;
   let score = 0;
   let moves = 30;
   let selected = null;
-  let dragState = null; // pointer drag state
+  let dragState = null;
 
-  // DOM refs (must exist in game.html)
+  // DOM refs
   const boardEl = document.getElementById('gameGrid');
   const scoreEl = document.getElementById('score');
   const movesEl = document.getElementById('moves');
@@ -27,7 +26,7 @@ const Game = (function(){
 
   function getMeta(l){ return LEVEL_META[l] || LEVEL_META.default; }
 
-  // render board with image tiles
+  /* ---------- render ---------- */
   function render(){
     if(!boardEl) return;
     boardEl.innerHTML = '';
@@ -39,41 +38,47 @@ const Game = (function(){
       const img = document.createElement('img');
       img.src = `images/candy${(color % GameCore.COLORS) + 1}.png`;
       img.alt = 'candy';
+      img.draggable = false;
       cell.appendChild(img);
 
-      // pointer events for dragging
+      // pointer handlers
       cell.addEventListener('pointerdown', onPointerDown);
       cell.addEventListener('pointermove', onPointerMove);
       cell.addEventListener('pointerup', onPointerUp);
       cell.addEventListener('pointercancel', onPointerCancel);
 
-      // click fallback selection
+      // touch fallback
+      cell.addEventListener('touchstart', onTouchStart, { passive: false });
+      cell.addEventListener('touchmove', onTouchMove, { passive: false });
+      cell.addEventListener('touchend', onTouchEnd, { passive: false });
+
+      // click fallback
       cell.addEventListener('click', onCellClick);
 
-      if(selected === i) cell.style.outline = '4px solid rgba(255,255,255,0.28)';
+      if(selected === i) cell.classList.add('selected');
+
       boardEl.appendChild(cell);
     });
 
     if(scoreEl) scoreEl.textContent = score;
     if(movesEl) movesEl.textContent = moves;
     if(targetEl) targetEl.textContent = getMeta(level).target;
-    updateStarsUI();
     if(levelTitle) levelTitle.textContent = `Level ${level}`;
+    updateStarsUI();
   }
 
   function updateStarsUI(){
     if(!starsEl) return;
     const meta = getMeta(level);
-    const starEls = Array.from(starsEl.querySelectorAll('.star'));
-    starEls.forEach(s => s.classList.remove('on'));
-    if(score >= meta.target) starEls[0] && starEls[0].classList.add('on');
-    if(score >= meta.star2)  starEls[1] && starEls[1].classList.add('on');
-    if(score >= meta.star3)  starEls[2] && starEls[2].classList.add('on');
+    const starEls = starsEl.querySelectorAll('.star');
+    starEls.forEach((s,i) => {
+      s.classList.toggle('on', i===0 ? score >= meta.target : i===1 ? score >= meta.star2 : score >= meta.star3);
+    });
   }
 
-  // click fallback
+  /* ---------- click fallback ---------- */
   function onCellClick(e){
-    if(dragState && dragState.dragging) return; // ignore click during drag
+    if(dragState && dragState.dragging) return;
     const idx = Number(e.currentTarget.dataset.index);
     if(selected === null){ selected = idx; render(); return; }
     if(selected === idx){ selected = null; render(); return; }
@@ -81,120 +86,135 @@ const Game = (function(){
     attemptSwap(selected, idx);
   }
 
-  // attempt swap: check validity then animate & process cascade
+  /* ---------- swap attempt + cascade flow ---------- */
   async function attemptSwap(a,b){
-    const matches = GameCore.trySwapAndFindMatches(grid, a, b);
-    if(matches.length === 0){
+    const possible = GameCore.trySwapAndFindMatches(grid, a, b);
+    if(!possible || possible.length === 0){
+      // invalid swap — animate a small shake/scale by doing transient transform
       await animateSwap(a,b,true);
       selected = null;
       render();
       return;
     }
+
     await animateSwap(a,b,false);
     GameCore.swap(grid, a, b);
     moves = Math.max(0, moves - 1);
     await processCascadeWithAnimations();
     selected = null;
     render();
-    checkGameEnd();
+    checkEndConditions();
   }
 
-  // visual swap animation using clones
+  /* ---------- visual swap (cloned tiles) ---------- */
   function animateSwap(a,b,revert){
     return new Promise(resolve => {
       const elA = boardEl.querySelector(`[data-index="${a}"]`);
       const elB = boardEl.querySelector(`[data-index="${b}"]`);
       if(!elA || !elB){ resolve(); return; }
-      const rA = elA.getBoundingClientRect(), rB = elB.getBoundingClientRect();
-      const cloneA = elA.cloneNode(true), cloneB = elB.cloneNode(true);
+
+      const rA = elA.getBoundingClientRect();
+      const rB = elB.getBoundingClientRect();
+
+      const cloneA = elA.cloneNode(true);
+      const cloneB = elB.cloneNode(true);
+      cloneA.classList.add('dragging-clone');
+      cloneB.classList.add('dragging-clone');
+
       [cloneA, cloneB].forEach((cl, i) => {
         cl.style.position = 'fixed';
-        cl.style.left = (i === 0 ? rA.left : rB.left) + 'px';
-        cl.style.top  = (i === 0 ? rA.top  : rB.top)  + 'px';
+        cl.style.left = (i===0 ? rA.left : rB.left) + 'px';
+        cl.style.top  = (i===0 ? rA.top  : rB.top)  + 'px';
         cl.style.width = rA.width + 'px';
         cl.style.height = rA.height + 'px';
+        cl.style.margin = 0;
         cl.style.zIndex = 9999;
         document.body.appendChild(cl);
       });
-      elA.style.visibility = 'hidden'; elB.style.visibility = 'hidden';
+
+      elA.style.visibility = 'hidden';
+      elB.style.visibility = 'hidden';
+
       const dx = rB.left - rA.left, dy = rB.top - rA.top;
-      cloneA.style.transition = 'transform 220ms ease'; cloneB.style.transition = 'transform 220ms ease';
-      cloneA.style.transform = `translate(${dx}px, ${dy}px)`; cloneB.style.transform = `translate(${-dx}px, ${-dy}px)`;
-      setTimeout(()=>{
+      requestAnimationFrame(() => {
+        cloneA.style.transition = 'transform 220ms ease';
+        cloneB.style.transition = 'transform 220ms ease';
+        cloneA.style.transform = `translate(${dx}px, ${dy}px)`;
+        cloneB.style.transform = `translate(${-dx}px, ${-dy}px)`;
+      });
+
+      setTimeout(() => {
         cloneA.remove(); cloneB.remove();
-        elA.style.visibility = ''; elB.style.visibility = '';
+        elA.style.visibility = '';
+        elB.style.visibility = '';
         if(revert){
-          elA.style.transform = 'scale(.96)'; elB.style.transform = 'scale(.96)';
-          setTimeout(()=>{ elA.style.transform = ''; elB.style.transform = ''; resolve(); }, 140);
-        } else resolve();
-      }, 280);
+          elA.style.transform = 'scale(.96)';
+          elB.style.transform = 'scale(.96)';
+          setTimeout(()=>{ elA.style.transform=''; elB.style.transform=''; resolve(); }, 140);
+        } else {
+          resolve();
+        }
+      }, 260);
     });
   }
 
-  // process cascades with animations: fade matched, collapse & refill, drop-in new tiles
+  /* ---------- cascade: find matches -> animate fade -> collapse -> refill -> repeat ---------- */
   async function processCascadeWithAnimations(){
     while(true){
       const matches = GameCore.findMatches(grid);
-      if(matches.length === 0) break;
+      if(!matches || matches.length === 0) break;
 
-      // animate matched tiles fade-out
+      // add fade class to matched DOM nodes
       matches.forEach(i => {
         const el = boardEl.querySelector(`[data-index="${i}"]`);
         if(el) el.classList.add('fade-out');
       });
 
-      // small delay for fade
+      // wait fade
       await wait(180);
 
-      // collapse & refill (core)
-      const res = GameCore.collapseAndRefill(grid, matches);
-      grid = res.grid;
+      // collapse & refill
+      const result = GameCore.collapseAndRefill(grid, matches);
+      grid = result.grid;
 
-      // rerender and animate new tiles drop-in
+      // rerender and animate drop-in
       render();
-      const allCells = Array.from(boardEl.querySelectorAll('.cell'));
-      allCells.forEach(c => c.classList.add('drop-in'));
-      // next frame add show to trigger CSS transition
+      const cells = Array.from(boardEl.querySelectorAll('.cell'));
+      cells.forEach(c => c.classList.add('drop-in'));
+      // second frame to trigger transition
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => allCells.forEach(c => c.classList.add('show')));
+        requestAnimationFrame(() => cells.forEach(c => c.classList.add('show')));
       });
 
-      // wait for drop animation to finish
-      await wait(340);
+      await wait(360);
       // cleanup
-      allCells.forEach(c => c.classList.remove('drop-in','show'));
+      cells.forEach(c => c.classList.remove('drop-in','show','fade-out'));
 
-      // scoring (simple)
-      const base = 60;
-      score += matches.length * base;
+      // scoring simple formula
+      score += matches.length * 60;
+      if(scoreEl) scoreEl.textContent = score;
 
-      // small pause before checking next cascade
+      // small pause then check again
       await wait(80);
     }
   }
 
-  function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function wait(ms){ return new Promise(res => setTimeout(res, ms)); }
 
-  function checkGameEnd(){
+  /* ---------- check end ---------- */
+  function checkEndConditions(){
     const meta = getMeta(level);
     if(score >= meta.target){
-      finishLevel(true);
+      Storage.unlock(level + 1);
+      location.href = `gameover.html?level=${level}&score=${score}`;
       return;
     }
     if(moves <= 0){
-      finishLevel(score >= meta.target);
+      location.href = `gameover.html?level=${level}&score=${score}`;
     }
   }
 
-  function finishLevel(won){
-    // optionally unlock next level
-    if(won) Storage.unlock(level + 1);
-    // go to gameover page with params (multi-page flow)
-    const params = new URLSearchParams({ level, score });
-    location.href = `gameover.html?${params.toString()}`;
-  }
-
-  /* ---------- Pointer drag / swipe handlers ---------- */
+  /* ---------- Pointer / touch dragging handlers ---------- */
   function onPointerDown(e){
     e.preventDefault();
     const el = e.currentTarget;
@@ -218,17 +238,17 @@ const Game = (function(){
     const dy = e.clientY - dragState.startY;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if(!dragState.dragging && dist > 8){
-      // start visual clone
+      // start dragging visual clone
       dragState.dragging = true;
       const rect = dragState.originEl.getBoundingClientRect();
       const clone = dragState.originEl.cloneNode(true);
+      clone.classList.add('dragging-clone');
       clone.style.position = 'fixed';
       clone.style.left = rect.left + 'px';
-      clone.style.top  = rect.top + 'px';
+      clone.style.top  = rect.top  + 'px';
       clone.style.width = rect.width + 'px';
       clone.style.height = rect.height + 'px';
       clone.style.zIndex = 9999;
-      clone.classList.add('dragging');
       document.body.appendChild(clone);
       dragState.clone = clone;
       dragState.originEl.style.visibility = 'hidden';
@@ -256,7 +276,7 @@ const Game = (function(){
     if(dragState.dragging && end !== start && GameCore.areAdjacent(start, end)){
       attemptSwap(start, end);
     } else {
-      // treat as click / selection fallback
+      // treat like click fallback
       if(!dragState.dragging){
         if(selected === null){ selected = start; render(); }
         else if(selected === start){ selected = null; render(); }
@@ -274,7 +294,28 @@ const Game = (function(){
     dragState = null;
   }
 
-  /* ---------- public API ---------- */
+  /* ---------- touch fallback (maps to pointer handlers) ---------- */
+  function onTouchStart(ev){
+    if(!ev.touches || ev.touches.length === 0) return;
+    ev.preventDefault();
+    const touch = ev.touches[0];
+    const el = ev.currentTarget;
+    onPointerDown({ currentTarget: el, clientX: touch.clientX, clientY: touch.clientY, pointerId: (Date.now()%100000) });
+  }
+  function onTouchMove(ev){
+    if(!ev.touches || ev.touches.length === 0) return;
+    ev.preventDefault();
+    const touch = ev.touches[0];
+    if(!dragState) return;
+    onPointerMove({ clientX: touch.clientX, clientY: touch.clientY, pointerId: dragState.pointerId });
+  }
+  function onTouchEnd(ev){
+    ev.preventDefault();
+    if(!dragState) return;
+    onPointerUp({ pointerId: dragState.pointerId });
+  }
+
+  /* ---------- public api ---------- */
   function start(lvl){
     level = Number(lvl) || 1;
     score = 0;
@@ -282,19 +323,14 @@ const Game = (function(){
     selected = null;
     grid = GameCore.generateGrid();
     render();
-    // ensure no leftover immediate matches
-    setTimeout(()=> processCascadeWithAnimations().then(()=> render()), 80);
+    // process any accidental initial matches with animation
+    setTimeout(()=> processCascadeWithAnimations().then(()=> render()), 60);
   }
 
-  function restart(){
-    start(level);
-  }
+  function restart(){ start(level); }
+  function getState(){ return { level, score, moves }; }
 
-  function getState(){
-    return { level, score, moves };
-  }
-
-  // expose to window for external use (game.html uses Game.start etc.)
+  // expose to window (game.html starter uses Game.start)
   window.setCurrentLevel = function(n){ level = Number(n); };
 
   return { start, restart, getState };
