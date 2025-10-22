@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Map</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="container card">
+    <a class="btn back" href="index.html">← Back</a>
+    <h2>Level Map</h2>
+    <button id="resetProgress" class="btn">Reset Progress</button>
+
+    <div id="levelGrid" class="level-grid" style="margin-top:18px"></div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // inline small renderer to keep file minimal
+    (function(){
+      const TOTAL = 9;
+      const gridEl = document.getElementById('levelGrid');
+
+      function render(){
+        const prog = Storage.getProgress();
+        gridEl.innerHTML = '';
+        for(let i=1;i<=TOTAL;i++){
+          const card = document.createElement('div');
+          card.className = 'level-card' + (prog.unlocked.includes(i) ? '' : ' locked');
+          const thumb = document.createElement('div');
+          thumb.className = 'level-thumb';
+          for(let j=0;j<3;j++){
+            const img = document.createElement('img');
+            const idx = (i + j) % 5 + 1;
+            img.src = `images/candy${idx}.png`;
+            img.alt = 'candy';
+            thumb.appendChild(img);
+          }
+          const label = document.createElement('div');
+          label.className = 'label';
+          label.textContent = prog.unlocked.includes(i) ? `Level ${i} • Play` : `Level ${i} • Locked`;
+
+          card.appendChild(thumb);
+          card.appendChild(label);
+          card.addEventListener('click', ()=> {
+            if(!prog.unlocked.includes(i)){
+              alert('Level locked — complete previous levels to unlock.');
+              return;
+            }
+            // open game page with level param
+            location.href = `game.html?level=${i}`;
+          });
+          gridEl.appendChild(card);
+        }
+      }
+
+      document.getElementById('resetProgress').addEventListener('click', ()=>{
+        if(confirm('Reset all progress?')){
+          Storage.reset();
+          render();
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
