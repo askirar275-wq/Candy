@@ -1,304 +1,164 @@
-// js/game.js (updated) — swipe + gravity/refill animation (uses GameCore)
+// js/game.js — swipe + gravity refill animation
 const Game = (function(){
-  const LEVEL_META = {
-    1: { target: 600, star2:1000, star3:1600 },
-    2: { target: 800, star2:1400, star3:2000 },
-    3: { target:1000, star2:1700, star3:2500 },
-    default: { target:1200, star2:2200, star3:3200 }
-  };
+  const META={1:{target:600,star2:1000,star3:1600},default:{target:1200,star2:2200,star3:3200}};
+  let grid=[],level=1,score=0,moves=30,selected=null,dragState=null;
 
-  let grid = [];
-  let level = 1;
-  let score = 0;
-  let moves = 30;
-  let selected = null;
-  let dragState = null;
+  const boardEl=document.getElementById('gameGrid');
+  const scoreEl=document.getElementById('score');
+  const movesEl=document.getElementById('moves');
+  const targetEl=document.getElementById('target');
+  const starsEl=document.getElementById('stars');
+  const levelTitle=document.getElementById('levelTitle');
 
-  const boardEl = document.getElementById('gameGrid');
-  const scoreEl = document.getElementById('score');
-  const movesEl = document.getElementById('moves');
-  const targetEl = document.getElementById('target');
-  const starsEl = document.getElementById('stars');
-  const levelTitle = document.getElementById('levelTitle');
+  function getMeta(){return META[level]||META.default;}
 
-  function getMeta(l){ return LEVEL_META[l] || LEVEL_META.default; }
-
-  // render creates cells (image tiles) — each .cell is reused each render (clears board)
   function render(){
-    if(!boardEl) return;
-    boardEl.innerHTML = '';
+    if(!boardEl)return;
+    boardEl.innerHTML='';
     grid.forEach((color,i)=>{
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.index = i;
-      const img = document.createElement('img');
-      const imgIndex = (color % GameCore.COLORS) + 1;
-      img.src = `images/candy${imgIndex}.png`;
-      img.alt = 'candy';
-      cell.appendChild(img);
-
-      // pointer handlers (drag/swipe)
-      cell.addEventListener('pointerdown', onPointerDown);
-      cell.addEventListener('pointermove', onPointerMove);
-      cell.addEventListener('pointerup', onPointerUp);
-      cell.addEventListener('pointercancel', onPointerCancel);
-
-      // click fallback
-      cell.addEventListener('click', onCellClick);
-
-      if(selected === i) cell.style.outline = '4px solid rgba(255,255,255,0.28)';
-      boardEl.appendChild(cell);
+      const c=document.createElement('div');
+      c.className='cell'; c.dataset.index=i;
+      const img=document.createElement('img');
+      img.src=`images/candy${(color%GameCore.COLORS)+1}.png`;
+      c.appendChild(img);
+      c.addEventListener('pointerdown',onPointerDown);
+      c.addEventListener('pointermove',onPointerMove);
+      c.addEventListener('pointerup',onPointerUp);
+      c.addEventListener('pointercancel',onPointerCancel);
+      c.addEventListener('click',onCellClick);
+      if(selected===i)c.style.outline='4px solid rgba(255,255,255,0.3)';
+      boardEl.appendChild(c);
     });
-
-    // HUD
-    if(scoreEl) scoreEl.textContent = score;
-    if(movesEl) movesEl.textContent = moves;
-    if(targetEl) targetEl.textContent = getMeta(level).target;
+    scoreEl&&(scoreEl.textContent=score);
+    movesEl&&(movesEl.textContent=moves);
+    targetEl&&(targetEl.textContent=getMeta().target);
     updateStarsUI();
-    if(levelTitle) levelTitle.textContent = `स्तर ${level}`;
+    if(levelTitle)levelTitle.textContent=`स्तर ${level}`;
   }
 
   function updateStarsUI(){
-    if(!starsEl) return;
-    const meta = getMeta(level);
-    const starEls = Array.from(starsEl.querySelectorAll('.star'));
-    starEls.forEach(s=>s.classList.remove('on'));
-    if(score >= meta.target) starEls[0] && starEls[0].classList.add('on');
-    if(score >= meta.star2) starEls[1] && starEls[1].classList.add('on');
-    if(score >= meta.star3) starEls[2] && starEls[2].classList.add('on');
+    if(!starsEl)return;
+    const meta=getMeta(),st=Array.from(starsEl.querySelectorAll('.star'));
+    st.forEach(s=>s.classList.remove('on'));
+    if(score>=meta.target)st[0].classList.add('on');
+    if(score>=meta.star2)st[1].classList.add('on');
+    if(score>=meta.star3)st[2].classList.add('on');
   }
 
-  /* ---------------- Click fallback (select then swap) ---------------- */
   function onCellClick(e){
-    if(dragState && dragState.dragging) return; // ignore click if drag in progress
-    const idx = Number(e.currentTarget.dataset.index);
-    if(selected === null){ selected = idx; render(); return; }
-    if(selected === idx){ selected = null; render(); return; }
-    if(!GameCore.areAdjacent(selected, idx)){ selected = idx; render(); return; }
-    attemptSwap(selected, idx);
+    if(dragState&&dragState.dragging)return;
+    const i=+e.currentTarget.dataset.index;
+    if(selected===null){selected=i;render();return;}
+    if(selected===i){selected=null;render();return;}
+    if(!GameCore.areAdjacent(selected,i)){selected=i;render();return;}
+    attemptSwap(selected,i);
   }
 
-  /* ---------------- Swap attempt with animation ---------------- */
   async function attemptSwap(a,b){
-    const matches = GameCore.trySwapAndFindMatches(grid, a, b);
-    if(matches.length === 0){
-      await animateSwap(a,b,true);
-      selected = null; render();
-      return;
-    }
+    const m=GameCore.trySwapAndFindMatches(grid,a,b);
+    if(!m.length){await animateSwap(a,b,true);selected=null;render();return;}
     await animateSwap(a,b,false);
-    // commit swap in grid
-    GameCore.swap(grid, a, b);
-    moves = Math.max(0, moves-1);
-    await processMatchesCascadeWithAnimation();
-    selected = null;
-    render();
-    checkGameEnd();
+    GameCore.swap(grid,a,b); moves=Math.max(0,moves-1);
+    await cascadeAnimation(); selected=null;render(); checkEnd();
   }
 
-  // swap clones animation (same approach)
   function animateSwap(a,b,revert){
-    return new Promise(resolve=>{
-      const elA = boardEl.querySelector(`[data-index="${a}"]`);
-      const elB = boardEl.querySelector(`[data-index="${b}"]`);
-      if(!elA || !elB){ resolve(); return; }
-      const ra = elA.getBoundingClientRect(), rb = elB.getBoundingClientRect();
-      const cloneA = elA.cloneNode(true), cloneB = elB.cloneNode(true);
-      [cloneA,cloneB].forEach((cl,i)=>{
+    return new Promise(res=>{
+      const A=boardEl.querySelector(`[data-index="${a}"]`),B=boardEl.querySelector(`[data-index="${b}"]`);
+      if(!A||!B){res();return;}
+      const ra=A.getBoundingClientRect(),rb=B.getBoundingClientRect();
+      const cA=A.cloneNode(true),cB=B.cloneNode(true);
+      [cA,cB].forEach((cl,i)=>{
         cl.style.position='fixed';
-        cl.style.left = (i===0?ra.left:rb.left) + 'px';
-        cl.style.top  = (i===0?ra.top:rb.top) + 'px';
-        cl.style.width = ra.width + 'px';
-        cl.style.height = ra.height + 'px';
-        cl.style.zIndex = 9999;
+        cl.style.left=(i?rb.left:ra.left)+'px';
+        cl.style.top=(i?rb.top:ra.top)+'px';
+        cl.style.width=ra.width+'px';cl.style.height=ra.height+'px';cl.style.zIndex=9999;
         document.body.appendChild(cl);
       });
-      elA.style.visibility='hidden'; elB.style.visibility='hidden';
-      const dx = rb.left - ra.left, dy = rb.top - ra.top;
-      cloneA.style.transition = 'transform 200ms ease'; cloneB.style.transition = 'transform 200ms ease';
-      cloneA.style.transform = `translate(${dx}px,${dy}px)`; cloneB.style.transform = `translate(${-dx}px,${-dy}px)`;
-      setTimeout(()=> {
-        cloneA.remove(); cloneB.remove();
-        elA.style.visibility=''; elB.style.visibility='';
-        if(revert){
-          elA.style.transform='scale(.96)'; elB.style.transform='scale(.96)';
-          setTimeout(()=>{ elA.style.transform=''; elB.style.transform=''; resolve(); }, 140);
-        } else resolve();
-      }, 260);
+      A.style.visibility='hidden';B.style.visibility='hidden';
+      const dx=rb.left-ra.left,dy=rb.top-ra.top;
+      cA.style.transition='transform .2s';cB.style.transition='transform .2s';
+      cA.style.transform=`translate(${dx}px,${dy}px)`;cB.style.transform=`translate(${-dx}px,${-dy}px)`;
+      setTimeout(()=>{cA.remove();cB.remove();A.style.visibility='';B.style.visibility='';res();},230);
     });
   }
 
-  /* ------------- processMatchesCascadeWithAnimation -------------
-     This function:
-       - finds matches
-       - animates matched tiles (fade/scale)
-       - removes them, collapse & refill using GameCore.collapseAndRefill
-       - after refill, applies "drop-in" animation for new tiles
-       - loops while new matches appear (cascades)
-  -----------------------------------------------------------------*/
-  async function processMatchesCascadeWithAnimation(){
+  async function cascadeAnimation(){
     while(true){
-      const matches = GameCore.findMatches(grid);
-      if(matches.length === 0) break;
-
-      // 1) animate matched tiles: add fade-out class
-      matches.forEach(i=>{
-        const el = boardEl.querySelector(`[data-index="${i}"]`);
-        if(el){
-          el.classList.add('fade-out');
-          // optional small pop sound
-          try{ window.Sound && window.Sound.play && window.Sound.play('pop'); }catch(e){}
-        }
+      const m=GameCore.findMatches(grid);
+      if(!m.length)break;
+      m.forEach(i=>{
+        const el=boardEl.querySelector(`[data-index="${i}"]`);
+        if(el)el.classList.add('fade-out');
       });
-
-      // wait for fade animation to finish
       await wait(180);
-
-      // 2) collapse and refill grid using core
-      const result = GameCore.collapseAndRefill(grid, matches);
-      const newGrid = result.grid;
-      // set grid to newGrid now (visual update happens next)
-      grid = newGrid;
-
-      // 3) rerender board — but mark any cell that is a "new tile" with drop-in class
-      // strategy: after render, all cells are new DOM nodes. We'll add .drop-in then force reflow then add .show
+      const r=GameCore.collapseAndRefill(grid,m);
+      grid=r.grid; score+=m.length*60;
       render();
-      // add .drop-in to all cells then mark .show in next frame to animate them sliding down
-      const allCells = Array.from(boardEl.querySelectorAll('.cell'));
-      allCells.forEach(c => {
-        c.classList.add('drop-in');
-      });
-      // small timeout to ensure class applied then trigger show to animate to position
-      requestAnimationFrame(()=> {
-        requestAnimationFrame(()=> {
-          allCells.forEach(c => c.classList.add('show'));
-        });
-      });
-
-      // wait for drop animation to finish
+      const cells=Array.from(boardEl.querySelectorAll('.cell'));
+      cells.forEach(c=>c.classList.add('drop-in'));
+      requestAnimationFrame(()=>{requestAnimationFrame(()=>cells.forEach(c=>c.classList.add('show')));});
       await wait(340);
-      // cleanup drop classes so subsequent cascades animate again
-      allCells.forEach(c => { c.classList.remove('drop-in','show'); });
-
-      // 4) update score (simple scoring here: points = matchedCount * base)
-      const base = 60;
-      score += matches.length * base;
-      // HUD updated inside render loop earlier
+      cells.forEach(c=>c.classList.remove('drop-in','show'));
       render();
-      await wait(60); // small pause before next cascade
+      await wait(50);
     }
   }
 
-  function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-  function checkGameEnd(){
-    const meta = getMeta(level);
-    if(score >= meta.target){ finishLevel(true); return; }
-    if(moves <= 0){ finishLevel(score >= meta.target); }
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const checkEnd=()=>{
+    const m=getMeta();
+    if(score>=m.target){finish(true);return;}
+    if(moves<=0){finish(score>=m.target);}
+  };
+  function finish(win){
+    const f=document.getElementById('finalScore'); if(f)f.textContent=score;
+    if(win)Storage.unlock(level+1); Nav.show('gameOver');
   }
 
-  function finishLevel(won){
-    const finalScoreEl = document.getElementById('finalScore');
-    if(finalScoreEl) finalScoreEl.textContent = score;
-    if(won) Storage.unlock(level + 1);
-    Nav.show('gameOver');
+  // drag/swipe
+  function onPointerDown(e){e.preventDefault();
+    const el=e.currentTarget;const i=+el.dataset.index;
+    try{el.setPointerCapture(e.pointerId);}catch{}
+    dragState={startIdx:i,currentIdx:i,startX:e.clientX,startY:e.clientY,pointerId:e.pointerId,originEl:el,clone:null,dragging:false};
   }
-
-  /* -------------- Pointer drag handlers (swipe) -------------- */
-  function onPointerDown(e){
-    e.preventDefault();
-    const el = e.currentTarget;
-    const idx = Number(el.dataset.index);
-    try { el.setPointerCapture && el.setPointerCapture(e.pointerId); } catch(e){}
-    dragState = {
-      startIdx: idx,
-      currentIdx: idx,
-      startX: e.clientX,
-      startY: e.clientY,
-      pointerId: e.pointerId,
-      originEl: el,
-      clone: null,
-      dragging: false
-    };
-  }
-
   function onPointerMove(e){
-    if(!dragState || dragState.pointerId !== e.pointerId) return;
-    const dx = e.clientX - dragState.startX;
-    const dy = e.clientY - dragState.startY;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if(!dragState.dragging && dist > 8){
-      dragState.dragging = true;
-      const rect = dragState.originEl.getBoundingClientRect();
-      const clone = dragState.originEl.cloneNode(true);
-      clone.style.position='fixed';
-      clone.style.left = rect.left + 'px';
-      clone.style.top  = rect.top  + 'px';
-      clone.style.width = rect.width + 'px';
-      clone.style.height = rect.height + 'px';
-      clone.style.zIndex = 9999;
-      clone.classList.add('dragging');
-      document.body.appendChild(clone);
-      dragState.clone = clone;
-      dragState.originEl.style.visibility = 'hidden';
+    if(!dragState||dragState.pointerId!==e.pointerId)return;
+    const dx=e.clientX-dragState.startX,dy=e.clientY-dragState.startY;
+    if(!dragState.dragging&&Math.hypot(dx,dy)>8){
+      dragState.dragging=true;
+      const r=dragState.originEl.getBoundingClientRect(),cl=dragState.originEl.cloneNode(true);
+      Object.assign(cl.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',zIndex:9999});
+      document.body.appendChild(cl); dragState.clone=cl; dragState.originEl.style.visibility='hidden';
     }
-    if(dragState.dragging && dragState.clone){
-      dragState.clone.style.transform = `translate(${dx}px, ${dy}px)`;
-      const under = document.elementFromPoint(e.clientX, e.clientY);
-      if(!under) return;
-      const cell = under.closest && under.closest('.cell');
-      if(cell){
-        const hoverIdx = Number(cell.dataset.index);
-        if(hoverIdx !== dragState.currentIdx && GameCore.areAdjacent(dragState.startIdx, hoverIdx)){
-          dragState.currentIdx = hoverIdx;
-        }
+    if(dragState.dragging&&dragState.clone){
+      dragState.clone.style.transform=`translate(${dx}px,${dy}px)`;
+      const u=document.elementFromPoint(e.clientX,e.clientY);
+      if(!u)return;const c=u.closest('.cell');if(c){
+        const h=+c.dataset.index;
+        if(h!==dragState.currentIdx&&GameCore.areAdjacent(dragState.startIdx,h))dragState.currentIdx=h;
       }
     }
   }
-
   function onPointerUp(e){
-    if(!dragState || dragState.pointerId !== e.pointerId) return;
-    const start = dragState.startIdx;
-    const end = dragState.currentIdx;
-    if(dragState.clone){ dragState.clone.remove(); dragState.clone = null; }
-    if(dragState.originEl) dragState.originEl.style.visibility = '';
-    if(dragState.dragging && end !== start && GameCore.areAdjacent(start,end)){
-      attemptSwap(start,end);
-    } else {
-      // fallback selection behavior
-      if(!dragState.dragging){
-        if(selected === null){ selected = start; render(); }
-        else if(selected === start){ selected = null; render(); }
-        else if(GameCore.areAdjacent(selected, start)) attemptSwap(selected, start);
-        else { selected = start; render(); }
-      }
+    if(!dragState||dragState.pointerId!==e.pointerId)return;
+    const s=dragState.startIdx,eIdx=dragState.currentIdx;
+    dragState.clone&&dragState.clone.remove();
+    dragState.originEl&&(dragState.originEl.style.visibility='');
+    if(dragState.dragging&&eIdx!==s&&GameCore.areAdjacent(s,eIdx))attemptSwap(s,eIdx);
+    else if(!dragState.dragging){
+      if(selected===null)selected=s;else if(selected===s)selected=null;
+      else if(GameCore.areAdjacent(selected,s))attemptSwap(selected,s);
+      else selected=s; render();
     }
-    dragState = null;
+    dragState=null;
   }
+  function onPointerCancel(){dragState=null;}
 
-  function onPointerCancel(e){
-    if(!dragState || dragState.pointerId !== e.pointerId) return;
-    if(dragState.clone) dragState.clone.remove();
-    if(dragState.originEl) dragState.originEl.style.visibility = '';
-    dragState = null;
-  }
-
-  /* -------- public methods -------- */
   function start(lvl){
-    level = Number(lvl) || 1;
-    score = 0;
-    moves = 30;
-    selected = null;
-    grid = GameCore.generateGrid();
-    render();
-    // in case initial grid had matches (very rare), process them
-    setTimeout(()=> processMatchesCascadeWithAnimation().then(()=> render()), 80);
-    Nav.show('game');
+    level=+lvl||1;score=0;moves=30;selected=null;grid=GameCore.generateGrid();render();
+    setTimeout(()=>cascadeAnimation(),100);Nav.show('game');
   }
-  function restart(){ start(level); }
-  function getState(){ return { level, score, moves }; }
-
-  window.setCurrentLevel = function(n){ level = Number(n); };
-
-  return { start, restart, getState };
+  function restart(){start(level);}
+  return{start,restart};
 })();
