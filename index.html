@@ -1,27 +1,41 @@
-<!-- scripts (paste this near the end of game.html, before </body>) -->
-<script src="js/storage.js"></script>
-<script src="js/confetti.js"></script>
-<script src="js/game-core.js"></script>
-<script src="js/game.js"></script>
-<script>
-  // start level from query param e.g. ?level=1
-  (function(){
-    try {
-      const urlParams = new URLSearchParams(location.search);
-      const lvl = urlParams.get('level') || 1;
-      // tiny safety: wait for DOM & Game to be available
-      function startWhenReady(){
-        if(typeof Game !== 'undefined' && document.readyState === 'complete'){
-          Game.start(lvl);
-        } else if(typeof Game !== 'undefined' && document.readyState !== 'loading'){
-          Game.start(lvl);
-        } else {
-          window.addEventListener('load', ()=> { if(typeof Game !== 'undefined') Game.start(lvl); });
-        }
-      }
-      startWhenReady();
-    } catch(e){
-      console.error('Game start failed', e);
-    }
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Home</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="card center" aria-labelledby="homeTitle">
+      <h1 id="homeTitle" style="display:flex;align-items:center;gap:12px;justify-content:center;">
+        <span class="h1-icon" aria-hidden="true">🍬</span>
+        <span>Candy Match</span>
+      </h1>
+
+      <p class="lead">Match colorful candies. Pop your way through sweet levels!</p>
+
+      <div class="btn-row" style="margin-top:18px;">
+        <a class="btn" href="game.html?level=1">Play Level 1</a>
+        <a class="btn secondary" href="map.html">Level Map</a>
+      </div>
+
+      <div class="link-row" style="margin-top:14px;">
+        <a href="map.html">All Levels</a>
+        <a href="#">Settings</a>
+        <a href="#">About</a>
+      </div>
+
+      <div style="margin-top:16px;color:#666;font-size:13px;">
+        Tip: Tap a candy to select, then tap an adjacent candy — or drag to swap.
+      </div>
+    </section>
+
+    <section style="max-width:760px;margin:18px auto;text-align:center;">
+      <small style="color:#666;">Built with ❤️ — keep your images in <code>images/</code> (candy1..candy5.png)</small>
+    </section>
+  </main>
+</body>
+</html>
