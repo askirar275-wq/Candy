@@ -1,78 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Candy Match 🍬</title>
-  <link rel="stylesheet" href="css/style.css"/>
+  <meta charset="utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Home</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div class="container card center">
+    <h1>🍬 Candy Match</h1>
+    <p class="lead">Match. Pop. Smile!</p>
 
-  <!-- HOME (separate page) -->
-  <main id="home" class="screen active">
-    <div class="card">
-      <h1>🍬 Candy Match</h1>
-      <p>Match. Pop. Smile!</p>
-      <div class="btn-row">
-        <button id="playBtn">Play</button>
-        <button id="mapBtn">Map</button>
-      </div>
+    <div class="btn-row">
+      <a class="btn" href="map.html">Map</a>
+      <a class="btn" href="game.html?level=1">Play</a>
     </div>
-  </main>
 
-  <!-- MAP (separate page) -->
-  <main id="map" class="screen hidden">
-    <div class="card">
-      <button id="backHome" class="back">← Back</button>
-      <h2>Level Map</h2>
-      <button id="resetProgress">Reset Progress</button>
-      <div id="levelGrid" class="level-grid"></div>
+    <div style="margin-top:18px">
+      <a class="link-btn" href="map.html">Level Map</a>
+      <a class="link-btn" href="#">Settings</a>
+      <a class="link-btn" href="#">About</a>
     </div>
-  </main>
-
-  <!-- GAME (separate page) -->
-  <main id="game" class="screen hidden">
-    <div class="card">
-      <button id="mapBack" class="back">← Map</button>
-      <h2 id="levelTitle">Level 1</h2>
-
-      <div class="hud-row">
-        <div>Score: <span id="score">0</span></div>
-        <div>Moves: <span id="moves">30</span></div>
-        <div>Target: <span id="target">1200</span></div>
-        <div class="stars" id="stars">
-          <span class="star" data-index="1">☆</span>
-          <span class="star" data-index="2">☆</span>
-          <span class="star" data-index="3">☆</span>
-        </div>
-      </div>
-
-      <div id="gameGrid" class="board"></div>
-
-      <div style="text-align:center;margin-top:10px">
-        <button id="endBtn">End</button>
-      </div>
-    </div>
-  </main>
-
-  <!-- GAME OVER (separate page) -->
-  <main id="gameOver" class="screen hidden">
-    <div class="card">
-      <h2 id="levelComplete">Level Complete!</h2>
-      <p>Score: <span id="finalScore">0</span></p>
-      <div class="btn-row">
-        <button id="replayBtn">Replay</button>
-        <button id="nextBtn">Next</button>
-        <button id="mapReturn">Map</button>
-      </div>
-    </div>
-  </main>
-
-  <!-- scripts -->
-  <script src="js/storage.js"></script>
-  <script src="js/level-map.js"></script>
-  <script src="js/game-core.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/main.js"></script>
+  </div>
 </body>
-  </html>
+</html>
