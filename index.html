@@ -1,46 +1,30 @@
 <!doctype html>
-<html lang="hi">
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Test</title>
   <link rel="stylesheet" href="css/style.css">
+  <style> /* tiny page-only overrides so you see elements */ body{background:#f1fbfb}</style>
 </head>
 <body>
-
-  <!-- App container -->
-  <div id="app" class="app">
-
-    <!-- Header / Home -->
-    <header class="card home-card page" id="page-home">
-      <div class="app-logo">🍬</div>
-      <h1>कैंडी मैच</h1>
-      <p class="sub">Match. Pop. Smile!</p>
-
+  <div class="app">
+    <div class="card home-card page" id="page-home">
+      <h1 class="app-logo">Candy Match</h1>
       <div class="btn-row">
-        <button id="btn-play" class="btn primary">Play</button>
-        <button id="btn-map" class="btn">Map</button>
+        <button class="btn primary" id="btnPlay">Play</button>
+        <button class="btn" id="btnMap">Map</button>
       </div>
+    </div>
 
-      <nav class="links">
-        <a href="#" id="link-map">Level Map</a>
-        <a href="#" id="link-settings">Settings</a>
-        <a href="#" id="link-about">About</a>
-      </nav>
-    </header>
-
-    <!-- Level Map page -->
-    <section class="card page" id="page-map" aria-hidden="true">
-      <button class="btn small btn-back" id="map-back">← Back</button>
+    <div id="page-map" class="card page">
       <h2>Level Map</h2>
-      <button id="reset-progress" class="btn">Reset Progress</button>
+      <div class="map-grid" id="mapGrid"></div>
+      <div style="margin-top:12px;"><button class="btn" id="btnBackFromMap">← Back</button></div>
+    </div>
 
-      <div id="mapGrid" class="map-grid"></div>
-    </section>
-
-    <!-- Game page -->
-    <section class="card page" id="page-game" aria-hidden="true">
-      <button class="btn small btn-back" id="game-back">← Map</button>
+    <div id="page-game" class="card page">
+      <button class="btn" id="btnBackToMap">← Map</button>
       <h2 id="levelTitle">Level 1</h2>
 
       <div class="stats-row">
@@ -52,110 +36,46 @@
 
       <div id="stars" class="stars">☆ ☆ ☆</div>
 
-      <div id="gameGrid" class="game-grid" aria-live="polite"></div>
-
-      <div class="controls">
-        <button id="btn-end" class="btn">End</button>
+      <div class="game-grid-container">
+        <div id="gameGrid" class="game-grid"></div>
       </div>
-    </section>
 
-    <!-- Level complete / Over page -->
-    <section class="card page" id="page-over" aria-hidden="true">
-      <h2 id="overTitle">Level Complete!</h2>
-      <div id="overScore">Score: 0</div>
-      <div class="btn-row">
-        <button id="btn-replay" class="btn">Replay</button>
-        <button id="btn-next" class="btn primary">Next</button>
-        <button id="btn-to-map" class="btn">Map</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="btn" id="btnEnd">End</button>
       </div>
-    </section>
-
+    </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- SCRIPTS: order matters -->
   <script src="js/storage.js"></script>
-  <script src="js/sound.js"></script>
   <script src="js/game-core.js"></script>
   <script src="js/game.js"></script>
 
   <script>
-    // wire up UI navigation after DOM load
-    window.addEventListener('load', ()=> {
-      const showPage = (id) => {
-        document.querySelectorAll('.page').forEach(p=>{
-          p.setAttribute('aria-hidden','true');
-          p.classList.remove('active');
-        });
-        const el = document.getElementById(id);
-        if(el){ el.classList.add('active'); el.setAttribute('aria-hidden','false'); }
-      };
+    // navigation buttons (page switching)
+    function showPage(id){
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
 
-      // initial show map
-      showPage('page-map');
-
-      // buttons
-      document.getElementById('btn-play').addEventListener('click', ()=> {
-        // default start level 1
-        Game.start(1);
-      });
-      document.getElementById('btn-map').addEventListener('click', ()=> showPage('page-map'));
-      document.getElementById('link-map').addEventListener('click', ()=> showPage('page-map'));
-
-      // map back
-      document.getElementById('map-back').addEventListener('click', ()=> showPage('page-home'));
-      document.getElementById('game-back').addEventListener('click', ()=> showPage('page-map'));
-
-      // end, replay, next, map buttons
-      document.getElementById('btn-end').addEventListener('click', ()=> {
-        showPage('page-over');
-        document.getElementById('overScore').textContent = `Score: ${document.getElementById('score').textContent}`;
-      });
-      document.getElementById('btn-replay').addEventListener('click', ()=> {
-        const s = GameCore ? GameCore.getState() : {currentLevel:1};
-        Game.start(s.currentLevel);
-      });
-      document.getElementById('btn-next').addEventListener('click', ()=> {
-        const s = GameCore ? GameCore.getState() : {currentLevel:1};
-        Game.start(Number(s.currentLevel) + 1);
-      });
-      document.getElementById('btn-to-map').addEventListener('click', ()=> showPage('page-map'));
-
-      // reset progress (simple storage clear)
-      document.getElementById('reset-progress').addEventListener('click', ()=> {
-        if(confirm('Reset progress?')) {
-          Storage.clearProgress();
-          // rebuild map
-          buildLevelMap();
-          alert('Progress reset');
-        }
-      });
-
-      // build dynamic map
-      function buildLevelMap(){
-        const mapGrid = document.getElementById('mapGrid');
-        mapGrid.innerHTML = '';
-        const unlocked = Storage.getUnlocked() || [1]; // default: level1 unlocked
-        const LEVEL_COUNT = 12;
-        for(let i=1;i<=LEVEL_COUNT;i++){
-          const card = document.createElement('div');
-          card.className = 'level-card' + (unlocked.includes(i) ? '' : ' locked');
-          card.dataset.level = i;
-          card.innerHTML = `
-            <div class="thumb"><img src="images/candy${(i%5)+1}.png" alt="level ${i}"></div>
-            <div class="lvl">Level ${i}</div>
-            <div class="desc">${unlocked.includes(i)? 'Play':'Locked'}</div>
-          `;
-          card.addEventListener('click', ()=> {
-            if(!unlocked.includes(i)){ alert('Level locked'); return; }
-            Game.start(i);
-          });
-          mapGrid.appendChild(card);
-        }
-      }
-      // initial build
-      buildLevelMap();
+    document.getElementById('btnPlay').addEventListener('click', ()=> {
+      showPage('page-game');
+      const urlParams = new URLSearchParams(location.search);
+      const lvl = urlParams.get('level') || 1;
+      Game.start(lvl);
     });
-  </script>
+    document.getElementById('btnMap').addEventListener('click', ()=> showPage('page-map'));
+    document.getElementById('btnBackToMap').addEventListener('click', ()=> showPage('page-map'));
+    document.getElementById('btnBackFromMap').addEventListener('click', ()=> showPage('page-home'));
 
+    // show home at load
+    showPage('page-home');
+
+    // quick auto-start for testing (uncomment to auto open game)
+    // window.addEventListener('load', ()=>{ showPage('page-game'); Game.start(1); });
+
+    // debug: expose Game on window already done in game.js
+    console.log('startup done');
+  </script>
 </body>
-  </html>
+</html>
