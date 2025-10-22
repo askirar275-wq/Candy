@@ -150,3 +150,75 @@ nav .links a{color:var(--primary);text-decoration:none;margin-left:12px;font-wei
 
 /* footer */
 footer{opacity:0.7;padding:14px 10px;text-align:center;font-size:0.95rem}
+/* --- Game Over modal --- */
+.modal.hidden{ display:none; }
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:1200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.modal-backdrop{
+  position:absolute; inset:0;
+  background:rgba(0,0,0,0.44);
+  backdrop-filter: blur(2px);
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.modal-card{
+  position:relative;
+  width:92%;
+  max-width:520px;
+  background:#fff;
+  border-radius:14px;
+  padding:22px;
+  box-shadow:0 18px 48px rgba(10,20,40,0.18);
+  transform:translateY(14px) scale(.98);
+  opacity:0;
+  transition: transform .18s cubic-bezier(.2,.9,.3,1), opacity .18s ease;
+  pointer-events:auto;
+  text-align:center;
+}
+.modal.show .modal-backdrop{ opacity:1; }
+.modal.show .modal-card{ transform:translateY(0) scale(1); opacity:1; }
+
+/* Title & score */
+#goTitle{ font-size:1.6rem; margin-bottom:8px; }
+.go-score{ margin:6px 0 18px; font-weight:600; color:#444; }
+
+/* action buttons */
+.go-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.btn{
+  border:1px solid rgba(0,0,0,0.06);
+  background:#fff;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+}
+.btn-primary{
+  background:linear-gradient(180deg,#2ea2ff,#0d86ff);
+  color:#fff;border:none;
+  box-shadow:0 8px 20px rgba(13,134,255,0.16);
+}
+@media (max-width:520px){
+  .modal-card{ padding:18px }
+  #goTitle{ font-size:1.3rem }
+}
+
+/* --- extra recommended small game UI styles (optional) --- */
+.game-grid { touch-action: none; display:grid; gap:12px; justify-content:center; }
+.cell { width: 64px; height: 64px; transition: transform 0.18s ease, box-shadow 0.12s; }
+.cell.swapping { transform: scale(0.96); box-shadow: 0 8px 26px rgba(0,0,0,0.12); }
+.cell.invalid { animation: shake .18s; }
+@keyframes shake {
+  0%{ transform: translateX(0); }
+  25%{ transform: translateX(-8px); }
+  50%{ transform: translateX(6px); }
+  75%{ transform: translateX(-4px); }
+  100%{ transform: translateX(0); }
+}
+.cell img { transition: opacity 0.18s ease; }
