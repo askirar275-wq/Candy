@@ -1,174 +1,190 @@
-// js/game.js - input handling + UI glue for GameCore
+// game.js - UI & interactions
 (function(){
-  const gridEl = document.getElementById('gameGrid');
+  const gridContainer = document.getElementById('gameGrid');
   const scoreEl = document.getElementById('score');
   const movesEl = document.getElementById('moves');
   const targetEl = document.getElementById('target');
-  const starsEl = document.getElementById('stars');
+  const timerEl = document.getElementById('timer');
   const levelTitle = document.getElementById('levelTitle');
   const levelComplete = document.getElementById('levelComplete');
   const completeScore = document.getElementById('completeScore');
-  const btnReplay = document.getElementById('btnReplay');
-  const btnNext = document.getElementById('btnNext');
-  const btnEnd = document.getElementById('btnEnd');
-  const btnRestart = document.getElementById('btnRestart');
 
-  if(!gridEl) return;
+  let cellEls = []; // 2D array of cell elements
+  let cols = 6, rows = 6;
+  let dragging = null; // {r,c,clone,originX,originY}
+  let cellSize = 64;
 
-  const meta = GameCore.getMeta();
-  const ROWS = meta.ROWS, COLS = meta.COLS;
-
-  // adjust columns to screen width
-  function adjustGrid(){
-    const maxW = Math.min(window.innerWidth - 40, 720);
-    const gap = 12;
-    const totalGap = (COLS - 1) * gap;
-    const cell = Math.floor((maxW - totalGap) / COLS);
-    gridEl.style.gridTemplateColumns = `repeat(${COLS}, ${cell}px)`;
-    document.querySelectorAll('.game-grid .cell').forEach(c => { c.style.width = cell + 'px'; c.style.height = cell + 'px'; });
+  // helper: set grid CSS columns based on cols
+  function applyGridColumns(n){
+    gridContainer.innerHTML = '';
+    gridContainer.classList.add('game-grid');
+    gridContainer.style.gridTemplateColumns = `repeat(${n}, ${cellSize}px)`;
   }
-  window.addEventListener('resize', adjustGrid);
 
-  // render function
-  function render(state){
-    gridEl.innerHTML = '';
-    for(let r=0;r<ROWS;r++){
-      for(let c=0;c<COLS;c++){
+  // render from Game.getGrid()
+  function renderAll(){
+    const state = Game.getState();
+    rows = state.grid.length;
+    cols = state.grid[0].length;
+    applyGridColumns(cols);
+    cellEls = [];
+    for(let r=0;r<rows;r++){
+      const rowEls = [];
+      for(let c=0;c<cols;c++){
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.dataset.r = r;
-        cell.dataset.c = c;
+        cell.dataset.r = r; cell.dataset.c = c;
         const img = document.createElement('img');
-        img.src = 'images/candy' + (state.grid[r][c]) + '.png';
-        img.alt = 'candy';
-        img.draggable = false;
+        img.src = `images/candy${state.grid[r][c]}.png`;
+        img.alt = '';
         cell.appendChild(img);
-        cell.addEventListener('pointerdown', onPointerDown);
-        gridEl.appendChild(cell);
+        // touch / mouse handlers
+        addInteraction(cell);
+        gridContainer.appendChild(cell);
+        rowEls.push(cell);
+      }
+      cellEls.push(rowEls);
+    }
+    updateHUD(state);
+  }
+
+  function updateHUD(state){
+    scoreEl.textContent = state.score;
+    movesEl.textContent = state.moves;
+    targetEl.textContent = state.target;
+    levelTitle.textContent = `Level ${state.level}`;
+  }
+
+  // swap visuals between two cells with animation
+  function swapVisual(r1,c1,r2,c2,done){
+    const a = cellEls[r1][c1], b = cellEls[r2][c2];
+    if(!a || !b){ done && done(); return; }
+    // clone images
+    const imgA = a.querySelector('img'), imgB = b.querySelector('img');
+    // animate using transform
+    a.style.transition = 'transform .18s ease';
+    b.style.transition = 'transform .18s ease';
+    const dx = (c2-c1)*(cellSize+10); // plus gap
+    const dy = (r2-r1)*(cellSize+10);
+    a.style.transform = `translate(${dx}px, ${dy}px)`;
+    b.style.transform = `translate(${-dx}px, ${-dy}px)`;
+    setTimeout(()=>{
+      // swap DOM img srcs (finalize)
+      const tmp = imgA.src; imgA.src = imgB.src; imgB.src = tmp;
+      // reset transforms
+      a.style.transition = '';
+      b.style.transition = '';
+      a.style.transform = '';
+      b.style.transform = '';
+      done && done();
+    }, 190);
+  }
+
+  // Hook Game updates
+  Game.onUpdate(function(state){
+    // if grid element count matches, update images directly, else full render
+    if(cellEls.length === rows && rows === state.grid.length){
+      // update cell images
+      for(let r=0;r<state.grid.length;r++){
+        for(let c=0;c<state.grid[r].length;c++){
+          const img = cellEls[r][c].querySelector('img');
+          img.src = `images/candy${state.grid[r][c]}.png`;
+        }
+      }
+    } else {
+      renderAll();
+    }
+    updateHUD(state);
+    // show level complete if target reached
+    if(state.score >= state.target){
+      document.getElementById('completeScore').textContent = state.score;
+      document.getElementById('levelComplete').classList.remove('hidden');
+    } else {
+      document.getElementById('levelComplete').classList.add('hidden');
+    }
+  });
+
+  // helpers to convert pointer/touch coordinates to cell indices
+  function coordToCell(x,y){
+    const rect = gridContainer.getBoundingClientRect();
+    const cx = x - rect.left;
+    const cy = y - rect.top;
+    const c = Math.floor(cx / (cellSize + 10));
+    const r = Math.floor(cy / (cellSize + 10));
+    if(r<0||r>=rows||c<0||c>=cols) return null;
+    return {r,c};
+  }
+
+  // interaction: support touch swipe & mouse drag
+  function addInteraction(cell){
+    function start(ev){
+      ev.preventDefault && ev.preventDefault();
+      const touch = ev.touches ? ev.touches[0] : ev;
+      const r = parseInt(cell.dataset.r,10), c = parseInt(cell.dataset.c,10);
+      dragging = {r,c,startX: touch.clientX, startY: touch.clientY};
+    }
+    function move(ev){
+      if(!dragging) return;
+      const touch = ev.touches ? ev.touches[0] : ev;
+      const dx = touch.clientX - dragging.startX;
+      const dy = touch.clientY - dragging.startY;
+      // if move exceeds threshold, determine direction
+      const thresh = 22;
+      if(Math.abs(dx) > thresh || Math.abs(dy) > thresh){
+        let dr=0, dc=0;
+        if(Math.abs(dx) > Math.abs(dy)){
+          dc = dx > 0 ? 1 : -1;
+        } else {
+          dr = dy > 0 ? 1 : -1;
+        }
+        const r2 = dragging.r + dr, c2 = dragging.c + dc;
+        if(r2>=0 && r2<rows && c2>=0 && c2<cols){
+          // perform swap visually then call Game.userSwap
+          // disable further moves until resolved
+          const can = Game.userSwap(dragging.r, dragging.c, r2, c2);
+          // render updated grid (Game.onUpdate will run)
+          dragging = null;
+        }
       }
     }
-    adjustGrid();
-
-    if(levelTitle) levelTitle.textContent = 'Level ' + (state.level || 1);
-    if(scoreEl) scoreEl.textContent = state.score;
-    if(movesEl) movesEl.textContent = state.moves;
-    if(targetEl) targetEl.textContent = state.target;
-    if(starsEl){
-      const pct = Math.min(1, state.score / Math.max(1,state.target));
-      if(pct>=0.66) starsEl.textContent = '★ ★ ★';
-      else if(pct>=0.33) starsEl.textContent = '★ ★ ☆';
-      else starsEl.textContent = '☆ ☆ ☆';
-    }
-
-    // show complete if ended
-    if(state.status === 'won' || state.status === 'lost'){
-      completeScore.textContent = state.score;
-      levelComplete.classList.remove('hidden');
-    } else {
-      levelComplete.classList.add('hidden');
-    }
+    function end(ev){ dragging = null; }
+    // touch
+    cell.addEventListener('touchstart', start, {passive:false});
+    cell.addEventListener('touchmove', move, {passive:false});
+    cell.addEventListener('touchend', end);
+    // mouse (desktop)
+    cell.addEventListener('mousedown', (e)=>{ start(e); document.addEventListener('mousemove', move); document.addEventListener('mouseup', function up(){ end(); document.removeEventListener('mousemove', move); }, {once:true}); });
   }
 
-  GameCore.onUpdate(render);
-
-  // pointer handling (simple swipe)
-  let pstate = null;
-  const THRESH = 12;
-  function onPointerDown(e){
-    try { if(e.cancelable) e.preventDefault(); } catch(_){}
-    const el = e.currentTarget;
-    el.setPointerCapture && el.setPointerCapture(e.pointerId);
-    pstate = {
-      id: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      r: Number(el.dataset.r),
-      c: Number(el.dataset.c),
-      el
-    };
-    document.addEventListener('pointermove', onPointerMove, {passive:false});
-    document.addEventListener('pointerup', onPointerUp, {passive:false});
-    document.addEventListener('pointercancel', onPointerCancel, {passive:false});
-  }
-  function onPointerMove(e){
-    if(!pstate || e.pointerId !== pstate.id) return;
-    try { if(e.cancelable) e.preventDefault(); } catch(_){}
-    // nothing visual — simple swipe detection on up
-  }
-  function onPointerUp(e){
-    if(!pstate || e.pointerId !== pstate.id) return;
-    const dx = e.clientX - pstate.startX;
-    const dy = e.clientY - pstate.startY;
-    const adx = Math.abs(dx), ady = Math.abs(dy);
-    pstate.el.releasePointerCapture && pstate.el.releasePointerCapture(e.pointerId);
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerCancel);
-
-    if(Math.max(adx,ady) < THRESH){ pstate = null; return; }
-    let dir = null;
-    if(adx > ady) dir = dx>0 ? 'right' : 'left';
-    else dir = dy>0 ? 'down' : 'up';
-
-    let nr = pstate.r, nc = pstate.c;
-    if(dir === 'left') nc = pstate.c -1;
-    if(dir === 'right') nc = pstate.c +1;
-    if(dir === 'up') nr = pstate.r -1;
-    if(dir === 'down') nr = pstate.r +1;
-
-    if(nr<0 || nr>=ROWS || nc<0 || nc>=COLS){ pstate=null; return; }
-
-    // ask core to try swap
-    const ok = GameCore.trySwap(pstate.r,pstate.c,nr,nc);
-    if(!ok){
-      // optionally show quick invalid feedback
-      // flash cell
-      flashCells([document.querySelector(`.cell[data-r="${pstate.r}"][data-c="${pstate.c}"]`),
-                  document.querySelector(`.cell[data-r="${nr}"][data-c="${nc}"]`)]);
-      Sound.play && Sound.play('swap');
-    } else {
-      Sound.play && Sound.play('swap');
-    }
-    pstate = null;
-  }
-  function onPointerCancel(e){
-    if(!pstate || e.pointerId !== pstate.id) return;
-    try { pstate.el.releasePointerCapture && pstate.el.releasePointerCapture(e.pointerId); } catch(_){}
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerCancel);
-    pstate = null;
+  // public init & helpers
+  function init(){
+    // initial cellSize adjust based on container width
+    const containerW = Math.min(680, window.innerWidth-40);
+    // compute cellSize so grid fits nicely
+    cellSize = Math.floor((containerW - (cols-1)*10) / cols);
+    if(cellSize < 44) cellSize = 44;
+    // start UI with Game's initial state or request Game.start externally
+    renderAll();
   }
 
-  function flashCells(nodes){
-    nodes.forEach(n => { if(!n) return; n.classList.add('swap-anim'); setTimeout(()=>n.classList.remove('swap-anim'), 200); });
-  }
-
-  // UI buttons
-  btnRestart && btnRestart.addEventListener('click', ()=> {
-    const s = GameCore.getState();
-    Game.start(s.level || 1);
+  // buttons
+  document.getElementById('btnRestart').addEventListener('click', ()=> {
+    const lv = parseInt(new URLSearchParams(location.search).get('level')) || 1;
+    Game.start(lv);
   });
-  btnEnd && btnEnd.addEventListener('click', ()=> {
-    location.hash = '#map';
+  document.getElementById('btnReplay').addEventListener('click', ()=> {
+    const lv = Game.getState().level;
+    Game.start(lv);
   });
-  btnReplay && btnReplay.addEventListener('click', ()=> {
-    const s = GameCore.getState(); Game.start(s.level || 1);
-  });
-  btnNext && btnNext.addEventListener('click', ()=> {
-    const s = GameCore.getState(); Game.start((s.level||1)+1);
+  document.getElementById('btnNext').addEventListener('click', ()=> {
+    const lv = Math.min(9, Game.getState().level+1);
+    Game.start(lv);
+    // update URL param
+    const url = new URL(location);
+    url.searchParams.set('level', lv);
+    history.pushState({},'',url);
   });
 
-  // expose Game facade
-  window.Game = {
-    start(level){
-      const s = GameCore.start(level);
-      render(s);
-      setTimeout(adjustGrid,50);
-      return s;
-    }
-  };
-
-  // initial small render if state exists
-  try { const s = GameCore.getState(); if(s) render(s); } catch(e){}
+  // initialize UI
+  window.addEventListener('load', init);
 })();
