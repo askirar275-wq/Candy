@@ -1,43 +1,24 @@
-// level-map.js
-const LevelMap = {
-  total: 9,
-  render: () => {
-    const grid = document.getElementById('levelGrid');
-    const progress = Storage.getProgress();
-    grid.innerHTML = '';
-    for (let i = 1; i <= LevelMap.total; i++) {
+// js/level-map.js - render a map with clickable levels
+const LevelMap = (function(){
+  const container = document.getElementById('mapGrid');
+  function render(){
+    if(!container) return;
+    container.innerHTML = '';
+    // show 12 levels for demo
+    for(let i=1;i<=12;i++){
       const card = document.createElement('div');
-      card.className = 'level-card' + (progress.unlocked.includes(i) ? '' : ' locked');
+      card.className = 'level-card' + (Storage.isUnlocked(i) ? '' : ' locked');
+      card.innerHTML = `<div class="thumb"><img src="images/candy1.png" alt=""></div>
+        <div class="txt">Level ${i}</div>
+        <div class="sub">${Storage.isUnlocked(i) ? 'Play' : 'Locked'}</div>`;
       card.dataset.level = i;
-
-      const thumb = document.createElement('div');
-      thumb.className = 'level-thumb';
-      // show 3 candy thumbnails (cycle images)
-      for(let j=0;j<3;j++){
-        const img = document.createElement('img');
-        const idx = (i + j) % 5 + 1; // 1..5
-        img.src = `images/candy${idx}.png`;
-        img.alt = 'candy';
-        thumb.appendChild(img);
-      }
-
-      const label = document.createElement('div');
-      label.className = 'label';
-      label.textContent = progress.unlocked.includes(i) ? `Level ${i} • Play` : `Level ${i} • Locked`;
-
-      card.appendChild(thumb);
-      card.appendChild(label);
-
-      card.addEventListener('click', () => {
-        if (!progress.unlocked.includes(i)){
-          alert('Level locked — complete previous levels to unlock.');
-          return;
-        }
-        // start level
-        Game.start(i);
+      card.addEventListener('click', (e)=>{
+        const lvl = Number(card.dataset.level);
+        if(!Storage.isUnlocked(lvl)){ alert('Level locked — complete previous levels to unlock'); return; }
+        location.hash = '#game?level=' + lvl;
       });
-
-      grid.appendChild(card);
+      container.appendChild(card);
     }
   }
-};
+  return { render };
+})();
