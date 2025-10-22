@@ -6,6 +6,135 @@
   <title>Candy Match — Game Play</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
+  <!-- ===== Eruda + Sound debug helper (paste before </body>) ===== -->
+<!-- 1) load eruda -->
+<script>
+  (function(){
+    // load eruda script
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+    s.onload = function(){
+      try {
+        eruda.init();
+        console.log('[Eruda] initialized');
+        // open console automatically (comment out if not wanted)
+        eruda.show();
+      } catch(e){
+        console.warn('[Eruda] init failed', e);
+      }
+    };
+    s.onerror = function(e){
+      console.error('[Eruda] failed to load', e);
+    };
+    document.head.appendChild(s);
+  })();
+</script>
+
+<!-- 2) debug bridge to Sound object and audio resources -->
+<script>
+  (function(){
+    // small helper to wait until Sound object exists
+    function whenSoundReady(cb){
+      var tries = 0;
+      var t = setInterval(function(){
+        tries++;
+        if(window.Sound){
+          clearInterval(t);
+          cb(null, window.Sound);
+        } else if(tries > 100){
+          clearInterval(t);
+          cb(new Error('Sound not found'));
+        }
+      }, 100);
+    }
+
+    whenSoundReady(function(err, Sound){
+      if(err){
+        console.warn('[SoundDebug] Sound object not found. Ensure js/sound.js is loaded.');
+        return;
+      }
+      console.log('[SoundDebug] Sound object found. muted=', Sound.isMuted && Sound.isMuted());
+
+      // show sound status
+      try { console.log('[SoundDebug] Sound.isMuted() =>', Sound.isMuted()); } catch(e){}
+
+      // instrument preloaded audio elements inside Sound (if audio map exists)
+      try {
+        // try accessing internal audio objects — best-effort (depends on implementation)
+        if(window.Sound && window.Sound._debugExposeAudioElements){
+          // user may have exposed them earlier
+        }
+      } catch(e){}
+
+      // If Sound has an internal "audio" map (like earlier implementation), hook events
+      try {
+        // inspect Sound internals (best-effort)
+        const audMap = (function(){
+          // try common property names
+          return window.Sound && (window.Sound.__audio || window.Sound._audio || window.Sound.audio || window.Sound._audios);
+        })();
+        if(audMap){
+          console.log('[SoundDebug] internal audio map found:', audMap);
+          Object.keys(audMap).forEach(function(k){
+            try {
+              var a = audMap[k];
+              // if it's a node list or object
+              if(a && a.addEventListener){
+                a.addEventListener('canplaythrough', function(){ console.log('[audio]['+k+'] canplaythrough'); });
+                a.addEventListener('error', function(ev){ console.error('[audio]['+k+'] error', ev); });
+                a.addEventListener('play', function(){ console.log('[audio]['+k+'] play'); });
+              }
+            } catch(e){}
+          });
+        } else {
+          console.log('[SoundDebug] no internal map found (implementation differs). We will still test play attempts.');
+        }
+      } catch(e){
+        console.warn('[SoundDebug] error inspecting Sound internals', e);
+      }
+
+      // global wrapper to capture play attempts and log results
+      var wrapPlay = function(name){
+        try {
+          console.log('[SoundDebug] trying Sound.play("' + name + '") ...');
+          Sound.play(name);
+        } catch(e){
+          console.error('[SoundDebug] Sound.play("' + name + '") threw', e);
+        }
+      };
+
+      // add test UI button (floating)
+      var btn = document.createElement('button');
+      btn.textContent = 'Open Console / Test Sound';
+      btn.style.position = 'fixed';
+      btn.style.right = '12px';
+      btn.style.bottom = '12px';
+      btn.style.zIndex = 2147483647;
+      btn.style.padding = '10px 14px';
+      btn.style.borderRadius = '10px';
+      btn.style.background = '#fff';
+      btn.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+      btn.style.border = 'none';
+      btn.style.fontWeight = '600';
+      btn.style.fontSize = '14px';
+      document.body.appendChild(btn);
+
+      btn.addEventListener('click', function(){
+        // show eruda (if loaded)
+        if(window.eruda) try { eruda.show(); } catch(e){}
+        // remove any muted preference (for debug)
+        try { localStorage.removeItem('prefs_sound_muted'); console.log('[SoundDebug] cleared prefs_sound_muted'); } catch(e){}
+        // try playing a sequence: swap -> pop -> bg
+        wrapPlay('swap');
+        setTimeout(()=> wrapPlay('pop'), 250);
+        setTimeout(()=> wrapPlay('bg'), 450);
+      });
+
+      console.log('[SoundDebug] debug button added. Tap it to open console & test sounds.');
+    });
+  })();
+</script>
+<!-- ===== end Eruda + Sound debug helper ===== -->
 <body>
   <div class="container card center">
     <h1 id="levelTitle">Level</h1>
