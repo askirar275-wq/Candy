@@ -2,22 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="google" content="notranslate" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match — Level Map</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .stars-mini {
+      font-size: 14px;
+      color: gold;
+      margin-top: 4px;
+      letter-spacing: 2px;
+    }
+    .locked .stars-mini { opacity: 0.4; }
+    .score-label {
+      font-size: 13px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
     <section class="card" aria-labelledby="mapTitle">
-      <a class="btn back" href="index.html" style="display:inline-block;margin-bottom:10px;">← Back</a>
-      <h2 id="mapTitle" style="margin-top:6px;">Level Map</h2>
-
-      <p class="lead" style="margin-top:6px;">Choose a level to play. Complete levels unlock the next one.</p>
+      <a class="btn back" href="index.html" style="margin-bottom:10px;">← Back</a>
+      <h2 id="mapTitle">Level Map</h2>
+      <p class="lead">Select a level to play. Complete levels to unlock more!</p>
 
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
         <button id="resetProgress" class="btn secondary" style="padding:8px 12px;">Reset Progress</button>
-        <small style="color:#666;">Progress saved in your browser (localStorage).</small>
+        <small style="color:#666;">Progress & scores saved in your browser.</small>
       </div>
 
       <div id="levelGrid" class="level-grid" style="margin-top:18px;"></div>
@@ -27,35 +38,70 @@
   <script src="js/storage.js"></script>
   <script>
     (function(){
-      const TOTAL = 9;
+      const TOTAL = 20; // total levels shown
       const gridEl = document.getElementById('levelGrid');
+
+      // Level metadata (targets etc.)
+      const LEVEL_META = {
+        1: { target: 600, star2: 1000, star3: 1600 },
+        2: { target: 800, star2: 1400, star3: 2000 },
+        default: { target: 1200, star2: 2200, star3: 3200 }
+      };
+      function getMeta(l){ return LEVEL_META[l] || LEVEL_META.default; }
+
+      function getBest(level){
+        return parseInt(localStorage.getItem('best_'+level) || '0',10);
+      }
+
+      function calcStars(level,score){
+        const meta = getMeta(level);
+        let stars = 0;
+        if(score >= meta.target) stars = 1;
+        if(score >= meta.star2) stars = 2;
+        if(score >= meta.star3) stars = 3;
+        return stars;
+      }
 
       function render(){
         const prog = Storage.getProgress();
         gridEl.innerHTML = '';
         for(let i=1;i<=TOTAL;i++){
           const card = document.createElement('div');
-          card.className = 'level-card' + (prog.unlocked.includes(i) ? '' : ' locked');
+          const unlocked = prog.unlocked.includes(i);
+          card.className = 'level-card' + (unlocked ? '' : ' locked');
 
           const thumb = document.createElement('div');
           thumb.className = 'level-thumb';
           for(let j=0;j<3;j++){
             const img = document.createElement('img');
-            img.src = `images/candy${(i+j) % 5 + 1}.png`;
+            img.src = `images/candy${(i+j)%5+1}.png`;
             img.alt = 'candy';
             thumb.appendChild(img);
           }
 
           const label = document.createElement('div');
           label.className = 'label';
-          label.textContent = prog.unlocked.includes(i) ? `Level ${i} • Play` : `Level ${i} • Locked`;
+          label.textContent = `Level ${i}` + (unlocked ? '' : ' 🔒');
+
+          const best = getBest(i);
+          const starsCount = calcStars(i,best);
+          const stars = document.createElement('div');
+          stars.className = 'stars-mini';
+          stars.innerHTML = '★'.repeat(starsCount) + '☆'.repeat(3 - starsCount);
+
+          const score = document.createElement('div');
+          score.className = 'score-label';
+          score.textContent = best > 0 ? `Best: ${best}` : (unlocked ? 'Not played yet' : '');
 
           card.appendChild(thumb);
           card.appendChild(label);
+          card.appendChild(stars);
+          card.appendChild(score);
 
+          // click
           (function(level){
             card.addEventListener('click', ()=>{
-              if(!prog.unlocked.includes(level)){
+              if(!unlocked){
                 alert('This level is locked. Complete previous levels to unlock.');
                 return;
               }
@@ -68,13 +114,15 @@
       }
 
       document.getElementById('resetProgress').addEventListener('click', ()=>{
-        if(confirm('Reset all progress?')){
+        if(confirm('Reset all progress and scores?')){
           Storage.reset();
+          for(let i=1;i<=TOTAL;i++){
+            localStorage.removeItem('best_'+i);
+          }
           render();
         }
       });
 
-      // initial render
       render();
     })();
   </script>
