@@ -1,6 +1,6 @@
-/* --- game grid & cell styling (replace/append in css/style.css) --- */
+/* --- game grid & cell styling (updated: no scale on move) --- */
 
-.card { overflow:hidden; }
+.card { overflow: hidden; }
 
 /* container to center the grid */
 .game-grid-container {
@@ -15,9 +15,10 @@
   gap: 12px;
   justify-content: center;
   padding: 8px;
-  touch-action: none; /* very important for touch swipe handling */
+  touch-action: none; /* important for touch handling */
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* cell box */
@@ -32,33 +33,42 @@
   -webkit-user-drag: none;
   position: relative;
   overflow: visible;
-  width: 64px;  /* fallback size, JS will set actual column size */
+  width: 64px;   /* fallback, JS will set final size */
   height: 64px;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  /* IMPORTANT: do NOT change transform here (no scale/translate) */
+  transform: none !important;
+  transition: box-shadow 0.12s ease; /* only shadow transitions */
 }
 
 /* candy image inside cell */
+/* fixed size so it won't grow/shrink on :active */
 .game-grid .cell img {
   width: 72%;
   height: 72%;
+  max-width: 72%;
+  max-height: 72%;
   object-fit: contain;
   pointer-events: none;
   -webkit-user-drag: none;
   display:block;
-  transition: transform 0.12s ease;
+  transform: none !important;   /* prevent transient scale */
+  transition: none !important;  /* disable transform transition */
 }
 
-/* small highlight while pressing */
+/* remove any active scaling on mobile */
 .game-grid .cell:active {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 22px rgba(10,20,40,0.12);
+  /* keep no transform; optionally small shadow for press feedback */
+  transform: none !important;
+  box-shadow: 0 9px 20px rgba(10,20,40,0.08);
 }
 
-/* when a swap happens we can temporarily scale */
-.cell.swap-anim img { transform: scale(1.06); }
+/* ensure swap-anim doesn't scale the image */
+.cell.swap-anim img {
+  transform: none !important;
+}
 
 /* small screens: scale down */
 @media (max-width: 520px) {
   .game-grid .cell { width: 54px; height: 54px; }
-  .game-grid .cell img { width: 78%; height: 78%; }
-}
+  .game-grid .cell img { width: 78%; height: 78%; max-width: 78%; max-height:78%; }
+        }
