@@ -1,224 +1,72 @@
-/* ---------- style.css (replace existing) ---------- */
-
-/* global reset */
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --card-max-width:760px;
-  --card-pad:20px;
-  --bg-accent:linear-gradient(180deg,#ffeaf2 0%,#f3fff8 100%);
-  --primary:#007aff;
-  --muted:#f7f9fb;
+/* reset and base */
+*{box-sizing:border-box}
+body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; margin:0; background: #f6fbfc; color:#111}
+a{color:#6a2b8d; text-decoration:none}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; background: linear-gradient(180deg,#ffd6eb,#fff); box-shadow:0 2px 6px rgba(0,0,0,.04);
+  position:sticky; top:0; z-index:50;
 }
+.brand{font-weight:700}
+.nav a{ margin-left:12px; color:#0b76d1; font-weight:600 }
 
-/* body / page */
-html,body{height:100%}
-body{
-  font-family:"Poppins", "Noto Sans Devanagari", Arial, sans-serif;
-  background: var(--bg-accent);
-  color:#111;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
+/* card */
+.card{ background:#fff; border-radius:14px; padding:18px; margin:18px auto; max-width:760px; box-shadow:0 8px 24px rgba(10,20,40,0.06) }
+.hero{ text-align:left }
+.row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px }
+.center{ justify-content:center }
+.btn{ padding:8px 14px; border-radius:10px; background:#fff; border:1px solid rgba(0,0,0,0.06); cursor:pointer; font-weight:600 }
+.btn.primary{ background: linear-gradient(180deg,#2ea2ff,#0d86ff); color:#fff; border:none }
 
-/* header */
-header{
-  width:100%;
-  position:sticky; top:0;
-  z-index:40;
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-nav{
-  max-width:var(--card-max-width);
-  margin:auto;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:10px var(--card-pad);
-}
-nav .logo{font-weight:700;display:flex;gap:8px;align-items:center}
-nav .links a{color:var(--primary);text-decoration:none;margin-left:12px;font-weight:600}
+/* level grid */
+.level-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:12px }
+.level-tile{ background:#fff; border-radius:10px; padding:12px; text-align:center; box-shadow:0 10px 18px rgba(10,20,40,0.06) }
 
-/* card container */
-.page{
-  width:100%;
-  display:flex;
-  justify-content:center;
-}
-.card{
-  width:100%;
-  max-width:var(--card-max-width);
-  background:#fff;
-  border-radius:18px;
-  padding:var(--card-pad);
-  margin:18px;
-  box-shadow: 0 8px 28px rgba(10,20,40,0.05);
-  overflow:hidden; /* IMPORTANT: keep grid inside */
-}
+/* stats row (play) */
+.stats-row{ display:flex; gap:12px; margin:10px 0; flex-wrap:wrap }
+.stat{ background:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 8px 20px rgba(10,20,40,0.04); font-weight:600 }
 
-/* stats row */
-.stats-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;margin:12px 0}
-.stat{background:var(--muted);padding:10px 16px;border-radius:12px;box-shadow:0 6px 18px rgba(10,20,40,0.04);min-width:110px;text-align:center;font-weight:600}
-
-/* game-grid container: keeps grid centered & prevents overflow */
-.game-grid-container{
-  width:100%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  overflow:hidden; /* hide any overflow (ensures no side extrusions) */
-  padding:8px 0;
-}
-
-/* game-grid: we'll set columns from JS; fallback: 6 columns */
+/* game area */
+.game-card{ position:relative; overflow:visible; background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.98)); }
+.game-grid-container{ display:flex; justify-content:center; padding:6px }
 .game-grid{
   display:grid;
   gap:12px;
+  /* columns set from JS dynamically for responsiveness */
   justify-content:center;
-  align-content:start;
-  grid-template-columns: repeat(6, 64px); /* fallback */
-  padding:6px;
   touch-action:none;
-  user-select:none;
-  will-change: transform;
-  /* limit max-width so grid never spills card */
-  max-width: calc(var(--cell-size, 64px) * 9 + 12px * 8); /* large safety */
-  margin: 0 auto;
 }
 
-/* cell styling */
+/* cell */
 .cell{
-  width:var(--cell-size, 64px);
-  height:var(--cell-size, 64px);
-  border-radius:12px;
-  background:#fff;
-  box-shadow: 0 6px 18px rgba(10,20,40,0.06);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  width:72px; height:72px;
+  background:#fff; border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 10px 18px rgba(10,20,40,0.06);
+  user-select:none; -webkit-user-drag:none; position:relative; overflow:visible;
   transition: transform 0.18s ease, box-shadow 0.12s;
-  position:relative;
-  overflow:visible;
 }
-
-/* on swap */
-.cell.swapping{ transform: scale(0.96); box-shadow: 0 8px 26px rgba(0,0,0,0.12); }
-
-/* invalid shake */
+.cell img{ width:76%; height:76%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; transition: transform 0.12s, opacity .12s}
+.cell.swapping{ transform: scale(.96); box-shadow:0 12px 30px rgba(0,0,0,0.12)}
 .cell.invalid{ animation:shake .18s }
-@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
-
-/* candy image */
-.cell img{
-  width:72%;
-  height:72%;
-  object-fit:contain;
-  pointer-events:none;
-  -webkit-user-drag:none;
-  transition: transform 0.12s ease, opacity 0.12s ease;
-}
 
 /* dragging clone */
-.dragging-clone{
-  position:fixed; left:0; top:0;
-  width: calc(var(--cell-size,64px) * 0.9);
-  height: calc(var(--cell-size,64px) * 0.9);
-  pointer-events:none;
-  z-index:9999;
-  transform: translate(-50%,-50%);
-  transition: transform 0.06s linear;
-}
+.dragging-clone{ position:fixed; z-index:9999; width:56px; height:56px; transform:translate(-50%,-50%); pointer-events:none; transition: transform 0.06s linear }
 
-/* responsive tweaks */
-@media (max-width: 820px){
-  .game-grid{ gap:10px }
-  :root{ --card-max-width:720px }
-}
-@media (max-width: 520px){
-  .card{ margin:10px; padding:14px }
-  .game-grid{ gap:8px }
-  :root{ --card-max-width:420px }
-  /* smaller default cells */
-  .game-grid{ grid-template-columns: repeat(6, 54px) }
-  .cell{ width:54px;height:54px }
-  .cell img{ width:78%; height:78% }
-}
+/* modal */
+.modal.hidden{ display:none }
+.modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:1200; pointer-events:none }
+.modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.44); opacity:0; transition:opacity .18s }
+.modal-card{ position:relative; width:92%; max-width:520px; background:#fff; border-radius:14px; padding:20px; transform:translateY(10px) scale(.98); opacity:0; transition:transform .18s, opacity .18s; pointer-events:auto; text-align:center }
+.modal.show .modal-backdrop{ opacity:1 }
+.modal.show .modal-card{ transform:none; opacity:1 }
 
-/* footer */
-footer{opacity:0.7;padding:14px 10px;text-align:center;font-size:0.95rem}
-/* --- Game Over modal --- */
-.modal.hidden{ display:none; }
-.modal{
-  position:fixed;
-  inset:0;
-  z-index:1200;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  pointer-events:none;
-}
-.modal-backdrop{
-  position:absolute; inset:0;
-  background:rgba(0,0,0,0.44);
-  backdrop-filter: blur(2px);
-  opacity:0;
-  transition:opacity .18s ease;
-}
-.modal-card{
-  position:relative;
-  width:92%;
-  max-width:520px;
-  background:#fff;
-  border-radius:14px;
-  padding:22px;
-  box-shadow:0 18px 48px rgba(10,20,40,0.18);
-  transform:translateY(14px) scale(.98);
-  opacity:0;
-  transition: transform .18s cubic-bezier(.2,.9,.3,1), opacity .18s ease;
-  pointer-events:auto;
-  text-align:center;
-}
-.modal.show .modal-backdrop{ opacity:1; }
-.modal.show .modal-card{ transform:translateY(0) scale(1); opacity:1; }
+/* shaking */
+@keyframes shake{ 0%{ transform:translateX(0)} 25%{transform:translateX(-8px)} 50%{transform:translateX(6px)} 75%{transform:translateX(-4px)} 100%{transform:translateX(0)} }
 
-/* Title & score */
-#goTitle{ font-size:1.6rem; margin-bottom:8px; }
-.go-score{ margin:6px 0 18px; font-weight:600; color:#444; }
-
-/* action buttons */
-.go-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
-.btn{
-  border:1px solid rgba(0,0,0,0.06);
-  background:#fff;
-  padding:10px 14px;
-  border-radius:10px;
-  cursor:pointer;
-  font-weight:600;
-}
-.btn-primary{
-  background:linear-gradient(180deg,#2ea2ff,#0d86ff);
-  color:#fff;border:none;
-  box-shadow:0 8px 20px rgba(13,134,255,0.16);
-}
+/* small screens */
 @media (max-width:520px){
-  .modal-card{ padding:18px }
-  #goTitle{ font-size:1.3rem }
-}
-
-/* --- extra recommended small game UI styles (optional) --- */
-.game-grid { touch-action: none; display:grid; gap:12px; justify-content:center; }
-.cell { width: 64px; height: 64px; transition: transform 0.18s ease, box-shadow 0.12s; }
-.cell.swapping { transform: scale(0.96); box-shadow: 0 8px 26px rgba(0,0,0,0.12); }
-.cell.invalid { animation: shake .18s; }
-@keyframes shake {
-  0%{ transform: translateX(0); }
-  25%{ transform: translateX(-8px); }
-  50%{ transform: translateX(6px); }
-  75%{ transform: translateX(-4px); }
-  100%{ transform: translateX(0); }
-}
-.cell img { transition: opacity 0.18s ease; }
+  .cell{ width:56px; height:56px }
+  .cell img{ width:80%; height:80% }
+  .game-grid{ gap:10px }
+  }
