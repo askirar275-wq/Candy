@@ -1,189 +1,189 @@
-// js/game-core.js
-// Match-3 core with support for special candies
+// js/game-core.js (updated with specials, obstacles, color-bomb support, timed levels)
 const GameCore = (function(){
-  const W = 5;
-  const H = 6;
-  const SIZE = W * H;
-  const COLORS = 5; // candy types: 0..4
+  const ROWS = 7, COLS = 7;
+  const COLORS = 6; // 0..5
+  // obstacle types: { type:'ice'|'choco', hits: n } stored in tile.o
+  function randColor(){ return Math.floor(Math.random()*COLORS); }
+  function index(r,c){ return r*COLS + c; }
+  function coords(i){ return { r: Math.floor(i/COLS), c: i%COLS }; }
+  function inBounds(r,c){ return r>=0 && c>=0 && r<ROWS && c<COLS; }
 
-  function randColor(){ return Math.floor(Math.random() * COLORS); }
-  function idx(r,c){ return r * W + c; }
-  function rc(i){ return [Math.floor(i / W), i % W]; }
-
-  // create tile object
-  function tile(color=null, special=null){
-    return { c: color===null ? randColor() : color, s: special || null };
+  // create random tile; optionally sometimes include obstacles (for higher levels)
+  function makeTile(opts){
+    opts = opts || {};
+    const t = { c: randColor(), s: null, o: null };
+    if(opts.obstacle){
+      // obstacle example: ice (needs 1 match to break), choco needs 2
+      if(Math.random() < 0.12) t.o = { type:'ice', hits:1 };
+      else if(Math.random() < 0.08) t.o = { type:'choco', hits:2 };
+    }
+    return t;
   }
 
-  // generate grid without initial matches
-  function generateGrid(){
-    const g = new Array(SIZE);
-    for(let i=0;i<SIZE;i++) g[i] = tile();
-    // remove accidental initial matches by reassigning single tiles
-    for(let i=0;i<SIZE;i++){
-      let guard=0;
-      while(hasMatchAt(g, i) && guard < 30){
-        g[i].c = randColor();
-        g[i].s = null;
-        guard++;
-      }
+  function generateGrid(opts){
+    opts = opts || {};
+    const g = new Array(ROWS*COLS);
+    for(let i=0;i<g.length;i++) g[i] = makeTile(opts);
+    // remove initial matches
+    while(true){
+      const m = findMatchesWithSpecials(g);
+      if(!m.removed || m.removed.length===0) break;
+      for(const idx of m.removed) g[idx].c = randColor();
     }
     return g;
   }
 
   function areAdjacent(a,b){
-    const [ra,ca] = rc(a), [rb,cb] = rc(b);
-    return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1);
+    const A = coords(a), B = coords(b);
+    const dr = Math.abs(A.r - B.r), dc = Math.abs(A.c - B.c);
+    return (dr + dc) === 1;
+  }
+  function swap(g,a,b){ const t = g[a]; g[a] = g[b]; g[b] = t; }
+
+  // find groups (horizontal + vertical), returns groups as arrays
+  function collectGroups(g){
+    const groups = [];
+    // horizontal
+    for(let r=0;r<ROWS;r++){
+      let run = [ index(r,0) ];
+      for(let c=1;c<COLS;c++){
+        const cur = index(r,c), prev = index(r,c-1);
+        if(g[cur].c === g[prev].c) run.push(cur);
+        else { if(run.length>=3) groups.push(run.slice()); run=[cur]; }
+      }
+      if(run.length>=3) groups.push(run.slice());
+    }
+    // vertical
+    for(let c=0;c<COLS;c++){
+      let run = [ index(0,c) ];
+      for(let r=1;r<ROWS;r++){
+        const cur = index(r,c), prev = index(r-1,c);
+        if(g[cur].c === g[prev].c) run.push(cur);
+        else { if(run.length>=3) groups.push(run.slice()); run=[cur]; }
+      }
+      if(run.length>=3) groups.push(run.slice());
+    }
+    return groups;
   }
 
-  function swap(g,a,b){
-    const t = g[a];
-    g[a] = g[b];
-    g[b] = t;
-  }
-
-  // match detection returns object:
-  // { removed: Set(indices), specialsToCreate: [{pos, kind}] , colorBombHits: [] }
+  // produce removed indices + specials creation instructions
   function findMatchesWithSpecials(g){
-    const rem = new Set();
-    const specials = []; // create special candies where needed
-    // horizontal
-    for(let r=0;r<H;r++){
-      let start = 0;
-      for(let c=1;c<=W;c++){
-        const prev = g[idx(r, c-1)].c;
-        const cur = (c < W) ? g[idx(r,c)].c : null;
-        if(c === W || cur !== prev){
-          const len = c - start;
-          if(len >= 3){
-            for(let cc=start; cc<c; cc++) rem.add(idx(r,cc));
-            // special creation: when swapped produce special at swap end handled in UI.
-            // heuristic: if len==4 create row special at rightmost cell, if len>=5 create color bomb at middle
-            if(len === 4){
-              specials.push({ pos: idx(r, c-1), kind: 'row' });
-            } else if(len >= 5){
-              const mid = Math.floor((start + c-1)/2);
-              specials.push({ pos: idx(r, mid), kind: 'color' });
-            }
-          }
-          start = c;
+    const groups = collectGroups(g);
+    const removedSet = new Set();
+    const specials = []; // { pos, kind:'stripe'|'color' }
+
+    for(const gr of groups){
+      gr.forEach(i=> removedSet.add(i));
+      if(gr.length === 4){
+        // create stripe (decide later row/col)
+        specials.push({ pos: gr[Math.floor(gr.length/2)], kind:'stripe', length:4 });
+      } else if(gr.length >= 5){
+        specials.push({ pos: gr[Math.floor(gr.length/2)], kind:'color', length:gr.length });
+      }
+    }
+
+    // also check for L/T shapes -> if any cell appears in 2 groups crossing -> treat as color bomb
+    const countMap = {};
+    for(const gidx of groups.flat()){
+      countMap[gidx] = (countMap[gidx]||0) + 1;
+    }
+    for(const k in countMap){
+      if(countMap[k] >= 2){
+        // crossing -> color bomb
+        removedSet.add(Number(k));
+        specials.push({ pos: Number(k), kind:'color', length:5 });
+      }
+    }
+
+    return { removed: Array.from(removedSet), specials };
+  }
+
+  // decide and assign special types into grid (stripe -> row/col)
+  function assignSpecialsFromGroups(grid, specialsList){
+    specialsList.forEach(sp=>{
+      if(!grid[sp.pos]) return;
+      if(sp.kind === 'color'){ grid[sp.pos].s = 'color'; return; }
+      // stripe: check orientation by neighbors
+      const { r, c } = coords(sp.pos);
+      let h=0,v=0;
+      for(let dc=-2;dc<=2;dc++){ if(inBounds(r,c+dc) && grid[index(r,c+dc)].c === grid[sp.pos].c) h++; }
+      for(let dr=-2;dr<=2;dr++){ if(inBounds(r+dr,c) && grid[index(r+dr,c)].c === grid[sp.pos].c) v++; }
+      grid[sp.pos].s = (h >= v) ? 'row' : 'col';
+    });
+  }
+
+  // expand removal due to specials already present on grid (row/col/color) AND obstacles (we will reduce hits instead of immediate remove)
+  function expandRemovedBySpecials(grid, removedList){
+    const set = new Set(removedList);
+    // iterate removedList to also expand for specials on those cells
+    removedList.forEach(idx=>{
+      const tile = grid[idx];
+      if(!tile) return;
+      if(tile.s === 'row'){
+        const rr = coords(idx).r;
+        for(let c=0;c<COLS;c++) set.add(index(rr,c));
+      } else if(tile.s === 'col'){
+        const cc = coords(idx).c;
+        for(let r=0;r<ROWS;r++) set.add(index(r,cc));
+      } else if(tile.s === 'color'){
+        const col = tile.c;
+        for(let i=0;i<grid.length;i++) if(grid[i].c === col) set.add(i);
+      }
+    });
+    return Array.from(set);
+  }
+
+  // handle obstacles: if a tile in removed set has tile.o -> reduce hits and if hits>0 keep tile (not remove)
+  function applyObstaclesBeforeRemoval(grid, removedIndices){
+    const toRemove = [];
+    for(const idx of removedIndices){
+      const t = grid[idx];
+      if(t && t.o){
+        t.o.hits = Math.max(0, t.o.hits - 1);
+        if(t.o.hits <= 0){
+          t.o = null;
+          toRemove.push(idx);
+        } else {
+          // still obstacle remains — do not remove tile; we leave its color intact
         }
+      } else {
+        toRemove.push(idx);
       }
     }
-    // vertical
-    for(let c=0;c<W;c++){
-      let start = 0;
-      for(let r=1;r<=H;r++){
-        const prev = g[idx(r-1,c)].c;
-        const cur = (r < H) ? g[idx(r,c)].c : null;
-        if(r === H || cur !== prev){
-          const len = r - start;
-          if(len >= 3){
-            for(let rr=start; rr<r; rr++) rem.add(idx(rr,c));
-            if(len === 4){
-              specials.push({ pos: idx(r-1, c), kind: 'row' }); // vertical 4 -> create a 'row' (we will treat row as directional special)
-            } else if(len >= 5){
-              const mid = Math.floor((start + r-1)/2);
-              specials.push({ pos: idx(mid, c), kind: 'color' });
-            }
-          }
-          start = r;
-        }
+    return toRemove;
+  }
+
+  // collapse + refill (drops down and new tiles enter from top)
+  function collapseAndRefill(grid, removedIndices, opts){
+    opts = opts || {};
+    const removed = new Set(removedIndices || []);
+    for(let c=0;c<COLS;c++){
+      const stack = [];
+      for(let r=ROWS-1;r>=0;r--){
+        const idx = index(r,c);
+        if(!removed.has(idx)) stack.push(grid[idx]);
+      }
+      while(stack.length < ROWS) stack.push(makeTile(opts));
+      for(let r=ROWS-1, i=0; r>=0; r--, i++){
+        grid[index(r,c)] = stack[i];
       }
     }
-    return { removed: Array.from(rem), specials };
+    return { grid };
   }
 
-  // When special tiles are present in removed set, they create extended removal:
-  // - 'row' clears entire row (we'll clear horizontally for simplicity)
-  // - 'bomb' clears 3x3 area
-  // - 'color' (color bomb) logic handled in UI when activated (since activation depends on swap)
-  function expandRemovedBySpecials(g, removedArr){
-    const rem = new Set(removedArr);
-    const toCheck = removedArr.slice();
-    for(const i of toCheck){
-      const t = g[i];
-      if(!t) continue;
-      if(t.s === 'row'){
-        // clear its row
-        const [r,] = rc(i);
-        for(let c=0;c<W;c++) rem.add(idx(r,c));
-      } else if(t.s === 'bomb'){
-        const [r,c] = rc(i);
-        for(let rr=r-1; rr<=r+1; rr++){
-          for(let cc=c-1; cc<=c+1; cc++){
-            if(rr>=0 && rr<H && cc>=0 && cc<W) rem.add(idx(rr,cc));
-          }
-        }
-      } else if(t.s === 'color'){
-        // color bombs if matched should remove entire color — leave UI to trigger color-bomb activation
-        // here we don't auto-clear colorbomb unless it's in removed and UI didn't handle; to be safe do nothing
-      }
-    }
-    return Array.from(rem);
-  }
-
-  // collapse columns and refill with new tile objects, returns new grid and removedCount
-  function collapseAndRefill(g, removedIndices){
-    const removedSet = new Set(removedIndices);
-    const ng = new Array(SIZE);
-    for(let c=0;c<W;c++){
-      const col = [];
-      // collect bottom-up existing non removed tiles
-      for(let r=H-1; r>=0; r--){
-        const i = idx(r,c);
-        if(!removedSet.has(i)) col.push(g[i]);
-      }
-      let writeR = H - 1;
-      for(const t of col){
-        ng[idx(writeR, c)] = { c: t.c, s: t.s }; // copy object
-        writeR--;
-      }
-      // fill remaining top with new random tiles
-      while(writeR >= 0){
-        ng[idx(writeR, c)] = tile();
-        writeR--;
-      }
-    }
-    return { grid: ng, removedCount: removedIndices.length };
-  }
-
-  // convenience: check if index has match (uses color)
-  function hasMatchAt(g,i){
-    if(i<0||i>=SIZE) return false;
-    const [r,c] = rc(i);
-    const color = g[i].c;
-    // horizontal
-    let count = 1;
-    for(let cc=c-1; cc>=0 && g[idx(r,cc)].c === color; cc--) count++;
-    for(let cc=c+1; cc<W && g[idx(r,cc)].c === color; cc++) count++;
-    if(count >= 3) return true;
-    // vertical
-    count = 1;
-    for(let rr=r-1; rr>=0 && g[idx(rr,c)].c === color; rr--) count++;
-    for(let rr=r+1; rr<H && g[idx(rr,c)].c === color; rr++) count++;
-    return count >= 3;
-  }
-
-  // when swapping two indices, return matches (non-mutating copy)
-  function trySwapAndFindMatches(g, a, b){
-    if(!areAdjacent(a,b)) return [];
-    const copy = g.map(t => ({c: t.c, s: t.s}));
-    const tmp = copy[a]; copy[a] = copy[b]; copy[b] = tmp;
-    const res = findMatchesWithSpecials(copy);
-    return res.removed || [];
+  function trySwapAndFindMatches(grid, a, b){
+    const copy = grid.map(x => ({ ...x }));
+    swap(copy, a, b);
+    const m = findMatchesWithSpecials(copy);
+    // if swap hits obstacle-only positions: still consider matches only if removed non-zero
+    return (m.removed && m.removed.length) ? m.removed : [];
   }
 
   return {
-    W, H, SIZE, COLORS,
-    tile,
-    generateGrid,
-    swap,
-    areAdjacent,
-    findMatchesWithSpecials,
-    collapseAndRefill,
-    expandRemovedBySpecials,
-    hasMatchAt,
-    trySwapAndFindMatches
+    ROWS, COLS, COLORS,
+    generateGrid, swap, areAdjacent,
+    findMatchesWithSpecials, expandRemovedBySpecials, collapseAndRefill,
+    trySwapAndFindMatches, assignSpecialsFromGroups,
+    applyObstaclesBeforeRemoval
   };
 })();
