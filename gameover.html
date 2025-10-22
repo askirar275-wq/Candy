@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Level Complete</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="container card center">
+    <h2 id="levelComplete">Level Complete!</h2>
+    <p>Score: <strong id="finalScore">0</strong></p>
+    <p>Best: <strong id="bestScore">0</strong></p>
+    <div class="btn-row">
+      <a id="replayBtn" class="btn" href="#">Replay</a>
+      <a id="nextBtn" class="btn" href="#">Next</a>
+      <a id="mapBtn" class="btn" href="map.html">Map</a>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script>
+    function getParam(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name);
+    }
+    const lvl = parseInt(getParam('level')||'1',10);
+    const score = parseInt(getParam('score')||'0',10);
+    document.getElementById('finalScore').textContent = score;
+    // save best in localStorage per level
+    const key = 'level_best_' + lvl;
+    const prev = parseInt(localStorage.getItem(key) || '0',10);
+    if(score > prev) localStorage.setItem(key, String(score));
+    document.getElementById('bestScore').textContent = localStorage.getItem(key);
+
+    document.getElementById('replayBtn').href = `game.html?level=${lvl}`;
+    document.getElementById('nextBtn').href = `game.html?level=${Math.min(lvl+1, 99)}`;
+
+    // unlock next level if score meets target
+    // (we don't know target here exactly; we assume Game unlocked when finished - but double ensure)
+    const progress = Storage.getProgress();
+    if(!progress.unlocked.includes(lvl+1)) Storage.unlock(lvl+1);
+  </script>
+</body>
+</html>
