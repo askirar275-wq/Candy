@@ -1,52 +1,51 @@
 // js/game-core.js
-// Match-3 core: generate, detect matches, collapse + refill
+// match-3 core logic: generate grid, find matches, swap, collapse & refill
 
 const GameCore = (function(){
   const W = 5;
   const H = 6;
   const SIZE = W * H;
-  const COLORS = 5; // number of candy types (images candy1..candy5)
+  const COLORS = 5; // number of candy types (candy1..candy5)
 
-  function randColor(){ return Math.floor(Math.random() * COLORS); }
+  function rand() { return Math.floor(Math.random() * COLORS); }
   function idx(r,c){ return r * W + c; }
   function rc(i){ return [Math.floor(i / W), i % W]; }
 
-  // generate grid avoiding initial matches
+  // generate grid without initial matches
   function generateGrid(){
-    const grid = new Array(SIZE).fill(0).map(()=>randColor());
+    const g = new Array(SIZE).fill(0).map(() => rand());
     for(let i=0;i<SIZE;i++){
-      let guard = 0;
-      while(hasMatchAt(grid, i) && guard < 20){
-        grid[i] = randColor();
+      let guard=0;
+      while(hasMatchAt(g, i) && guard < 30){
+        g[i] = rand();
         guard++;
       }
     }
-    return grid;
+    return g;
   }
 
-  function swap(grid, a, b){
-    const t = grid[a]; grid[a] = grid[b]; grid[b] = t;
-  }
+  // swap in place
+  function swap(g,a,b){ const t=g[a]; g[a]=g[b]; g[b]=t; }
 
+  // adjacency
   function areAdjacent(a,b){
-    const [ra,ca] = rc(a);
-    const [rb,cb] = rc(b);
+    const [ra,ca] = rc(a), [rb,cb] = rc(b);
     return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1);
   }
 
-  // find all indices that are part of horizontal or vertical runs of length >= 3
-  function findMatches(grid){
-    const remove = new Set();
+  // detect all match indices (runs >=3 horizontally or vertically)
+  function findMatches(g){
+    const rem = new Set();
     // horizontal
     for(let r=0;r<H;r++){
       let start = 0;
       for(let c=1;c<=W;c++){
-        const prev = grid[idx(r, c-1)];
-        const cur  = (c < W) ? grid[idx(r, c)] : null;
+        const prev = g[idx(r, c-1)];
+        const cur = (c < W) ? g[idx(r,c)] : null;
         if(c === W || cur !== prev){
           const len = c - start;
           if(len >= 3){
-            for(let cc = start; cc < c; cc++) remove.add(idx(r, cc));
+            for(let cc=start; cc<c; cc++) rem.add(idx(r,cc));
           }
           start = c;
         }
@@ -56,68 +55,68 @@ const GameCore = (function(){
     for(let c=0;c<W;c++){
       let start = 0;
       for(let r=1;r<=H;r++){
-        const prev = grid[idx(r-1, c)];
-        const cur  = (r < H) ? grid[idx(r, c)] : null;
+        const prev = g[idx(r-1,c)];
+        const cur = (r < H) ? g[idx(r,c)] : null;
         if(r === H || cur !== prev){
           const len = r - start;
           if(len >= 3){
-            for(let rr = start; rr < r; rr++) remove.add(idx(rr, c));
+            for(let rr=start; rr<r; rr++) rem.add(idx(rr,c));
           }
           start = r;
         }
       }
     }
-    return Array.from(remove);
+    return Array.from(rem);
   }
 
-  function hasMatchAt(grid, i){
+  function hasMatchAt(g,i){
     if(i < 0 || i >= SIZE) return false;
     const [r,c] = rc(i);
-    const color = grid[i];
+    const color = g[i];
     // horizontal
     let count = 1;
-    for(let cc = c-1; cc >= 0 && grid[idx(r,cc)] === color; cc--) count++;
-    for(let cc = c+1; cc < W && grid[idx(r,cc)] === color; cc++) count++;
+    for(let cc=c-1; cc>=0 && g[idx(r,cc)] === color; cc--) count++;
+    for(let cc=c+1; cc<W && g[idx(r,cc)] === color; cc++) count++;
     if(count >= 3) return true;
     // vertical
     count = 1;
-    for(let rr = r-1; rr >= 0 && grid[idx(rr,c)] === color; rr--) count++;
-    for(let rr = r+1; rr < H && grid[idx(rr,c)] === color; rr++) count++;
+    for(let rr=r-1; rr>=0 && g[idx(rr,c)] === color; rr--) count++;
+    for(let rr=r+1; rr<H && g[idx(rr,c)] === color; rr++) count++;
     return count >= 3;
   }
 
-  // remove indices and collapse columns, refill top with random colors
-  // returns { grid: newGrid, removedCount }
-  function collapseAndRefill(grid, removedIndices){
+  // collapse columns and refill top with random colors
+  // removedIndices: array of indices to remove
+  function collapseAndRefill(g, removedIndices){
     const removed = new Set(removedIndices);
-    const newGrid = new Array(SIZE).fill(-1);
-    for(let c = 0; c < W; c++){
+    const ng = new Array(SIZE).fill(-1);
+    for(let c=0;c<W;c++){
       const col = [];
-      // collect not-removed values bottom-up
-      for(let r = H - 1; r >= 0; r--){
+      // collect existing (bottom-up)
+      for(let r=H-1; r>=0; r--){
         const i = idx(r,c);
-        if(!removed.has(i)) col.push(grid[i]);
+        if(!removed.has(i)) col.push(g[i]);
       }
       let writeR = H - 1;
       for(const v of col){
-        newGrid[idx(writeR, c)] = v;
+        ng[idx(writeR, c)] = v;
         writeR--;
       }
-      // fill remaining top with random colors
+      // fill remaining top with random
       while(writeR >= 0){
-        newGrid[idx(writeR, c)] = randColor();
+        ng[idx(writeR, c)] = rand();
         writeR--;
       }
     }
-    return { grid: newGrid, removedCount: removedIndices.length };
+    return { grid: ng, removedCount: removedIndices.length };
   }
 
-  // try swapping a & b on a copy and return found matches (without mutating)
-  function trySwapAndFindMatches(grid, a, b){
+  // try swapping a,b on a copy and return found matches (non-mutating)
+  function trySwapAndFindMatches(g, a, b){
     if(!areAdjacent(a,b)) return [];
-    const g = grid.slice();
-    swap(g,a,b);
-    return findMatches(g);
+    const copy = g.slice();
+    swap(copy, a, b);
+    return findMatches(copy);
   }
 
   return {
