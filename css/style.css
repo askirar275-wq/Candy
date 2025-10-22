@@ -1,34 +1,122 @@
-/* basic layout */
-*{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Poppins",sans-serif;margin:0;background:linear-gradient(180deg,#fdfbfb,#eef6f8);color:#222}
-.screen{display:none;padding:18px;min-height:100vh}
-.screen.active{display:block}
-.card{max-width:760px;margin:14px auto;padding:18px;background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(19,34,51,0.06)}
-h1,h2{margin:6px 0 12px 0}
-.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-button{padding:10px 14px;border-radius:10px;border:none;background:#2196f3;color:#fff;font-size:16px;cursor:pointer}
-button.back{background:#7aaeea}
-button:hover{transform:translateY(-1px);filter:brightness(.98)}
-.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;justify-items:center}
-.level-card{width:140px;height:100px;border-radius:12px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(20,40,60,0.04)}
-.level-card.locked{opacity:.5}
-.level-thumb{width:120px;height:48px;display:flex;gap:6px;align-items:center;justify-content:center}
-.level-thumb img{width:28%;height:100%;object-fit:contain;border-radius:6px}
-.level .label{margin-top:8px;font-weight:600}
+/* ---------- General Layout ---------- */
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(180deg, #fdfdff, #eef7ff);
+  color: #222;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
 
-/* board styles (cells are image-based) */
-.board{margin:14px auto;display:grid;grid-template-columns:repeat(5,64px);gap:8px;width:calc(64px*5 + 8px*4);justify-content:center}
-.cell{width:64px;height:64px;border-radius:8px;overflow:hidden;touch-action:none;user-select:none;background:#eee;display:flex;align-items:center;justify-content:center}
-.cell img{width:100%;height:100%;object-fit:contain;display:block}
-.hud-row{display:flex;gap:14px;justify-content:center;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.hud-row div{background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.04)}
-.stars{font-size:20px;color:#f0c419}
-.star{margin:0 4px;opacity:.4;transition:opacity .16s,transform .12s}
-.star.on{opacity:1;transform:scale(1.05)}
-/* drag visual */
-.cell.dragging{transform:scale(1.03);box-shadow:0 10px 30px rgba(0,0,0,.14);z-index:999}
-@media (max-width:420px){
-  .board{grid-template-columns:repeat(5,56px);gap:6px;width:calc(56px*5 + 6px*4)}
-  .cell{width:56px;height:56px}
-  .level-card{width:120px;height:96px}
-                                                                 }
+h1, h2, h3 {
+  margin: 8px 0;
+}
+
+button {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background: #1976d2;
+}
+
+/* ---------- Board Grid ---------- */
+#gameGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 64px);
+  grid-gap: 6px;
+  justify-content: center;
+  margin: 16px auto;
+  width: max-content;
+}
+
+.cell {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 250ms cubic-bezier(.22,.9,.3,1), opacity 180ms linear;
+}
+
+.cell img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ---------- Animations ---------- */
+.cell.pop {
+  transform: scale(1.06);
+}
+
+.cell.fade-out {
+  transition: transform 160ms ease, opacity 160ms ease;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.cell.drop-in {
+  transform: translateY(-28px);
+  opacity: 0.01;
+}
+
+.cell.drop-in.show {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 320ms cubic-bezier(.22,.9,.3,1), opacity 220ms ease;
+}
+
+/* ---------- Stars ---------- */
+#stars {
+  margin: 10px 0;
+}
+
+.star {
+  font-size: 22px;
+  color: #ccc;
+  transition: color 0.3s ease;
+}
+
+.star.on {
+  color: gold;
+}
+
+/* ---------- Game HUD ---------- */
+#hud {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-weight: 600;
+  margin: 10px 0;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 480px) {
+  #gameGrid {
+    grid-template-columns: repeat(5, 52px);
+    grid-gap: 5px;
+  }
+
+  .cell {
+    width: 52px;
+    height: 52px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 7px 12px;
+  }
+  }
