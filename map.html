@@ -4,21 +4,28 @@
   <meta charset="utf-8" />
   <meta name="google" content="notranslate" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Map</title>
+  <title>Candy Match — Level Map</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div class="container card">
-    <a class="btn back" href="index.html">← Back</a>
-    <h2>Level Map</h2>
-    <button id="resetProgress" class="btn">Reset Progress</button>
+  <main class="container">
+    <section class="card" aria-labelledby="mapTitle">
+      <a class="btn back" href="index.html" style="display:inline-block;margin-bottom:10px;">← Back</a>
+      <h2 id="mapTitle" style="margin-top:6px;">Level Map</h2>
 
-    <div id="levelGrid" class="level-grid" style="margin-top:18px"></div>
-  </div>
+      <p class="lead" style="margin-top:6px;">Choose a level to play. Complete levels unlock the next one.</p>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+        <button id="resetProgress" class="btn secondary" style="padding:8px 12px;">Reset Progress</button>
+        <small style="color:#666;">Progress saved in your browser (localStorage).</small>
+      </div>
+
+      <div id="levelGrid" class="level-grid" style="margin-top:18px;"></div>
+    </section>
+  </main>
 
   <script src="js/storage.js"></script>
   <script>
-    // inline small renderer to keep file minimal
     (function(){
       const TOTAL = 9;
       const gridEl = document.getElementById('levelGrid');
@@ -29,29 +36,33 @@
         for(let i=1;i<=TOTAL;i++){
           const card = document.createElement('div');
           card.className = 'level-card' + (prog.unlocked.includes(i) ? '' : ' locked');
+
           const thumb = document.createElement('div');
           thumb.className = 'level-thumb';
           for(let j=0;j<3;j++){
             const img = document.createElement('img');
-            const idx = (i + j) % 5 + 1;
-            img.src = `images/candy${idx}.png`;
+            img.src = `images/candy${(i+j) % 5 + 1}.png`;
             img.alt = 'candy';
             thumb.appendChild(img);
           }
+
           const label = document.createElement('div');
           label.className = 'label';
           label.textContent = prog.unlocked.includes(i) ? `Level ${i} • Play` : `Level ${i} • Locked`;
 
           card.appendChild(thumb);
           card.appendChild(label);
-          card.addEventListener('click', ()=> {
-            if(!prog.unlocked.includes(i)){
-              alert('Level locked — complete previous levels to unlock.');
-              return;
-            }
-            // open game page with level param
-            location.href = `game.html?level=${i}`;
-          });
+
+          (function(level){
+            card.addEventListener('click', ()=>{
+              if(!prog.unlocked.includes(level)){
+                alert('This level is locked. Complete previous levels to unlock.');
+                return;
+              }
+              location.href = `game.html?level=${level}`;
+            });
+          })(i);
+
           gridEl.appendChild(card);
         }
       }
@@ -63,6 +74,7 @@
         }
       });
 
+      // initial render
       render();
     })();
   </script>
