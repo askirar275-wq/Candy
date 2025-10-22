@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Play — Candy Match</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">🍬 Candy Match</div>
+  <nav class="top-nav">
+    <a href="index.html">Home</a>
+    <a href="map.html">Map</a>
+    <a href="play.html">Play</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="card">
+    <a class="back" href="map.html">← Map</a>
+    <h1 id="levelTitle">Level 1</h1>
+
+    <div class="stats-row">
+      <div class="stat">Score: <span id="score">0</span></div>
+      <div class="stat">Moves: <span id="moves">30</span></div>
+      <div class="stat">Target: <span id="target">600</span></div>
+      <div class="stat">Timer: <span id="timer">--:--</span></div>
+    </div>
+
+    <div id="stars" class="stars">☆☆☆</div>
+
+    <div id="gameGrid" class="game-grid-container"></div>
+
+    <div class="controls">
+      <button id="btnRestart" class="btn">Restart</button>
+      <a href="map.html" class="btn">End</a>
+    </div>
+
+    <div id="levelComplete" class="card hidden">
+      <h2>Level Complete!</h2>
+      <p>Score: <span id="completeScore">0</span></p>
+      <div class="controls">
+        <button id="btnReplay" class="btn">Replay</button>
+        <button id="btnNext" class="btn">Next</button>
+        <a href="map.html" class="btn">Map</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- scripts -->
+<script src="js/storage.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/game-core.js"></script>
+<script src="js/game.js"></script>
+
+<script>
+  // start level from query param e.g. ?level=1
+  (function(){
+    try {
+      const urlParams = new URLSearchParams(location.search);
+      const lvl = parseInt(urlParams.get('level')) || 1;
+      window.addEventListener('load', ()=> {
+        if(typeof Game !== 'undefined' && typeof Game.start === 'function'){
+          Game.start(lvl);
+        } else {
+          console.error('Game object missing.');
+        }
+      });
+    } catch(e){ console.error(e); }
+  })();
+</script>
+</body>
+  </html>
