@@ -1,63 +1,216 @@
-/* basic mobile-friendly style */
-:root{
+/* =============================
+   CANDY MATCH - Full Style File
+   ============================= */
+
+/* Root Variables */
+:root {
   --bg: #f7fbfc;
   --card: #fff;
   --accent: #29a6ff;
   --muted: #777;
   --radius: 14px;
 }
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue"; background: url("../images/bg-gradient.png") center/cover no-repeat fixed, linear-gradient(#f7fbff,#f1fbfb); color:#111; -webkit-font-smoothing:antialiased}
-.app{max-width:720px;margin:8px auto;padding:12px}
-.card{background:var(--card); border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(20,30,50,0.06); margin-bottom:18px}
-.home-card{text-align:center}
-.app-logo{font-size:34px}
-h1{margin:8px 0 4px;font-size:28px}
-.sub{color:var(--muted); margin:0 0 12px}
-.btn-row{display:flex;gap:12px;justify-content:center;margin:12px 0}
-.btn{background:#fff;border:1px solid #d8e6f8;padding:10px 14px;border-radius:10px;cursor:pointer}
-.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
-.btn.small{padding:6px 10px}
-.links{margin-top:8px}
-.links a{color:var(--accent); text-decoration:underline;margin:0 8px}
 
-/* pages */
-.page{display:none}
-.page.active{display:block}
-
-/* map grid */
-.map-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-top:12px}
-.level-card{background:#fff;border-radius:12px;padding:10px;text-align:center; box-shadow:0 6px 18px rgba(10,20,40,0.04)}
-.level-card.locked{opacity:0.45;filter:grayscale(0.1)}
-.level-card .thumb img{width:80px;height:80px;object-fit:contain}
-
-/* game grid */
-.game-grid{display:grid; gap:10px; margin-top:18px; align-items:center; justify-items:center}
-.game-grid .cell{background:#fff;border-radius:10px;padding:6px; width:56px; height:56px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(10,20,40,0.04)}
-.game-grid .cell img{width:44px;height:44px;user-select:none; pointer-events:none;}
-
-/* responsive set cols */
-@media(min-width:560px){
-  .game-grid{grid-template-columns:repeat(7,56px)}
+/* Global Reset */
+* {
+  box-sizing: border-box;
 }
-@media(max-width:559px){
-  .game-grid{grid-template-columns:repeat(6,48px)}
-  .game-grid .cell{width:48px;height:48px}
-  .game-grid .cell img{width:40px;height:40px}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue";
+  background: url("../images/bg-gradient.png") center/cover no-repeat fixed,
+              linear-gradient(#f7fbff,#f1fbfb);
+  color: #111;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* fade out animation */
-.fade-out{opacity:0; transition:opacity .18s ease}
+/* App Layout */
+.app {
+  max-width: 720px;
+  margin: 8px auto;
+  padding: 12px;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(20,30,50,0.06);
+  margin-bottom: 18px;
+  overflow: hidden; /* ✅ ensure card doesn't overflow */
+}
+.home-card {
+  text-align: center;
+}
+.app-logo {
+  font-size: 34px;
+}
+h1 {
+  margin: 8px 0 4px;
+  font-size: 28px;
+}
+.sub {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
 
-/* dragging clone style */
-.dragging-clone{pointer-events:none;border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,0.12)}
+/* Buttons */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 12px 0;
+}
+.btn {
+  background: #fff;
+  border: 1px solid #d8e6f8;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.btn.small {
+  padding: 6px 10px;
+}
 
-/* HUD */
-.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-.stat{background:#fff;padding:10px;border-radius:10px;box-shadow:0 6px 18px rgba(10,20,40,0.04)}
+/* Links */
+.links {
+  margin-top: 8px;
+}
+.links a {
+  color: var(--accent);
+  text-decoration: underline;
+  margin: 0 8px;
+}
 
-/* stars */
-.stars{font-size:20px;color:#f9d64c;margin:8px 0}
+/* Pages */
+.page {
+  display: none;
+}
+.page.active {
+  display: block;
+}
 
-/* page over */
-#page-over .btn-row{justify-content:center}
+/* MAP PAGE */
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.level-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(10,20,40,0.04);
+  transition: 0.2s ease;
+}
+.level-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(10,20,40,0.08);
+}
+.level-card.locked {
+  opacity: 0.45;
+  filter: grayscale(0.3);
+  cursor: not-allowed;
+}
+.level-card .thumb img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+/* --- GAME PAGE STYLING --- */
+
+/* Game Grid Container */
+.game-grid {
+  display: grid;
+  gap: 10px;
+  justify-content: center;
+  /* grid-template-columns set dynamically in JS */
+  padding: 8px;
+  touch-action: none; /* allow swipe/touch handling */
+}
+
+/* Candy Cell */
+.game-grid .cell {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(10,20,40,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-drag: none;
+  position: relative;
+  overflow: visible;
+}
+
+/* Candy Image */
+.game-grid .cell img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Dragging Clone Effect */
+.dragging-clone {
+  position: fixed;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: transform 0.08s linear;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .game-grid .cell img { width: 80%; height: 80%; }
+}
+
+/* Ensure grid centered */
+.game-grid-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* HUD Row */
+.stats-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.stat {
+  background: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(10,20,40,0.04);
+}
+
+/* Stars */
+.stars {
+  font-size: 20px;
+  color: #f9d64c;
+  margin: 8px 0;
+  text-align: center;
+}
+
+/* Over Page Buttons */
+#page-over .btn-row {
+  justify-content: center;
+}
+
+/* Smooth transition for fade-outs */
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
