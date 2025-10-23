@@ -1,32 +1,52 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match — Home</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <header class="topbar">
+<body class="page-home">
+  <header class="app-header">
     <div class="brand">🍬 Candy Match</div>
-    <nav class="nav">
+    <nav class="top-nav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="play.html">Play</a>
+      <a href="game.html?level=1">Play</a>
     </nav>
   </header>
 
-  <main>
-    <div class="card hero">
+  <main class="container">
+    <section class="card hero">
       <h1>कैंडी मैच</h1>
-      <p>Match. Pop. Smile!</p>
-      <div class="row">
-        <a class="btn primary" href="play.html">Play</a>
+      <p class="lead">Match. Pop. Smile!</p>
+      <div class="btn-row">
+        <a class="btn primary" href="game.html?level=1">Play</a>
         <a class="btn" href="map.html">Map</a>
       </div>
-    </div>
+      <p class="links">
+        <a href="map.html">Level Map</a> ·
+        <a href="index.html#settings">Settings</a> ·
+        <a href="index.html#about">About</a>
+      </p>
+    </section>
+
+    <section id="map-preview" class="card level-preview">
+      <h2>Level Map</h2>
+      <a class="btn" href="map.html">Open Map</a>
+    </section>
+
+    <section id="about" class="card">
+      <h2>About</h2>
+      <p>Simple Candy Match demo — मोबाइल-friendly और smooth animation के साथ।</p>
+    </section>
   </main>
 
-  <footer class="footer">© Candy Match</footer>
+  <footer class="site-footer">© Candy Match</footer>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // nothing special here
+  </script>
 </body>
-</html>
+  </html>
