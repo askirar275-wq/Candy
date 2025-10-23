@@ -1,83 +1,81 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Play — Candy Match</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Candy Match — Play</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <header class="topbar">
+    <div class="brand">🍬 Candy Match</div>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="play.html">Play</a>
+    </nav>
+  </header>
 
-<header class="site-header">
-  <div class="brand">🍬 Candy Match</div>
-  <nav class="top-nav">
-    <a href="index.html">Home</a>
-    <a href="map.html">Map</a>
-    <a href="play.html">Play</a>
-  </nav>
-</header>
+  <main>
+    <div class="card game-card">
+      <a class="back" href="map.html">← Map</a>
+      <h2 id="levelTitle">Level 1</h2>
 
-<main class="container">
-  <section class="card">
-    <a class="back" href="map.html">← Map</a>
-    <h1 id="levelTitle">Level 1</h1>
+      <div class="stats-row">
+        <div class="stat">Score: <span id="score">0</span></div>
+        <div class="stat">Moves: <span id="moves">30</span></div>
+        <div class="stat">Target: <span id="target">600</span></div>
+        <div class="stat">Timer: <span id="timer">--:--</span></div>
+      </div>
 
-    <div class="stats-row">
-      <div class="stat">Score: <span id="score">0</span></div>
-      <div class="stat">Moves: <span id="moves">30</span></div>
-      <div class="stat">Target: <span id="target">600</span></div>
-    </div>
+      <div id="gridWrap" class="game-grid-container">
+        <div id="gameGrid" class="game-grid" role="application" aria-label="game grid"></div>
+      </div>
 
-    <div id="grid" class="game-grid"></div>
-
-    <div class="controls">
-      <button id="btnRestart" class="btn">Restart</button>
-      <a href="map.html" class="btn">End</a>
-    </div>
-
-    <div id="levelComplete" class="card hidden">
-      <h2>🎉 Level Complete!</h2>
-      <p>Score: <span id="completeScore">0</span></p>
-      <div class="controls">
-        <button id="btnReplay" class="btn">Replay</button>
-        <button id="btnNext" class="btn">Next</button>
-        <a href="map.html" class="btn">Map</a>
+      <div class="row center" style="margin-top:14px;">
+        <button class="btn" onclick="Game.restart()">Restart</button>
+        <button class="btn" onclick="Game.end()">End</button>
       </div>
     </div>
-  </section>
-</main>
+  </main>
 
-<footer class="site-footer">© Candy Match</footer>
+  <!-- Game Over Modal -->
+  <div id="gameOverModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="goBackdrop"></div>
+    <div class="modal-card">
+      <h3>Level <span id="go-level">1</span> Complete!</h3>
+      <p>Score: <strong id="go-score">0</strong></p>
+      <div class="go-actions">
+        <button id="go-replay" class="btn primary">Replay</button>
+        <button id="go-next" class="btn primary">Next</button>
+        <button id="go-map" class="btn">Map</button>
+      </div>
+    </div>
+  </div>
 
-<!-- scripts -->
-<script src="js/storage.js"></script>
-<script src="js/sound.js"></script>
-<script src="js/game-core.js"></script>
-<script src="js/game.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=> {
+      // start or resume level on page load
+      Game.start();
 
-<script>
-  // start level from query param e.g. ?level=1
-  (function(){
-    const urlParams = new URLSearchParams(location.search);
-    const lvl = parseInt(urlParams.get('level')) || 1;
-    window.addEventListener('load', ()=>{
-      if(window.Game && typeof Game.start==='function') Game.start(lvl);
-      document.getElementById('levelTitle').textContent = "Level " + lvl;
+      // modal buttons
+      document.getElementById('go-replay').addEventListener('click', ()=> {
+        document.getElementById('gameOverModal').classList.remove('show');
+        document.getElementById('gameOverModal').classList.add('hidden');
+        Game.restart();
+      });
+      document.getElementById('go-next').addEventListener('click', ()=> {
+        document.getElementById('gameOverModal').classList.remove('show');
+        document.getElementById('gameOverModal').classList.add('hidden');
+        Game.nextLevel();
+      });
+      document.getElementById('go-map').addEventListener('click', ()=> {
+        document.getElementById('gameOverModal').classList.remove('show');
+        document.getElementById('gameOverModal').classList.add('hidden');
+        window.location.href = 'map.html';
+      });
     });
-
-    // restart + next buttons
-    document.getElementById('btnRestart').addEventListener('click', ()=> Game.start(lvl));
-    document.getElementById('btnReplay').addEventListener('click', ()=> Game.start(lvl));
-    document.getElementById('btnNext').addEventListener('click', ()=>{
-      const next = lvl + 1;
-      Game.start(next);
-      const url = new URL(location);
-      url.searchParams.set('level', next);
-      history.replaceState({},'',url);
-      document.getElementById('levelTitle').textContent = "Level " + next;
-    });
-  })();
-</script>
-
+  </script>
 </body>
 </html>
