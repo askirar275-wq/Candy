@@ -1,238 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-  <script src="js/sound.js"></script>
+<!doctype html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Candy Match — Game Play</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Game — Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-  <!-- ===== Eruda + Sound debug helper (paste before </body>) ===== -->
-<!-- 1) load eruda -->
-<script>
-  (function(){
-    // load eruda script
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-    s.onload = function(){
-      try {
-        eruda.init();
-        console.log('[Eruda] initialized');
-        // open console automatically (comment out if not wanted)
-        eruda.show();
-      } catch(e){
-        console.warn('[Eruda] init failed', e);
-      }
-    };
-    s.onerror = function(e){
-      console.error('[Eruda] failed to load', e);
-    };
-    document.head.appendChild(s);
-  })();
-</script>
+<body class="page-game">
+  <header class="app-header">
+    <div class="brand">🍬 Candy Match</div>
+    <nav class="top-nav">
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="game.html?level=1">Play</a>
+    </nav>
+  </header>
 
-<!-- 2) debug bridge to Sound object and audio resources -->
-<script>
-  (function(){
-    // small helper to wait until Sound object exists
-    function whenSoundReady(cb){
-      var tries = 0;
-      var t = setInterval(function(){
-        tries++;
-        if(window.Sound){
-          clearInterval(t);
-          cb(null, window.Sound);
-        } else if(tries > 100){
-          clearInterval(t);
-          cb(new Error('Sound not found'));
-        }
-      }, 100);
-    }
+  <main class="container">
+    <a class="back-link" href="map.html">← Map</a>
+    <section class="card game-card">
+      <h1 id="levelTitle">Level 1</h1>
 
-    whenSoundReady(function(err, Sound){
-      if(err){
-        console.warn('[SoundDebug] Sound object not found. Ensure js/sound.js is loaded.');
-        return;
-      }
-      console.log('[SoundDebug] Sound object found. muted=', Sound.isMuted && Sound.isMuted());
+      <div class="stats-row">
+        <div class="stat">Score: <span id="score">0</span></div>
+        <div class="stat">Moves: <span id="moves">30</span></div>
+        <div class="stat">Target: <span id="target">600</span></div>
+        <div class="stat">Timer: <span id="timer">--:--</span></div>
+      </div>
 
-      // show sound status
-      try { console.log('[SoundDebug] Sound.isMuted() =>', Sound.isMuted()); } catch(e){}
+      <div class="stars" id="stars">☆ ☆ ☆</div>
 
-      // instrument preloaded audio elements inside Sound (if audio map exists)
-      try {
-        // try accessing internal audio objects — best-effort (depends on implementation)
-        if(window.Sound && window.Sound._debugExposeAudioElements){
-          // user may have exposed them earlier
-        }
-      } catch(e){}
+      <div id="gameGridContainer" class="game-grid-container">
+        <div id="gameGrid" class="game-grid" aria-hidden="false"></div>
+      </div>
 
-      // If Sound has an internal "audio" map (like earlier implementation), hook events
-      try {
-        // inspect Sound internals (best-effort)
-        const audMap = (function(){
-          // try common property names
-          return window.Sound && (window.Sound.__audio || window.Sound._audio || window.Sound.audio || window.Sound._audios);
-        })();
-        if(audMap){
-          console.log('[SoundDebug] internal audio map found:', audMap);
-          Object.keys(audMap).forEach(function(k){
-            try {
-              var a = audMap[k];
-              // if it's a node list or object
-              if(a && a.addEventListener){
-                a.addEventListener('canplaythrough', function(){ console.log('[audio]['+k+'] canplaythrough'); });
-                a.addEventListener('error', function(ev){ console.error('[audio]['+k+'] error', ev); });
-                a.addEventListener('play', function(){ console.log('[audio]['+k+'] play'); });
-              }
-            } catch(e){}
-          });
-        } else {
-          console.log('[SoundDebug] no internal map found (implementation differs). We will still test play attempts.');
-        }
-      } catch(e){
-        console.warn('[SoundDebug] error inspecting Sound internals', e);
-      }
+      <div class="controls">
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="endBtn" class="btn invert">End</button>
+        <label class="mute"><input type="checkbox" id="muteToggle"> Mute</label>
+      </div>
+    </section>
+  </main>
 
-      // global wrapper to capture play attempts and log results
-      var wrapPlay = function(name){
-        try {
-          console.log('[SoundDebug] trying Sound.play("' + name + '") ...');
-          Sound.play(name);
-        } catch(e){
-          console.error('[SoundDebug] Sound.play("' + name + '") threw', e);
-        }
-      };
+  <!-- popup area -->
+  <div id="overlay" class="overlay hidden"></div>
+  <div id="popup" class="popup hidden" role="dialog" aria-hidden="true"></div>
 
-      // add test UI button (floating)
-      var btn = document.createElement('button');
-      btn.textContent = 'Open Console / Test Sound';
-      btn.style.position = 'fixed';
-      btn.style.right = '12px';
-      btn.style.bottom = '12px';
-      btn.style.zIndex = 2147483647;
-      btn.style.padding = '10px 14px';
-      btn.style.borderRadius = '10px';
-      btn.style.background = '#fff';
-      btn.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-      btn.style.border = 'none';
-      btn.style.fontWeight = '600';
-      btn.style.fontSize = '14px';
-      document.body.appendChild(btn);
-
-      btn.addEventListener('click', function(){
-        // show eruda (if loaded)
-        if(window.eruda) try { eruda.show(); } catch(e){}
-        // remove any muted preference (for debug)
-        try { localStorage.removeItem('prefs_sound_muted'); console.log('[SoundDebug] cleared prefs_sound_muted'); } catch(e){}
-        // try playing a sequence: swap -> pop -> bg
-        wrapPlay('swap');
-        setTimeout(()=> wrapPlay('pop'), 250);
-        setTimeout(()=> wrapPlay('bg'), 450);
-      });
-
-      console.log('[SoundDebug] debug button added. Tap it to open console & test sounds.');
-    });
-  })();
-</script>
-<!-- ===== end Eruda + Sound debug helper ===== -->
-  <!-- TEMP SOUND STUB — paste just before </body> to avoid Sound not found errors -->
-<script>
-  if(typeof window.Sound === 'undefined'){
-    window.Sound = (function(){
-      console.warn('[SoundStub] using fallback stub — no real sounds will play. Add js/sound.js to enable audio.');
-      const mutedKey = 'prefs_sound_muted';
-      let muted = localStorage.getItem(mutedKey) === '1';
-      function play(name){
-        // just log attempts (safe)
-        console.log('[SoundStub] play(',name,') muted=',muted);
-        // quick fallback: try to play a tiny beep via Web Audio if unmuted (optional)
-        if(muted) return;
-        try {
-          if(!window._sound_stub_ctx){
-            const C = window.AudioContext || window.webkitAudioContext;
-            if(C) window._sound_stub_ctx = new C();
-          }
-          const ctx = window._sound_stub_ctx;
-          if(ctx){
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sine';
-            o.frequency.value = 800;
-            g.gain.value = 0.0008; // extremely quiet, just to init
-            o.connect(g); g.connect(ctx.destination);
-            o.start();
-            setTimeout(()=>{ try{ o.stop(); }catch(e){} }, 40);
-          }
-        } catch(e){}
-      }
-      function toggleMute(val){
-        if(typeof val === 'boolean') muted = val;
-        else muted = !muted;
-        localStorage.setItem(mutedKey, muted ? '1' : '0');
-        console.log('[SoundStub] mute=',muted);
-      }
-      function isMuted(){ return !!muted; }
-      function stopBg(){ console.log('[SoundStub] stopBg'); }
-      return { play, toggleMute, isMuted, stopBg };
-    })();
-  } else {
-    console.log('[SoundStub] Sound already exists, stub skipped.');
-  }
-</script>
-<body>
-  <div class="container card center">
-    <h1 id="levelTitle">Level</h1>
-
-    <!-- HUD (Score, Moves, Target) -->
-    <div class="hud">
-      <div>Score: <span id="score">0</span></div>
-      <div>Moves: <span id="moves">30</span></div>
-      <div>Target: <span id="target">0</span></div>
-    </div>
-
-    <!-- Stars indicator -->
-    <div class="stars" id="stars">
-      <span class="star">★</span>
-      <span class="star">★</span>
-      <span class="star">★</span>
-    </div>
-
-    <!-- Game Grid -->
-    <div id="gameGrid" class="board"></div>
-
-    <!-- Buttons -->
-    <div class="btn-row">
-      <a href="map.html" class="btn back">Back</a>
-      <a id="endBtn" href="#" class="btn">End</a>
-    </div>
-  </div>
-
-  <!-- scripts (keep this order) -->
+  <!-- scripts -->
   <script src="js/storage.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/confetti.js"></script>
+  <script src="js/responsive-grid.js"></script>
   <script src="js/game-core.js"></script>
   <script src="js/game.js"></script>
+
   <script>
-    // start level from query param e.g. ?level=1
+    // boot: start level from query param
     (function(){
-      try {
-        const urlParams = new URLSearchParams(location.search);
-        const lvl = urlParams.get('level') || 1;
-        // tiny safety: wait for DOM & Game to be available
-        function startWhenReady(){
-          if(typeof Game !== 'undefined' && document.readyState === 'complete'){
-            Game.start(lvl);
-          } else if(typeof Game !== 'undefined' && document.readyState !== 'loading'){
-            Game.start(lvl);
-          } else {
-            window.addEventListener('load', ()=> { if(typeof Game !== 'undefined') Game.start(lvl); });
-          }
-        }
-        startWhenReady();
-      } catch(e){
-        console.error('Game start failed', e);
+      const urlParams = new URLSearchParams(location.search);
+      const lvl = parseInt(urlParams.get('level')||'1',10);
+      // wait for Game to be ready
+      function startWhenReady(){
+        if(window.Game && Game.start) return Game.start(lvl);
+        setTimeout(startWhenReady, 80);
       }
+      startWhenReady();
     })();
   </script>
 </body>
