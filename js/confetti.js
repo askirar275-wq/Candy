@@ -1,62 +1,25 @@
-// js/confetti.js - small confetti burst (vanilla)
-const Confetti = (function(){
-  function burst(opts = {}){
-    const count = opts.count || 60;
-    const colors = opts.colors || ['#FFC107','#FF5252','#4CAF50','#2196F3','#E91E63'];
-    const duration = opts.duration || 1800;
-
-    const c = document.createElement('canvas');
-    c.style.position = 'fixed';
-    c.style.left = '0';
-    c.style.top = '0';
-    c.style.width = '100%';
-    c.style.height = '100%';
-    c.style.pointerEvents = 'none';
-    c.width = window.innerWidth;
-    c.height = window.innerHeight;
-    document.body.appendChild(c);
-    const ctx = c.getContext('2d');
-
-    const pieces = [];
+// tiny confetti: create random colored squares falling for short time
+window.CMConfetti = {
+  burst(x,y, count=20){
+    const container = document.createElement('div');
+    container.style.position='fixed';
+    container.style.left=0; container.style.top=0;
+    container.style.pointerEvents='none'; container.style.zIndex=9999;
+    document.body.appendChild(container);
     for(let i=0;i<count;i++){
-      pieces.push({
-        x: Math.random() * c.width,
-        y: -20 - Math.random()*200,
-        vx: (Math.random()-0.5) * 6,
-        vy: 2 + Math.random()*6,
-        size: 6 + Math.random()*10,
-        color: colors[i % colors.length],
-        rot: Math.random()*Math.PI,
-        vr: (Math.random()-0.5)*0.2,
-        life: duration
-      });
+      const d = document.createElement('div');
+      d.style.position='absolute';
+      d.style.left=(x + (Math.random()*120-60))+'px';
+      d.style.top=(y + (Math.random()*40-20))+'px';
+      d.style.width='10px'; d.style.height='14px';
+      d.style.background=['#ffd966','#ff7aa2','#79d2ff','#a3ff9b'][i%4];
+      d.style.opacity = '0.95';
+      d.style.transform = `translateY(${-(Math.random()*20)}px) rotate(${Math.random()*360}deg)`;
+      d.style.transition = `transform ${0.9+Math.random()*0.6}s ease-in, opacity 0.9s linear`;
+      container.appendChild(d);
+      setTimeout(()=> d.style.transform = `translateY(${300+Math.random()*200}px) rotate(${Math.random()*720}deg)`,10);
+      setTimeout(()=> d.style.opacity='0', 900+Math.random()*300);
     }
-
-    let start = performance.now();
-    function frame(now){
-      const t = now - start;
-      ctx.clearRect(0,0,c.width,c.height);
-      for(const p of pieces){
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.12; // gravity
-        p.rot += p.vr;
-        p.life -= 16;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-        ctx.restore();
-      }
-      if(t < duration){
-        requestAnimationFrame(frame);
-      } else {
-        document.body.removeChild(c);
-      }
-    }
-    requestAnimationFrame(frame);
+    setTimeout(()=> container.remove(), 1400);
   }
-
-  return { burst };
-})();
+};
