@@ -1,126 +1,38 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Level Map — Candy Match</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Candy Match — Map</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header class="site-header">
-  <div class="brand">🍬 Candy Match</div>
-  <nav class="top-nav">
-    <a href="index.html">Home</a>
-    <a href="map.html">Map</a>
-    <a href="play.html">Play</a>
-  </nav>
-</header>
+  <header class="topbar">
+    <div class="brand">🍬 Candy Match</div>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="play.html">Play</a>
+    </nav>
+  </header>
 
-<main class="container">
-  <section class="card">
-    <a class="back" href="index.html">← Home</a>
-    <h2>Level Map</h2>
-
-    <p style="margin:8px 0 14px;">
-      यहाँ उपलब्ध स्तर चुनें। Unlocked स्तर पर क्लिक करके खेलें — नए स्तर पहले समाप्त किए गए स्तर खोलते हैं।
-    </p>
-
-    <div style="margin-bottom:12px;">
-      <button id="resetProgress" class="btn">Reset Progress</button>
-      <span style="margin-left:12px;color:#6b7280;font-size:14px">Unlocked: <strong id="unlockedCount">1</strong></span>
+  <main>
+    <div class="card">
+      <a class="back" href="index.html">← Home</a>
+      <h2>Level Map</h2>
+      <div id="mapGrid" class="level-grid" style="margin-top:12px;"></div>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="Game.resetProgress()">Reset Progress</button>
+      </div>
     </div>
+  </main>
 
-    <div id="mapGrid" class="map-grid" aria-live="polite"></div>
-  </section>
-</main>
-
-<footer class="site-footer">© Candy Match</footer>
-
-<script>
-/*
-  Simple level map script.
-  - stores unlocked level in localStorage key 'candy_unlocked'
-  - default unlocked = 1
-  - clicking unlocked level opens play.html?level=N
-*/
-
-(function(){
-  const LEVEL_COUNT = 12; // total levels shown in map
-  const mapGrid = document.getElementById('mapGrid');
-  const unlockedCountEl = document.getElementById('unlockedCount');
-
-  function getUnlocked(){
-    const v = localStorage.getItem('candy_unlocked');
-    if(!v) {
-      localStorage.setItem('candy_unlocked','1');
-      return 1;
-    }
-    return parseInt(v,10) || 1;
-  }
-  function setUnlocked(n){
-    localStorage.setItem('candy_unlocked', String(n));
-    unlockedCountEl.textContent = n;
-  }
-
-  function renderMap(){
-    mapGrid.innerHTML = '';
-    const unlocked = getUnlocked();
-    unlockedCountEl.textContent = unlocked;
-    // create 3 columns responsive grid via CSS (style.css)
-    for(let i=1;i<=LEVEL_COUNT;i++){
-      const card = document.createElement('a');
-      card.className = 'level-card';
-      if(i > unlocked) card.classList.add('locked');
-      card.href = i <= unlocked ? `play.html?level=${i}` : '#';
-      card.setAttribute('aria-disabled', i>unlocked ? 'true' : 'false');
-
-      // thumb
-      const thumb = document.createElement('div');
-      thumb.className = 'thumb';
-      const img = document.createElement('img');
-      // image fallback: candy((i%6)+1).png
-      img.src = `images/candy${(i % 6) === 0 ? 6 : (i % 6)}.png`;
-      img.alt = `Level ${i} thumbnail`;
-      thumb.appendChild(img);
-
-      const lvl = document.createElement('div');
-      lvl.className = 'lvl';
-      lvl.textContent = `Level ${i}`;
-
-      const desc = document.createElement('div');
-      desc.className = 'desc';
-      desc.textContent = i <= unlocked ? 'Play' : 'Locked';
-
-      card.appendChild(thumb);
-      card.appendChild(lvl);
-      card.appendChild(desc);
-
-      // block clicking locked
-      card.addEventListener('click', function(e){
-        if(i > unlocked){ e.preventDefault(); alert('Level locked — पहले पिछले स्तर पूरा करें।'); }
-      });
-
-      mapGrid.appendChild(card);
-    }
-  }
-
-  // reset button
-  document.getElementById('resetProgress').addEventListener('click', function(){
-    if(confirm('क्या आप प्रगति रीसेट करना चाहते हैं?')){
-      setUnlocked(1);
-      renderMap();
-      alert('Progress reset to level 1.');
-    }
-  });
-
-  // ensure if user finishes levels elsewhere, map refreshes when page visible
-  document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState === 'visible') renderMap();
-  });
-
-  // initial render
-  renderMap();
-})();
-</script>
+  <script src="js/game.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=> {
+      // render map on this page
+      Game.renderMap();
+    });
+  </script>
 </body>
 </html>
