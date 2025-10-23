@@ -1,38 +1,71 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Candy Match — Map</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Level Map — Candy Match</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <header class="topbar">
+<body class="page-map">
+  <header class="app-header">
     <div class="brand">🍬 Candy Match</div>
-    <nav class="nav">
+    <nav class="top-nav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="play.html">Play</a>
+      <a href="game.html?level=1">Play</a>
     </nav>
   </header>
 
-  <main>
-    <div class="card">
-      <a class="back" href="index.html">← Home</a>
-      <h2>Level Map</h2>
-      <div id="mapGrid" class="level-grid" style="margin-top:12px;"></div>
-      <div style="margin-top:12px;">
-        <button class="btn" onclick="Game.resetProgress()">Reset Progress</button>
+  <main class="container">
+    <a class="back-link" href="index.html">← Home</a>
+    <section class="card">
+      <h1>Level Map</h1>
+      <div class="map-grid" id="levelMap"></div>
+      <div style="margin-top:12px">
+        <button id="resetProgress" class="btn">Reset Progress</button>
       </div>
-    </div>
+    </section>
   </main>
 
-  <script src="js/game.js"></script>
+  <script src="js/storage.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', ()=> {
-      // render map on this page
-      Game.renderMap();
+    const LEVEL_COUNT = 9;
+    const mapGrid = document.getElementById('levelMap');
+
+    function getUnlocked(){
+      return JSON.parse(localStorage.getItem('cm_unlocked')||'[1]');
+    }
+
+    function setUnlocked(arr){
+      localStorage.setItem('cm_unlocked', JSON.stringify(arr));
+    }
+
+    function renderMap(){
+      const unlocked = new Set(getUnlocked());
+      mapGrid.innerHTML = '';
+      for(let i=1;i<=LEVEL_COUNT;i++){
+        const el = document.createElement('div');
+        el.className = 'level-card' + (unlocked.includes(i)?'':' locked');
+        el.innerHTML = `<div class="thumb"><img src="images/candy${((i-1)%5)+1}.png" alt="lvl${i}" /></div>
+                        <div class="lvl">Level ${i}</div>
+                        <div class="desc">${unlocked.includes(i)?'Play':'Locked'}</div>`;
+        el.dataset.level = i;
+        el.addEventListener('click', () => {
+          if(!unlocked.includes(i)){ alert('Level locked — पहले पिछले लेवल पूरा करो'); return; }
+          location.href = `game.html?level=${i}`;
+        });
+        mapGrid.appendChild(el);
+      }
+    }
+
+    document.getElementById('resetProgress').addEventListener('click',()=>{
+      localStorage.removeItem('cm_unlocked');
+      localStorage.removeItem('cm_scores');
+      alert('Progress reset!');
+      renderMap();
     });
+
+    renderMap();
   </script>
 </body>
 </html>
