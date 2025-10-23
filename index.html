@@ -1,132 +1,32 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Candy Match — Home</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
   <header class="topbar">
     <div class="brand">🍬 Candy Match</div>
     <nav class="nav">
-      <a href="#home">Home</a>
-      <a href="#map">Map</a>
-      <a href="#play">Play</a>
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="play.html">Play</a>
     </nav>
   </header>
 
-  <main id="app">
-    <!-- HOME -->
-    <section id="view-home" class="view">
-      <div class="card hero">
-        <h1>कैंडी मैच</h1>
-        <p>Match. Pop. Smile!</p>
-        <div class="row">
-          <button id="btn-play" class="btn primary" onclick="App.go('play')">Play</button>
-          <button class="btn" onclick="App.go('map')">Map</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- MAP -->
-    <section id="view-map" class="view hidden">
-      <div class="card">
-        <a class="back" href="#home">← Home</a>
-        <h2>Level Map</h2>
-        <div id="mapGrid" class="level-grid"></div>
-        <div class="row">
-          <button class="btn" onclick="Game.resetProgress()">Reset Progress</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- PLAY -->
-    <section id="view-play" class="view hidden">
-      <div class="card game-card">
-        <a class="back" href="#map" onclick="App.go('map')">← Map</a>
-        <h2 id="levelTitle">Level 1</h2>
-
-        <div class="stats-row">
-          <div class="stat">Score: <span id="score">0</span></div>
-          <div class="stat">Moves: <span id="moves">30</span></div>
-          <div class="stat">Target: <span id="target">600</span></div>
-          <div class="stat">Timer: <span id="timer">--:--</span></div>
-        </div>
-
-        <div id="gridWrap" class="game-grid-container">
-          <div id="gameGrid" class="game-grid" role="application" aria-label="game grid"></div>
-        </div>
-
-        <div class="row center" style="margin-top:14px;">
-          <button class="btn" onclick="Game.restart()">Restart</button>
-          <button class="btn" onclick="Game.end()">End</button>
-        </div>
-
-      </div>
-    </section>
-  </main>
-
-  <!-- Game Over Modal -->
-  <div id="gameOverModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" id="goBackdrop"></div>
-    <div class="modal-card">
-      <h3>Level <span id="go-level">1</span> Complete!</h3>
-      <p>Score: <strong id="go-score">0</strong></p>
-      <div class="go-actions">
-        <button id="go-replay" class="btn primary">Replay</button>
-        <button id="go-next" class="btn primary">Next</button>
-        <button id="go-map" class="btn">Map</button>
+  <main>
+    <div class="card hero">
+      <h1>कैंडी मैच</h1>
+      <p>Match. Pop. Smile!</p>
+      <div class="row">
+        <a class="btn primary" href="play.html">Play</a>
+        <a class="btn" href="map.html">Map</a>
       </div>
     </div>
-  </div>
+  </main>
 
   <footer class="footer">© Candy Match</footer>
-
-  <script src="js/game.js"></script>
-  <script>
-    // basic router for hash views
-    const App = {
-      show(view){
-        document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
-        document.getElementById('view-'+view).classList.remove('hidden');
-      },
-      go(hash){
-        location.hash = '#' + hash;
-      },
-      init(){
-        window.addEventListener('hashchange', ()=> {
-          const h = location.hash.replace('#','') || 'home';
-          this.show(h);
-          if(h === 'play') Game.start();
-          if(h === 'map') Game.renderMap();
-        });
-        const start = (location.hash.replace('#','') || 'home');
-        this.show(start);
-        if(start === 'play') Game.start();
-      }
-    };
-    document.addEventListener('DOMContentLoaded', ()=> {
-      App.init();
-
-      // modal buttons
-      document.getElementById('go-replay').addEventListener('click', ()=> {
-        document.getElementById('gameOverModal').classList.remove('show');
-        document.getElementById('gameOverModal').classList.add('hidden');
-        Game.restart();
-      });
-      document.getElementById('go-next').addEventListener('click', ()=> {
-        document.getElementById('gameOverModal').classList.remove('show');
-        document.getElementById('gameOverModal').classList.add('hidden');
-        Game.nextLevel();
-      });
-      document.getElementById('go-map').addEventListener('click', ()=> {
-        document.getElementById('gameOverModal').classList.remove('show');
-        document.getElementById('gameOverModal').classList.add('hidden');
-        App.go('map');
-      });
-    });
-  </script>
 </body>
-  </html>
+</html>
