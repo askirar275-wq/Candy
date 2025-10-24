@@ -1,32 +1,36 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match - Home</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <header class="site-header">
-    <div class="brand">🍬 Candy Match</div>
-    <nav class="topnav">
-      <a href="index.html">Home</a>
-      <a href="map.html">Map</a>
-      <a href="game.html">Play</a>
-    </nav>
+    <div class="left">
+      <a class="back" id="btnHome">← Home</a>
+    </div>
+    <div class="title">Score: <span id="score">0</span></div>
+    <div class="moves-bubble"><span id="movesBubble">50</span></div>
   </header>
 
   <main class="container">
-    <section class="card hero">
-      <h1>कैंडी मैच</h1>
-      <p class="lead">Match. Pop. Smile! — Play, Open Map and Choose Level.</p>
-      <p>
-        <a class="btn primary" href="game.html">Play</a>
-        <a class="btn" href="map.html">Map</a>
-      </p>
+    <section class="card board-card">
+      <div class="game-grid-container">
+        <div id="gameGrid" class="game-grid" aria-label="Candy grid"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnRestart" class="btn">Restart</button>
+        <button id="btnShuffle" class="btn">Shuffle</button>
+        <button id="btnShop" class="btn">Open Shop</button>
+      </div>
     </section>
   </main>
 
   <footer class="site-footer">© Candy Match</footer>
+
+  <script src="js/game.js"></script>
 </body>
-</html>
+  </html>
