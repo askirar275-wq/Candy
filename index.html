@@ -3,34 +3,84 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
+  <title>Candy Match — Demo</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <header class="site-header">
-    <div class="left">
-      <a class="back" id="btnHome">← Home</a>
+    <div class="brand">
+      <span class="logo">🍬</span>
+      <span class="app-title">Candy Match</span>
     </div>
-    <div class="title">Score: <span id="score">0</span></div>
-    <div class="moves-bubble"><span id="movesBubble">50</span></div>
+    <nav class="top-nav">
+      <a href="#/home">Home</a>
+      <a href="#/map">Map</a>
+      <a href="#/play">Play</a>
+      <a href="#/about">About</a>
+    </nav>
   </header>
 
-  <main class="container">
-    <section class="card board-card">
-      <div class="game-grid-container">
-        <div id="gameGrid" class="game-grid" aria-label="Candy grid"></div>
+  <main id="app">
+    <!-- pages will be shown by JS router -->
+    <section id="page-home" class="page">
+      <div class="card intro">
+        <h1>कैन्डी मैच</h1>
+        <p>Match. Pop. Smile!</p>
+        <div class="actions">
+          <a class="btn" href="#/play">Play</a>
+          <a class="btn outline" href="#/map">Map</a>
+        </div>
       </div>
+    </section>
 
-      <div class="controls">
-        <button id="btnRestart" class="btn">Restart</button>
-        <button id="btnShuffle" class="btn">Shuffle</button>
-        <button id="btnShop" class="btn">Open Shop</button>
+    <section id="page-map" class="page hidden">
+      <div class="card">
+        <a class="small-link" href="#/home">← Home</a>
+        <h2>Level Map</h2>
+        <div id="levelGrid" class="level-grid"></div>
+      </div>
+    </section>
+
+    <section id="page-play" class="page hidden">
+      <div class="card board-card">
+        <a class="small-link" href="#/map">← Map</a>
+        <h2 id="levelTitle">Level 1</h2>
+
+        <div class="stats-row">
+          <div class="stat">Score: <span id="score">0</span></div>
+          <div class="stat">Moves: <span id="moves">30</span></div>
+          <div class="stat">Target: <span id="target">600</span></div>
+          <div class="stat">Timer: <span id="timer">--:--</span></div>
+        </div>
+
+        <div class="stars" id="stars">☆ ☆ ☆</div>
+
+        <div class="game-grid-container">
+          <div id="gameGrid" class="game-grid" aria-label="Candy grid"></div>
+        </div>
+
+        <div class="controls">
+          <button id="btnRestart" class="btn">Restart</button>
+          <button id="btnShuffle" class="btn">Shuffle</button>
+          <button id="btnShop" class="btn">Open Shop</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-about" class="page hidden">
+      <div class="card">
+        <a class="small-link" href="#/home">← Back</a>
+        <h2>About</h2>
+        <p>Simple Candy Match demo — मोबाइल friendly और smooth animations के साथ।</p>
       </div>
     </section>
   </main>
+
+  <!-- dragging clone (hidden; shown by JS while dragging) -->
+  <div id="dragClone" class="dragging-clone hidden" aria-hidden="true"></div>
 
   <footer class="site-footer">© Candy Match</footer>
 
   <script src="js/game.js"></script>
 </body>
-  </html>
+          </html>
