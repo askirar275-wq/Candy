@@ -1,17 +1,12 @@
-window.CMStorage = (function(){
-  const KEY = 'cm_unlocked';
-  return {
-    getUnlocked(){
-      try { return JSON.parse(localStorage.getItem(KEY) || 'null') || [1]; } catch(e){ return [1]; }
-    },
-    unlock(n){
-      try{
-        const arr = this.getUnlocked();
-        if(arr.indexOf(n)===-1){ arr.push(n); localStorage.setItem(KEY, JSON.stringify(arr)); }
-      }catch(e){}
-    },
-    reset(){
-      try{ localStorage.removeItem(KEY); }catch(e){}
-    }
-  };
-})();
+// js/storage.js
+const Store = {
+  key: 'candy_progress_v1',
+  load(){
+    try { return JSON.parse(localStorage.getItem(this.key) || '{}'); }
+    catch(e){ return {}; }
+  },
+  save(obj){
+    localStorage.setItem(this.key, JSON.stringify(obj));
+  },
+  clear(){ localStorage.removeItem(this.key); }
+};
