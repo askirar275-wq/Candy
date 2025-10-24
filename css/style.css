@@ -1,93 +1,67 @@
-:root{
-  --bg1:#ffdfe6;
-  --bg2:#f6fbff;
-  --card:#fff;
-  --accent:#2f9af3;
-  --cell-size:64px;
-  --gap:12px;
-  --cols:7;
+/* --- BOARD-CONTAINER & GRID - replace/append this block in css/style.css --- */
+
+/* कार्ड जो गेम रखता है */
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.08);
+  background: #fff;
+  /* fixed visual area so grid fits inside */
+  max-width: 520px;
+  margin: 0 auto;
 }
 
-/* base */
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif}
-body{background:linear-gradient(180deg,var(--bg1),var(--bg2)); -webkit-font-smoothing:antialiased;}
+/* कंटेनर जो ग्रिड को wrap करता है; यह कार्ड के अंदर scroll करेगा जब ज़रूरत हो */
+.game-grid-container {
+  width: 100%;
+  /* कम से कम जगह दें लेकिन ज़रूरत पर scroll होने दें */
+  max-height: calc(100vh - 320px); /* header+stats/controls के लिए जगह छोड़ें — जरूरत पर tweak करें */
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
 
-.site-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;position:sticky;top:0;background:transparent;z-index:20}
-.brand{display:flex;align-items:center;gap:8px}
-.logo{font-size:20px}
-.app-title{font-weight:700}
-.top-nav a{margin-left:12px;text-decoration:none;color:#0a66c2;font-weight:600}
-
-/* container & cards */
-#app{max-width:520px;margin:10px auto;padding:0 12px}
-.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 18px 48px rgba(0,0,0,0.08);margin-bottom:14px}
-.intro h1{margin:0 0 6px;font-size:28px}
-.actions{display:flex;gap:10px;margin-top:10px}
-.btn{background:#0a84ff;color:#fff;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;text-decoration:none;display:inline-block}
-.btn.outline{background:#fff;border:1px solid #d8e8ff;color:#0a84ff}
-
-/* level grid on map */
-.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-.level-card{background:#f7fbff;padding:14px;border-radius:10px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,0.06)}
-
-/* play page styles */
-.small-link{display:inline-block;margin-bottom:8px;text-decoration:none;color:#6b6bff}
-.stats-row{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 10px}
-.stat{background:#fff;padding:10px 12px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.06);font-weight:600}
-
-/* stars */
-.stars{margin:8px 0;color:#ffcc33;font-size:20px}
-
-/* game grid container */
-.game-grid-container{display:flex;justify-content:center;padding:8px}
-
-/* grid itself */
+/* खुद का grid: कॉलम/साइज़ CSS वेरिएबल द्वारा नियंत्रित होंगे */
 .game-grid{
-  display:grid;
-  gap:var(--gap);
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
-  background:linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.95));
-  padding:12px;border-radius:12px;
+  display: grid;
+  gap: var(--gap, 12px);
+  grid-template-columns: repeat(var(--cols, 6), var(--cell-size, 64px));
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.98));
   box-shadow: inset 0 6px 14px rgba(0,0,0,0.03);
-  touch-action: none;
+  justify-content: center;
 }
 
-/* cell */
+/* cell साइज और responsive adjustments */
 .cell{
-  width:var(--cell-size);
-  height:var(--cell-size);
-  border-radius:12px;
+  width: var(--cell-size, 64px);
+  height: var(--cell-size, 64px);
+  border-radius: 12px;
   background:#fff;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 12px 24px rgba(0,0,0,0.06);
-  position:relative; user-select:none;
-  transition:transform .16s cubic-bezier(.2,.9,.3,1), box-shadow .12s;
+  transition: transform .16s ease, box-shadow .12s;
 }
-.cell img{width:72%;height:72%;object-fit:contain;pointer-events:none;-webkit-user-drag:none;transition:transform .12s}
-.cell.selected{transform:scale(.96);box-shadow:0 18px 36px rgba(0,0,0,0.12)}
-.cell.invalid{animation:shake .18s}
-@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+.cell img{ width:72%; height:72%; object-fit:contain; pointer-events:none; }
 
-/* dragging clone */
-.dragging-clone{
-  position:fixed;left:0;top:0;pointer-events:none;z-index:9999; width:56px;height:56px;border-radius:12px;
-  box-shadow:0 26px 60px rgba(0,0,0,0.32); display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;
-  transform: translate(-50%,-50%) scale(1); transition:transform .06s linear;
+/* Smaller screens tweak */
+@media (max-width:420px){
+  :root{ --cell-size: 48px; --gap:10px; --cols:5; }
+  .board-card{ padding:12px; }
+  .game-grid-container{ max-height: calc(100vh - 300px); }
 }
-.dragging-clone img{width:80%;height:80%;object-fit:contain}
-.hidden{display:none}
 
-/* controls */
-.controls{display:flex;gap:12px;justify-content:center;margin-top:12px}
-.btn{padding:10px 12px;border-radius:12px}
-
-/* footer */
-.site-footer{text-align:center;color:#7a7a7a;margin:16px 0}
-
-/* responsive */
-@media (max-width:460px){
-  :root{ --cell-size:52px; --gap:10px; --cols:6; }
-  .card{padding:14px}
-  .stats-row{gap:8px}
+/* Larger phones / tablets tweak */
+@media (min-width:521px){
+  :root{ --cell-size: 64px; --gap:12px; --cols:7; }
+  .game-grid-container{ max-height: calc(100vh - 360px); }
 }
+
+/* small aesthetic: ensure outer page doesn't scroll unexpectedly when grid fits */
+html,body{height:100%}
