@@ -1,25 +1,25 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Game — Candy Match</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Candy Match — Game</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="page-game">
-  <header class="app-header">
+<body>
+  <header class="site-header">
     <div class="brand">🍬 Candy Match</div>
-    <nav class="top-nav">
+    <nav class="topnav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="game.html?level=1">Play</a>
+      <a href="game.html">Play</a>
     </nav>
   </header>
 
   <main class="container">
-    <a class="back-link" href="map.html">← Map</a>
-    <section class="card game-card">
-      <h1 id="levelTitle">Level 1</h1>
+    <section class="card">
+      <a class="back" href="map.html">← Map</a>
+      <h1 id="levelTitle">Level</h1>
 
       <div class="stats-row">
         <div class="stat">Score: <span id="score">0</span></div>
@@ -28,43 +28,39 @@
         <div class="stat">Timer: <span id="timer">--:--</span></div>
       </div>
 
-      <div class="stars" id="stars">☆ ☆ ☆</div>
+      <div id="stars" class="stars">☆ ☆ ☆</div>
 
-      <div id="gameGridContainer" class="game-grid-container">
-        <div id="gameGrid" class="game-grid" aria-hidden="false"></div>
+      <div class="game-grid-container">
+        <div id="gameGrid" class="game-grid" aria-label="game grid"></div>
       </div>
 
       <div class="controls">
         <button id="restartBtn" class="btn">Restart</button>
-        <button id="endBtn" class="btn invert">End</button>
-        <label class="mute"><input type="checkbox" id="muteToggle"> Mute</label>
+        <button id="endBtn" class="btn">End</button>
       </div>
     </section>
   </main>
 
-  <!-- popup area -->
   <div id="overlay" class="overlay hidden"></div>
-  <div id="popup" class="popup hidden" role="dialog" aria-hidden="true"></div>
+  <div id="popup" class="popup hidden"></div>
+
+  <footer class="site-footer">© Candy Match</footer>
 
   <!-- scripts -->
   <script src="js/storage.js"></script>
-  <script src="js/sound.js"></script>
-  <script src="js/confetti.js"></script>
   <script src="js/responsive-grid.js"></script>
   <script src="js/game-core.js"></script>
   <script src="js/game.js"></script>
 
   <script>
-    // boot: start level from query param
+    // start level from query param
     (function(){
-      const urlParams = new URLSearchParams(location.search);
-      const lvl = parseInt(urlParams.get('level')||'1',10);
-      // wait for Game to be ready
-      function startWhenReady(){
-        if(window.Game && Game.start) return Game.start(lvl);
-        setTimeout(startWhenReady, 80);
-      }
-      startWhenReady();
+      const url = new URL(location.href);
+      const lvl = url.searchParams.get('level') || 1;
+      // wait a bit and start
+      window.addEventListener('load', ()=> {
+        Game.start(lvl);
+      });
     })();
   </script>
 </body>
