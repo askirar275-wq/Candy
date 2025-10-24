@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match — Game</title>
+  <title>Game</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,7 +31,7 @@
       <div id="stars" class="stars">☆ ☆ ☆</div>
 
       <div class="game-grid-container">
-        <div id="gameGrid" class="game-grid" aria-label="game grid"></div>
+        <div id="gameGrid" class="game-grid" role="grid"></div>
       </div>
 
       <div class="controls">
@@ -41,27 +41,20 @@
     </section>
   </main>
 
-  <div id="overlay" class="overlay hidden"></div>
-  <div id="popup" class="popup hidden"></div>
-
   <footer class="site-footer">© Candy Match</footer>
 
-  <!-- scripts -->
   <script src="js/storage.js"></script>
   <script src="js/responsive-grid.js"></script>
   <script src="js/game-core.js"></script>
   <script src="js/game.js"></script>
 
   <script>
-    // start level from query param
-    (function(){
-      const url = new URL(location.href);
-      const lvl = url.searchParams.get('level') || 1;
-      // wait a bit and start
-      window.addEventListener('load', ()=> {
-        Game.start(lvl);
-      });
-    })();
+    // auto start level from query param
+    window.addEventListener('load', ()=> {
+      const p = new URLSearchParams(location.search);
+      const lvl = parseInt(p.get('level') || '1',10);
+      Game.start(lvl);
+    });
   </script>
 </body>
 </html>
