@@ -1,4 +1,3 @@
-/* storage.js — small wrapper for unlocked levels */
 window.CMStorage = (function(){
   const KEY = 'cm_unlocked';
   return {
