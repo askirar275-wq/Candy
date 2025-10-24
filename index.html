@@ -1,52 +1,45 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Candy Match — Home</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="page-home">
-  <header class="app-header">
+<body>
+  <header class="site-header">
     <div class="brand">🍬 Candy Match</div>
-    <nav class="top-nav">
+    <nav class="topnav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="game.html?level=1">Play</a>
+      <a href="game.html">Play</a>
     </nav>
   </header>
 
   <main class="container">
     <section class="card hero">
       <h1>कैंडी मैच</h1>
-      <p class="lead">Match. Pop. Smile!</p>
-      <div class="btn-row">
-        <a class="btn primary" href="game.html?level=1">Play</a>
+      <p class="lead">Match. Pop. Smile! मोबाइल-friendly और smooth animation के साथ।</p>
+      <div class="actions">
+        <a class="btn primary" href="game.html">Play</a>
         <a class="btn" href="map.html">Map</a>
       </div>
       <p class="links">
-        <a href="map.html">Level Map</a> ·
-        <a href="index.html#settings">Settings</a> ·
-        <a href="index.html#about">About</a>
+        <a href="map.html">Level Map</a> · <a href="#settings">Settings</a> · <a href="#about">About</a>
       </p>
     </section>
 
-    <section id="map-preview" class="card level-preview">
+    <section class="card" id="mapIntro">
       <h2>Level Map</h2>
-      <a class="btn" href="map.html">Open Map</a>
+      <p><a class="btn" href="map.html">Open Map</a></p>
     </section>
 
-    <section id="about" class="card">
+    <section class="card" id="about">
       <h2>About</h2>
       <p>Simple Candy Match demo — मोबाइल-friendly और smooth animation के साथ।</p>
     </section>
   </main>
 
   <footer class="site-footer">© Candy Match</footer>
-
-  <script src="js/storage.js"></script>
-  <script>
-    // nothing special here
-  </script>
 </body>
-  </html>
+</html>
