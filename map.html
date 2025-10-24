@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Candy Match — Map</title>
+  <title>Level Map</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -20,41 +20,30 @@
     <section class="card">
       <a class="back" href="index.html">← Home</a>
       <h1>Level Map</h1>
-      <div class="level-grid" id="levelGrid"></div>
+      <div id="levelGrid" class="level-grid"></div>
       <p><button id="resetProgress" class="btn">Reset Progress</button></p>
     </section>
   </main>
 
-  <footer class="site-footer">© Candy Match</footer>
-
   <script src="js/storage.js"></script>
   <script>
-    // level map render (simple)
     const LEVEL_COUNT = 9;
     const grid = document.getElementById('levelGrid');
-    const unlocked = new Set(CMStorage.getUnlocked() || [1]);
-
     function renderMap(){
+      const unlocked = new Set(CMStorage.getUnlocked());
       grid.innerHTML = '';
       for(let i=1;i<=LEVEL_COUNT;i++){
-        const card = document.createElement('div');
-        card.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
-        const btn = document.createElement('a');
-        btn.href = unlocked.has(i) ? `game.html?level=${i}` : '#';
-        btn.textContent = `Level ${i}`;
-        card.appendChild(btn);
-        if(!unlocked.has(i)){
-          const lock = document.createElement('div'); lock.className='lock'; lock.textContent='Locked';
-          card.appendChild(lock);
-        } else {
-          const sub = document.createElement('div'); sub.className='sub'; sub.textContent='Play';
-          card.appendChild(sub);
-        }
-        grid.appendChild(card);
+        const div = document.createElement('div');
+        div.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
+        const a = document.createElement('a');
+        a.href = unlocked.has(i) ? `game.html?level=${i}` : '#';
+        a.textContent = `Level ${i}`;
+        div.appendChild(a);
+        grid.appendChild(div);
       }
     }
     renderMap();
-    document.getElementById('resetProgress').addEventListener('click', ()=>{ if(confirm('Progress reset karein?')) { CMStorage.reset(); location.reload(); }});
+    document.getElementById('resetProgress').addEventListener('click', ()=>{ CMStorage.reset(); renderMap(); alert('Progress reset'); });
   </script>
 </body>
 </html>
