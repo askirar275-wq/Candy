@@ -1,99 +1,25 @@
-<!doctype html>
-<html lang="hi">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Candy Match</title>
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
+<!-- stats + title -->
+<div class="board-card page" id="play" style="display:none">
+  <a href="#map" class="link-back">← Map</a>
+  <h1 id="levelTitle">Level 1</h1>
 
-<!-- top -->
-<div class="topbar">
-  <div class="brand">🍬 <strong>Candy Match</strong></div>
-  <div class="navlinks">
-    <a href="#home">Home</a>
-    <a href="#map">Map</a>
-    <a href="#play">Play</a>
-    <a href="#about">About</a>
+  <div class="stats-row">
+    <div class="stat">Score: <span id="score">0</span></div>
+    <div class="stat">Moves: <span id="moves">30</span></div>
+    <div class="stat">Target: <span id="target">600</span></div>
+    <div class="stat">Timer: <span id="timer">--:--</span></div>
+  </div>
+
+  <!-- grid card: board-card wrapping + internal scroll container -->
+  <div class="board-card-inner">
+    <div class="game-grid-container">
+      <div id="gameGrid" class="game-grid" role="grid" aria-label="Game board"></div>
+    </div>
+
+    <div class="controls" style="display:flex;gap:12px;justify-content:center;padding:12px 0;">
+      <button id="restartBtn" class="btn">Restart</button>
+      <button id="shuffleBtn" class="btn">Shuffle</button>
+      <button id="endBtn" class="btn">End</button>
+    </div>
   </div>
 </div>
-
-<!-- HOME -->
-<section id="home" class="page">
-  <div class="card">
-    <h1>कैंडी मैच</h1>
-    <div class="lead">Match. Pop. Smile! — Play → Map → Level चुनें।</div>
-    <div style="display:flex;gap:8px">
-      <a class="btn" href="#play">Play</a>
-      <a class="btn btn-outline" href="#map">Map</a>
-    </div>
-    <div style="margin-top:12px"><a href="#settings">Settings</a> · <a href="#about">About</a></div>
-  </div>
-</section>
-
-<!-- MAP -->
-<section id="map" class="page" style="display:none">
-  <div class="card">
-    <a href="#home" class="link-back">← Home</a>
-    <h1>Level Map</h1>
-    <div style="margin:8px 0"><button id="resetProgress" class="control-btn">प्रगति रीसेट करें</button></div>
-    <div class="level-grid" id="levelGrid"></div>
-  </div>
-</section>
-
-<!-- PLAY -->
-<section id="play" class="page" style="display:none">
-  <div class="board-card" role="application">
-    <a href="#map" class="link-back">← Map</a>
-    <h1 id="levelTitle">Level 1</h1>
-    <div class="stats-row">
-      <div class="stat">Score: <span id="score">0</span></div>
-      <div class="stat">Moves: <span id="moves">30</span></div>
-      <div class="stat">Target: <span id="target">600</span></div>
-      <div class="stat">Timer: <span id="timer">--:--</span></div>
-    </div>
-
-    <div class="game-grid-container">
-      <div id="gameGrid" class="game-grid" aria-label="Game board"></div>
-    </div>
-
-    <div class="controls" style="margin-top:8px">
-      <button id="restartBtn" class="control-btn">Restart</button>
-      <button id="shuffleBtn" class="control-btn">Shuffle</button>
-      <button id="endBtn" class="control-btn">End</button>
-    </div>
-  </div>
-</section>
-
-<!-- Settings -->
-<section id="settings" class="page" style="display:none">
-  <div class="card">
-    <a href="#home" class="link-back">← Back</a>
-    <h2>Settings</h2>
-    <label><input type="checkbox" id="muteSound"> Mute Sound</label>
-  </div>
-</section>
-
-<!-- About -->
-<section id="about" class="page" style="display:none">
-  <div class="card">
-    <a href="#home" class="link-back">← Back</a>
-    <h2>About</h2>
-    <p>Simple Candy Match demo — मोबाइल-friendly और smooth animations के साथ।</p>
-  </div>
-</section>
-
-<div class="foot">© Candy Match</div>
-
-<!-- drag clone -->
-<div id="dragClone" class="dragging-clone" style="display:none"></div>
-
-<!-- scripts -->
-<script src="js/storage.js"></script>
-<script src="js/sound.js"></script>
-<script src="js/game-core.js"></script>
-<script src="js/game-ui.js"></script>
-
-</body>
-</html>
