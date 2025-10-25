@@ -1,26 +1,24 @@
-// confetti.js — छोटी confetti burst implementation
-(function(global){
-  console.log('[CONFETTI] loaded');
-  function fire(){
-    const duration = 900;
-    const colors = ['#ffcc00','#ff77aa','#77ffdd','#66ccff','#aaff66'];
-    const count = 30;
-    for(let i=0;i<count;i++){
-      const el = document.createElement('div');
-      el.className = 'confetti';
-      el.style.background = colors[Math.floor(Math.random()*colors.length)];
-      el.style.width = el.style.height = (6 + Math.random()*10) + 'px';
-      el.style.left = (10 + Math.random()*80) + '%';
-      el.style.top = '-10px';
-      el.style.position = 'fixed';
-      el.style.zIndex = 9999;
-      document.body.appendChild(el);
-      const dur = 900 + Math.random()*700;
-      el.animate([
-        { transform:'translateY(0) rotate(0deg)', opacity:1 },
-        { transform:`translateY(${window.innerHeight + 200}px) rotate(${360*Math.random()}deg)`, opacity:0 }
-      ], { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = ()=> el.remove();
+// हल्का confetti — console log करके emoji fall दिखाता है
+window.Confetti = (function(){
+  return {
+    fire: function(){
+      try{
+        console.log('[CONFETTI] loaded');
+        const root = document.createElement('div');
+        root.style.position='fixed'; root.style.left=0; root.style.top=0; root.style.width='100%'; root.style.height='100%'; root.style.pointerEvents='none'; root.style.zIndex=99999;
+        document.body.appendChild(root);
+        const symbols = ['🎉','✨','🍬','💫','🌟'];
+        for(let i=0;i<24;i++){
+          const d = document.createElement('div'); d.textContent = symbols[i%symbols.length];
+          d.style.position='absolute'; d.style.left = (Math.random()*90 + 5)+'%'; d.style.top='-10%';
+          d.style.fontSize = (12+Math.random()*24)+'px'; d.style.opacity = 0.95; d.style.transform = `rotate(${Math.random()*360}deg)`;
+          root.appendChild(d);
+          const dur = 1100 + Math.random()*900;
+          d.animate([{transform:d.style.transform, top:'-10%'},{transform:d.style.transform, top:'100%'}], {duration:dur, easing:'linear'});
+          setTimeout(()=> d.remove(), dur+50);
+        }
+        setTimeout(()=> root.remove(), 2200);
+      }catch(e){ console.warn('confetti error', e); }
     }
-  }
-  global.Confetti = { fire };
-})(window);
+  };
+})();
