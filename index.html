@@ -56,4 +56,27 @@
   <script src="js/game-core.js"></script>
   <script src="js/game-ui.js"></script>
 </body>
+  <!-- scripts: confetti + sound optional -->
+<script src="js/confetti.js"></script>
+<script src="js/sound.js"></script>
+
+<!-- core + ui (REPLACE with above files) -->
+<script src="js/game-core.js"></script>
+<script src="js/game-ui.js"></script>
+
+<!-- optional small starter if you prefer explicit start -->
+<script>
+  // start level from query param e.g. ?level=1
+  (function(){
+    const url = new URL(location.href);
+    const lvl = parseInt(url.searchParams.get('level')||'1',10);
+    window.addEventListener('load', ()=> {
+      try {
+        if(window.Game && !window.Game._state.running) {
+          window.Game.start(lvl);
+        }
+      } catch(e){ console.error('start fail', e); }
+    });
+  })();
+  </script>
   </html>
