@@ -1,36 +1,26 @@
-// 🎉 Confetti.js - visual celebration
+// confetti.js — छोटी confetti burst implementation
 (function(global){
-  console.log('[CONFETTI] लोड हो गया ✅');
-
-  const Confetti = {
-    fire() {
-      console.log('[CONFETTI] 🎊 Fire called!');
-      const duration = 1200;
-      const end = Date.now() + duration;
-
-      (function frame() {
-        const colors = ['#ff0', '#f0f', '#0ff', '#f66', '#6f6'];
-        const particle = document.createElement('div');
-        particle.className = 'confetti';
-        particle.style.position = 'fixed';
-        particle.style.width = '8px';
-        particle.style.height = '8px';
-        particle.style.borderRadius = '50%';
-        particle.style.background = colors[Math.floor(Math.random()*colors.length)];
-        particle.style.left = Math.random()*100 + '%';
-        particle.style.top = '-10px';
-        particle.style.zIndex = 9999;
-        document.body.appendChild(particle);
-
-        const fall = particle.animate([
-          { transform: 'translateY(0px)', opacity: 1 },
-          { transform: 'translateY(100vh)', opacity: 0 }
-        ], { duration: 1500 + Math.random()*1000, easing: 'ease-out' });
-
-        fall.onfinish = ()=> particle.remove();
-        if(Date.now() < end) requestAnimationFrame(frame);
-      })();
+  console.log('[CONFETTI] loaded');
+  function fire(){
+    const duration = 900;
+    const colors = ['#ffcc00','#ff77aa','#77ffdd','#66ccff','#aaff66'];
+    const count = 30;
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.width = el.style.height = (6 + Math.random()*10) + 'px';
+      el.style.left = (10 + Math.random()*80) + '%';
+      el.style.top = '-10px';
+      el.style.position = 'fixed';
+      el.style.zIndex = 9999;
+      document.body.appendChild(el);
+      const dur = 900 + Math.random()*700;
+      el.animate([
+        { transform:'translateY(0) rotate(0deg)', opacity:1 },
+        { transform:`translateY(${window.innerHeight + 200}px) rotate(${360*Math.random()}deg)`, opacity:0 }
+      ], { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = ()=> el.remove();
     }
-  };
-  global.Confetti = Confetti;
+  }
+  global.Confetti = { fire };
 })(window);
