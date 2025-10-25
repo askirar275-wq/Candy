@@ -1,4 +1,13 @@
-// js/game.js — Final Update with BG Music + All Sounds + Fixed Layout
+<script src="js/confetti.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/game-core.js"></script>
+<script src="js/game-ui.js"></script>
+<!-- अब नीचे Eruda Debug Console -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  eruda.init();
+  console.log('%c🔍 Eruda चालू — Console check करो!', 'color:lime;font-size:14px;');
+</script>// js/game.js — Final Update with BG Music + All Sounds + Fixed Layout
 
 window.Game = (function () {
   const C = {
