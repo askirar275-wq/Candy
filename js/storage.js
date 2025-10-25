@@ -1,12 +1,16 @@
-// js/storage.js
-const Store = {
+// storage.js
+const Storage = {
   key: 'candy_progress_v1',
-  load(){
-    try { return JSON.parse(localStorage.getItem(this.key) || '{}'); }
-    catch(e){ return {}; }
+  load() {
+    try {
+      const s = localStorage.getItem(this.key);
+      return s ? JSON.parse(s) : {};
+    } catch(e){ return {}; }
   },
-  save(obj){
-    localStorage.setItem(this.key, JSON.stringify(obj));
+  save(data){
+    try{ localStorage.setItem(this.key, JSON.stringify(data)); }catch(e){}
   },
-  clear(){ localStorage.removeItem(this.key); }
+  clear(){
+    try{ localStorage.removeItem(this.key); }catch(e){}
+  }
 };
