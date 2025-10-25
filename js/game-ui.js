@@ -1,235 +1,222 @@
-// game-ui.js
-(function(global){
-  console.log('[UI] init');
+/* js/game-ui.js
+   UI renderer + drag/swipe handling + Eruda logs.
+   यह file game-core.js के बाद लोड होनी चाहिए।
+*/
 
-  // responsive grid vars (place near top)
-  (function setupResponsiveGrid(){
-    const gridEl = document.getElementById && document.getElementById('gameGrid');
-    // if play.html uses separate file, render will create 'gameGrid' later; so run compute later inside render
-    function computeGridVars(){
-      const grid = document.getElementById('gameGrid');
-      if(!grid) return;
-      const parent = grid.parentElement || document.body;
-      const avail = Math.min(parent.getBoundingClientRect().width, window.innerWidth - 32);
-      const minCell=48,maxCell=72,gap=12,minCols=5,maxCols=8;
-      let chosen=minCols, chosenSize=minCell;
-      for(let cols=maxCols;cols>=minCols;cols--){
-        const requiredMin = cols*minCell + (cols-1)*gap;
-        if(requiredMin <= avail){
-          const size = Math.min(maxCell, Math.floor((avail - (cols-1)*gap)/cols));
-          chosen = cols; chosenSize = Math.max(minCell, size);
-          break;
-        }
-      }
-      document.documentElement.style.setProperty('--cols', chosen);
-      document.documentElement.style.setProperty('--cell-size', chosenSize + 'px');
-      document.documentElement.style.setProperty('--gap', gap + 'px');
-    }
-    window.addEventListener('resize', ()=> setTimeout(computeGridVars,80));
-    window.addEventListener('load', computeGridVars);
-    setTimeout(computeGridVars,120);
-  })();
+(function(){
+  // safety
+  if(!window.Game) {
+    console.error('[UI] Game core not found!');
+    return;
+  }
 
-  // UI state
-  let dragging = null; // {r,c,el,clone}
-  const gridWrapSelector = '.game-grid-container';
+  // cached DOM
+  const gridEl = document.getElementById('gameGrid');
+  const scoreEl = document.getElementById('score');
+  const movesEl = document.getElementById('moves');
+  const targetEl = document.getElementById('target');
+  const timerEl = document.getElementById('timer');
 
-  // render function used by core
+  // drag state
+  let dragging = null; // {startI,startJ, activeCloneEl}
+  let pointerId = null;
+
+  // render grid from Game._state
   function render(){
-    const coreState = Core.state;
-    // locate or create board-card (if main page not play, create simple view)
-    let boardCard = document.querySelector('.board-card');
-    if(!boardCard){
-      // create a container under body to show board (minimal)
-      boardCard = document.createElement('section');
-      boardCard.className = 'card board-card';
-      document.body.appendChild(boardCard);
-    }
-    boardCard.innerHTML = ''; // clear
+    const s = window.Game._state;
+    if(!s) return;
+    // update stats
+    scoreEl.textContent = s.score;
+    movesEl.textContent = s.moves;
+    targetEl.textContent = s.target;
+    timerEl.textContent = s.timerSeconds ? formatTime(s.timerSeconds) : '--:--';
 
-    // header stats row
-    const header = document.createElement('div');
-    header.className = 'stats-row';
-    header.innerHTML = `
-      <div class="stat">Score: <span id="score">${coreState.score}</span></div>
-      <div class="stat">Moves: <span id="moves">${coreState.moves}</span></div>
-      <div class="stat">Target: <span id="target">${coreState.target}</span></div>
-      <div class="stat">Timer: <span id="timer">--:--</span></div>
-    `;
-    boardCard.appendChild(header);
+    // build grid
+    while(gridEl.firstChild) gridEl.removeChild(gridEl.firstChild);
 
-    // grid wrapper
-    const wrap = document.createElement('div');
-    wrap.className = 'game-grid-container';
-    const grid = document.createElement('div');
-    grid.id = 'gameGrid';
-    grid.className = 'game-grid';
-    // set CSS columns (use state)
-    grid.style.gridTemplateColumns = `repeat(${coreState.cols}, 1fr)`;
-    wrap.appendChild(grid);
-    boardCard.appendChild(wrap);
+    gridEl.style.setProperty('--cols', s.cols);
 
-    // fill grid
-    for(let r=0;r<coreState.rows;r++){
-      for(let c=0;c<coreState.cols;c++){
+    for(let i=0;i<s.rows;i++){
+      for(let j=0;j<s.cols;j++){
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.dataset.r = r; cell.dataset.c = c;
-        const t = Core.state.board[r][c];
-        // image path from Types array in core? we'll build fallback
-        let imgPath = (function(){
-          const mapping = [
-            'img/candy-1.png',
-            'img/candy-2.png',
-            'img/candy-3.png',
-            'img/candy-4.png',
-            'img/candy-5.png'
-          ];
-          return mapping[t] || '';
-        })();
-        if(imgPath){
+        cell.dataset.i = i; cell.dataset.j = j;
+        const tile = s.board[i][j];
+        if(tile){
           const img = document.createElement('img');
-          img.src = imgPath;
+          const idx = Math.max(0, Math.min(tile.type, 5));
+          img.src = (window.CANDY_IMAGES && window.CANDY_IMAGES[idx]) ? window.CANDY_IMAGES[idx] : `img/candy-${idx+1}.png`;
           img.alt = 'candy';
           cell.appendChild(img);
+
+          // mark special visually
+          if(tile.special){
+            cell.classList.add('special-'+tile.special);
+          }
         } else {
-          cell.textContent = '🍬';
+          // empty box (shouldn't normally happen after refill), keep blank
         }
-        grid.appendChild(cell);
+
+        // pointer/touch handlers
+        cell.addEventListener('pointerdown', onPointerDown);
+        cell.addEventListener('pointerup', onPointerUp);
+        cell.addEventListener('pointercancel', onPointerCancel);
+        cell.addEventListener('pointermove', onPointerMove);
+
+        gridEl.appendChild(cell);
       }
     }
-
-    // controls
-    const controls = document.createElement('div');
-    controls.style.marginTop = '8px';
-    controls.innerHTML = `<button id="restartBtn" class="btn">Restart</button>
-                          <button id="shuffleBtn" class="btn">Shuffle</button>
-                          <button id="endBtn" class="btn">End</button>`;
-    boardCard.appendChild(controls);
-
-    // wire events
-    attachTileEvents();
-    document.getElementById('restartBtn').onclick = ()=> { Core.start(Core.state.level); }
-    document.getElementById('shuffleBtn').onclick = ()=> { shuffleBoard(); }
-    document.getElementById('endBtn').onclick = ()=> { alert('End level'); }
-
-    // call responsive compute
-    setTimeout(()=>{ const ev = new Event('resize'); window.dispatchEvent(ev); }, 20);
+    console.log('[UI] render board', s.rows, s.cols);
   }
 
-  // shuffle helper
-  function shuffleBoard(){
-    console.log('[UI] shuffle');
-    const s = Core.state;
-    for(let r=0;r<s.rows;r++) for(let c=0;c<s.cols;c++) s.board[r][c] = Math.floor(Math.random()*5);
+  // format timer
+  function formatTime(sec){
+    const m = Math.floor(sec/60), s = sec%60;
+    return (m<10? '0'+m: m) + ':' + (s<10? '0'+s: s);
+  }
+
+  // helper: find cell element by i,j
+  function cellEl(i,j){
+    return gridEl.querySelector(`.cell[data-i="${i}"][data-j="${j}"]`);
+  }
+
+  // create dragging clone (visual) and track pointer
+  function createClone(x,y, srcImg){
+    const clone = document.createElement('img');
+    clone.src = srcImg;
+    clone.className = 'dragging-clone';
+    clone.style.left = x + 'px'; clone.style.top = y + 'px';
+    document.body.appendChild(clone);
+    return clone;
+  }
+
+  // pointer events
+  function onPointerDown(e){
+    e.preventDefault();
+    const el = e.currentTarget;
+    const i = parseInt(el.dataset.i,10), j = parseInt(el.dataset.j,10);
+    pointerId = e.pointerId;
+    el.setPointerCapture(pointerId);
+    // store start
+    const img = el.querySelector('img');
+    const src = img ? img.src : '';
+    dragging = { startI: i, startJ: j, lastX: e.clientX, lastY: e.clientY, clone: createClone(e.clientX, e.clientY, src), started:true };
+    console.log('[UI] pointerdown', i,j);
+  }
+
+  function onPointerMove(e){
+    if(!dragging || e.pointerId !== pointerId) return;
+    e.preventDefault();
+    dragging.lastX = e.clientX; dragging.lastY = e.clientY;
+    if(dragging.clone){
+      dragging.clone.style.left = e.clientX + 'px';
+      dragging.clone.style.top = e.clientY + 'px';
+    }
+  }
+
+  function onPointerCancel(e){
+    if(!dragging) return;
+    cleanupDrag();
+  }
+
+  function onPointerUp(e){
+    if(!dragging || e.pointerId !== pointerId) return;
+    const startI = dragging.startI, startJ = dragging.startJ;
+    const endEl = document.elementFromPoint(e.clientX, e.clientY);
+    const targetCell = findCellFromElement(endEl);
+    if(targetCell){
+      const endI = targetCell.i, endJ = targetCell.j;
+      // attempt swap
+      const res = window.Game.attemptSwap(startI, startJ, endI, endJ);
+      if(res && res.ok){
+        // play pop sound (Game handled scoring)
+        if(window.Sound) Sound.play('pop');
+      } else {
+        // invalid -> shake feedback
+        const el = cellEl(startI,startJ);
+        if(el){
+          el.classList.add('invalid');
+          setTimeout(()=>el.classList.remove('invalid'), 200);
+        }
+      }
+    } else {
+      // pointer released not on cell -> no-op
+    }
+    cleanupDrag();
+  }
+
+  function findCellFromElement(el){
+    while(el && el !== document) {
+      if(el.classList && el.classList.contains('cell')){
+        return { i: parseInt(el.dataset.i,10), j: parseInt(el.dataset.j,10) };
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function cleanupDrag(){
+    if(dragging && dragging.clone){
+      try { document.body.removeChild(dragging.clone); } catch(e){}
+    }
+    dragging = null;
+    if(pointerId){
+      try { document.releasePointerCapture && document.releasePointerCapture(pointerId); } catch(e){}
+      pointerId = null;
+    }
+  }
+
+  // expose CANDY_IMAGES to UI (so image srcs can be set)
+  window.CANDY_IMAGES = [
+    'img/candy-1.png',
+    'img/candy-2.png',
+    'img/candy-3.png',
+    'img/candy-4.png',
+    'img/candy-5.png',
+    'img/candy-6.png'
+  ];
+
+  // initialize UI
+  function initUI(){
+    console.log('[UI] init');
+    // connect to Game state
+    if(!window.Game._state){
+      console.warn('[UI] Game state not yet ready');
+    }
+    // initial render
     render();
+
+    // expose render globally (used by core start wrapper)
+    window.render = render;
+
+    // simple animation loop to refresh UI every 250ms if running (keeps stats fresh)
+    setInterval(()=> {
+      if(window.Game && window.Game._state) {
+        const s = window.Game._state;
+        // update elements quickly
+        scoreEl.textContent = s.score;
+        movesEl.textContent = s.moves;
+        targetEl.textContent = s.target;
+      }
+    }, 250);
   }
 
-  // attach drag/touch handlers to each cell
-  function attachTileEvents(){
-    const grid = document.getElementById('gameGrid');
-    if(!grid) return;
-    let ongoing = false;
-
-    // helper to get rc from element
-    function rcFromEl(el){ return { r: parseInt(el.dataset.r), c: parseInt(el.dataset.c) }; }
-
-    function isAdjacent(a,b){
-      const dr = Math.abs(a.r - b.r), dc = Math.abs(a.c - b.c);
-      return (dr+dc) === 1;
+  // attach cleanup on unload
+  window.addEventListener('load', ()=> {
+    try {
+      initUI();
+      console.log('[UI] loaded');
+    } catch(e){
+      console.error('[UI] init failed', e);
     }
+  });
 
-    // touch/mouse unified
-    grid.addEventListener('pointerdown', (e)=>{
-      const cell = e.target.closest('.cell'); if(!cell) return;
-      e.preventDefault();
-      if(ongoing) return;
-      ongoing = true;
-      const rc = rcFromEl(cell);
-      dragging = { r: rc.r, c: rc.c, el: cell };
-      // create clone
-      const rect = cell.getBoundingClientRect();
-      const clone = cell.cloneNode(true);
-      clone.className = 'dragging-clone';
-      clone.style.left = (e.clientX) + 'px';
-      clone.style.top = (e.clientY) + 'px';
-      document.body.appendChild(clone);
-      dragging.clone = clone;
-      cell.classList.add('swapping');
-    });
+  // add some global shortcuts for debug (eruda console)
+  window._gameDebug = {
+    dumpState: ()=> { console.log(JSON.parse(JSON.stringify(window.Game._state))); },
+    findMatches: ()=> { console.log(window.Game._internal.findMatches()); },
+    applyGravity: ()=> { window.Game._internal.applyGravityAndRefill(); render(); }
+  };
 
-    window.addEventListener('pointermove', (e)=>{
-      if(!dragging) return;
-      e.preventDefault();
-      if(dragging.clone){
-        dragging.clone.style.left = (e.clientX) + 'px';
-        dragging.clone.style.top = (e.clientY) + 'px';
-      }
-    }, {passive:false});
-
-    window.addEventListener('pointerup', (e)=>{
-      if(!dragging) return;
-      const gridRect = grid.getBoundingClientRect();
-      const x = e.clientX, y = e.clientY;
-      const elUnder = document.elementFromPoint(x,y);
-      const targetCell = elUnder && elUnder.closest('.cell');
-      const from = { r: dragging.r, c: dragging.c };
-      if(targetCell){
-        const to = { r: parseInt(targetCell.dataset.r), c: parseInt(targetCell.dataset.c) };
-        if(isAdjacent(from,to)){
-          // do swap
-          Core.swapTiles(from,to);
-          Sound.play && Sound.play('swap');
-          Core.state.moves = Math.max(0, Core.state.moves - 1);
-          // render then check matches
-          render();
-          setTimeout(()=> {
-            const matches = Core.findMatches();
-            if(matches.length){
-              // good swap
-              Sound.play && Sound.play('pop');
-              Core.processBoardAfterSwap();
-            } else {
-              // invalid - swap back
-              Core.swapTiles(from,to);
-              Sound.play && Sound.play('swap');
-              render();
-            }
-            // update moves display
-            const mv = document.getElementById('moves'); if(mv) mv.textContent = Core.state.moves;
-          }, 160);
-        } else {
-          // not adjacent -> no-op
-          dragging.el.classList.add('invalid');
-          setTimeout(()=> dragging.el && dragging.el.classList.remove('invalid'),180);
-        }
-      }
-      // cleanup
-      dragging.el && dragging.el.classList.remove('swapping');
-      dragging.clone && dragging.clone.remove();
-      dragging = null;
-      ongoing = false;
-    });
-
-    // prevent default scrolling on grid
-    grid.addEventListener('touchmove', (e)=> { e.preventDefault(); }, {passive:false});
-  }
-
-  // start logic (reads ?level param)
-  function startWhenReady(){
-    const urlParams = new URLSearchParams(location.search);
-    const lvl = urlParams.get('level') || 1;
-    document.addEventListener('DOMContentLoaded', ()=> {
-      Core.start(lvl);
-      // start bg music attempt
-      try{ Sound.startBG(); }catch(e){}
-      // initial render
-      render();
-    });
-  }
-
-  // expose render so core can call it
-  global.render = render;
-  // start
-  startWhenReady();
-})(window);
+  console.log('[UI] script ready');
+})();
