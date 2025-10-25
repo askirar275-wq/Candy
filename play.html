@@ -4,305 +4,61 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match — Play</title>
-
-  <!-- --- बेसिक स्टाइल (थीम) --- -->
-  <style>
-    :root{ --cell-size:64px; --gap:12px; --cols:6; }
-    body{ font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; margin:0; background: linear-gradient(180deg,#fff,#f7fafc); color:#111; }
-    .page { max-width: 900px; margin: 0 auto; padding: 16px; }
-
-    /* header */
-    .site-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0; }
-    .logo { font-weight:700; font-size:18px; display:flex; align-items:center; gap:8px; }
-    .nav a { margin-left:10px; color:#0b69ff; text-decoration:none; }
-
-    /* --- BOARD CARD (जहाँ गेम रहेगा) --- */
-    .board-card {
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      padding:18px;
-      border-radius:14px;
-      box-shadow:0 20px 48px rgba(0,0,0,0.06);
-      background:#fff;
-      max-width:520px;
-      margin:12px auto;
-      min-height:420px; /* यदि board render delay है तो खाली नहीं दिखेगा */
-    }
-
-    /* top stats row */
-    .stats-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; }
-    .stat { background:#fbfdff; padding:10px 16px; border-radius:14px; box-shadow:0 10px 22px rgba(10,20,40,0.04); font-weight:600; }
-
-    /* container जो grid wrap करेगा */
-    .game-grid-container {
-      width:100%;
-      max-height: calc(100vh - 320px);
-      overflow:auto;
-      padding:8px;
-      display:flex;
-      justify-content:center;
-      align-items:flex-start;
-    }
-
-    /* grid */
-    .game-grid{
-      display:grid;
-      gap:var(--gap,12px);
-      grid-template-columns: repeat(var(--cols,6), var(--cell-size,64px));
-      padding:12px;
-      border-radius:12px;
-      justify-content:center;
-      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.98));
-      box-shadow: inset 0 6px 14px rgba(0,0,0,0.03);
-    }
-
-    /* cell */
-    .cell{
-      width: var(--cell-size,64px);
-      height: var(--cell-size,64px);
-      border-radius:12px;
-      background:#fff;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 12px 24px rgba(0,0,0,0.06);
-      transition: transform .16s ease, box-shadow .12s;
-      user-select:none;
-      -webkit-user-drag:none;
-      position:relative;
-    }
-    .cell img{ width:72%; height:72%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; }
-
-    /* dragging/feedback */
-    .cell.swapping{ transform: scale(0.96); box-shadow:0 8px 26px rgba(0,0,0,0.12); }
-    .cell.invalid{ animation: shake .18s; }
-    @keyframes shake {
-      0%{ transform: translateX(0); }
-      25%{ transform: translateX(-8px); }
-      50%{ transform: translateX(6px); }
-      75%{ transform: translateX(-4px); }
-      100%{ transform: translateX(0); }
-    }
-
-    /* responsive tweaks */
-    @media (max-width:420px){
-      :root{ --cell-size:48px; --gap:10px; --cols:5; }
-      .board-card { padding:12px; min-height:360px; }
-      .game-grid-container { max-height: calc(100vh - 300px); }
-    }
-    @media (min-width:521px){
-      :root{ --cell-size:64px; --gap:12px; --cols:7; }
-      .game-grid-container { max-height: calc(100vh - 360px); }
-    }
-
-    /* controls */
-    .controls { display:flex; gap:10px; justify-content:center; margin-top:6px; }
-    .btn { padding:10px 16px; border-radius:10px; background:#fff; border:1px solid #ddd; cursor:pointer; }
-    .btn.primary { background:#2a9df4; color:#fff; border:0; }
-
-    footer { text-align:center; margin:18px 0; color:#777; }
-
-    /* small drag clone */
-    .dragging-clone { position:fixed; z-index:9999; width:56px; height:56px; transform:translate(-50%,-50%); pointer-events:none; transition:transform .05s linear; }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="page">
-    <header class="site-header" role="banner">
-      <div class="logo">🍬 Candy Match</div>
-      <nav class="nav">
-        <a href="index.html">Home</a>
-        <a href="map.html">Map</a>
-        <a href="play.html">Play</a>
-        <a href="about.html">About</a>
-      </nav>
-    </header>
+  <header class="site-header">
+    <div class="logo">🍬 Candy Match</div>
+    <nav class="top-nav">
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="play.html">Play</a>
+    </nav>
+  </header>
 
-    <!-- --- BOARD CARD: यहाँ गेम render होगा --- -->
+  <main class="page">
     <section class="card board-card" id="boardCard" aria-live="polite">
-      <!-- ऊपर stats -->
-      <div class="stats-row" id="statsRow">
+      <a class="back" href="map.html">← Map</a>
+      <h1 id="levelTitle">Level 1</h1>
+
+      <div class="stats-row">
         <div class="stat">Score: <span id="score">0</span></div>
         <div class="stat">Moves: <span id="moves">30</span></div>
         <div class="stat">Target: <span id="target">600</span></div>
         <div class="stat">Timer: <span id="timer">--:--</span></div>
       </div>
 
-      <!-- grid container (UI/JS इसे भरेंगे) -->
+      <div class="stars" id="stars">☆ ☆ ☆</div>
+
       <div class="game-grid-container">
-        <!-- game-grid को JS बनाएगा; अगर JS fail भी हो तो empty area रहे -->
-        <div id="gameGrid" class="game-grid" role="application" aria-label="Candy board"></div>
+        <div id="gameGrid" class="game-grid" role="application" aria-label="Candy board" style="--cols:6;"></div>
       </div>
 
-      <!-- controls -->
-      <div class="controls" id="controls">
-        <button class="btn" id="restartBtn">Restart</button>
-        <button class="btn" id="shuffleBtn">Shuffle</button>
-        <button class="btn" id="endBtn">End</button>
+      <div class="controls">
+        <button id="btnRestart" class="btn">Restart</button>
+        <button id="btnShuffle" class="btn">Shuffle</button>
+        <button id="btnEnd" class="btn">End</button>
       </div>
     </section>
+  </main>
 
-    <footer>© Candy Match</footer>
-  </div>
+  <footer class="site-footer">© Candy Match</footer>
 
-  <!-- ============================
-       Scripts — सही order ज़रूरी है
-       Eruda (mobile console) — optional but useful for debug
-       ============================ -->
-  <!-- Eruda console (debug) -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>
-    eruda.init();
-    console.log('[ERUDA] Console initialized');
-  </script>
+  <!-- debug console -->
+  <script src="js/eruda-init.js"></script>
 
-  <!-- Confetti (tumble burst) - अपना confetti.js रखें या CDN वापरें -->
-  <!-- placeholder; अगर local है तो path बदलें: js/confetti.js -->
-  <script>
-    /* अगर तुम्हारे पास confetti.js नहीं है तो नीचे एक very small confetti stub रख रहा हूँ
-       (production में replace कर देना) */
-    window.Confetti = {
-      fire: function(opts){
-        console.log('[CONFETTI] fire()', opts||'');
-        // यहाँ वास्तविक confetti library call आ सकता है
-        // उदाहरण: confetti({ particleCount:50, spread: 70, origin:{y:0.6} });
-      },
-      init: function(){ console.log('[CONFETTI] loaded'); }
-    };
-    Confetti.init();
-  </script>
+  <!-- core assets -->
+  <script src="js/storage.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/confetti.js"></script>
 
-  <!-- Sound helper (placeholder). Replace with actual js/sound.js if तुमने बनाई है -->
-  <script>
-    window.Sound = {
-      _muted: false,
-      init: function(){
-        console.log('[SOUND] initializing');
-        // preload known files (swap,pop,win,bg) — replace paths as per your project
-        this.files = {
-          swap: 'sounds/swap.mp3',
-          pop:  'sounds/pop.mp3',
-          win:  'sounds/win.mp3',
-          bg:   'sounds/bg.mp3'
-        };
-        // create audio elements (do not autoplay) — will play on user gesture
-        this.audios = {};
-        for(const k in this.files){
-          try {
-            const a = new Audio(this.files[k]);
-            a.preload = 'auto';
-            a.loop = (k === 'bg');
-            this.audios[k] = a;
-          } catch(e){ console.warn('[SOUND] audio create failed', k, e); }
-        }
-        console.log('[SOUND] initialized');
-      },
-      play: function(name){
-        try {
-          if(this._muted) return console.log('[SoundStub] muted');
-          const a = this.audios && this.audios[name];
-          if(!a) return console.warn('[SoundDebug] Sound object not found for', name);
-          // mobile browsers block autoplay; play() may reject without user gesture
-          const p = a.play();
-          if(p && p.catch) p.catch(err => console.warn('[Sound] play blocked', err));
-        } catch(e){ console.error('[Sound] play error', e); }
-      },
-      toggleMute: function(){
-        this._muted = !this._muted;
-        for(const k in this.audios) this.audios[k].muted = this._muted;
-        console.log('[SoundDebug] muted=', this._muted);
-      }
-    };
-    Sound.init();
-  </script>
-
-  <!-- Responsive grid helper — this sets --cols and --cell-size dynamically -->
-  <script>
-  (function setupResponsiveGrid(){
-    const gridEl = document.getElementById('gameGrid');
-    if(!gridEl) return;
-
-    function computeGridVars(){
-      const minCell = 48;
-      const maxCell = 72;
-      const gap = 12;
-      const minCols = 5;
-      const maxCols = 8;
-
-      const parent = gridEl.parentElement || document.documentElement;
-      const avail = Math.min(parent.getBoundingClientRect().width || window.innerWidth, window.innerWidth - 32);
-      let chosen = minCols;
-      let chosenSize = minCell;
-      for(let cols=maxCols; cols>=minCols; cols--){
-        const requiredMin = cols * minCell + (cols-1) * gap;
-        if(requiredMin <= avail){
-          const size = Math.min(maxCell, Math.floor((avail - (cols-1)*gap) / cols));
-          chosen = cols; chosenSize = Math.max(minCell, size);
-          break;
-        }
-      }
-      document.documentElement.style.setProperty('--cols', chosen);
-      document.documentElement.style.setProperty('--cell-size', chosenSize + 'px');
-      document.documentElement.style.setProperty('--gap', gap + 'px');
-      console.log('[GRID] --cols', chosen, '--cell-size', chosenSize);
-    }
-
-    computeGridVars();
-    let t;
-    window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(computeGridVars, 120); });
-    window.addEventListener('load', computeGridVars);
-  })();
-  </script>
-
-  <!-- --- Game core & UI scripts ---
-       IMPORTANT:
-       - game-core.js should define window.Game (state, start, swap, etc)
-       - game-ui.js should define render(), attach controls and handle drag/swipe and call Game APIs
-       Replace these paths with your actual script locations.
-  -->
+  <!-- game logic -->
   <script src="js/game-core.js"></script>
   <script src="js/game-ui.js"></script>
+  <script src="js/game.js"></script>
 
-  <!-- safe Game.start wrapper (wait for DOM & Game) -->
-  <script>
-  (function(){
-    try {
-      const urlParams = new URLSearchParams(location.search);
-      const lvl = parseInt(urlParams.get('level') || '1',10) || 1;
-
-      function startWhenReady(){
-        // if Game API available and DOM ready
-        if(typeof window.Game !== 'undefined' && document.readyState !== 'loading'){
-          console.log('[CORE] start level', lvl);
-          window.Game.start && window.Game.start(lvl);
-          // call UI render if exists
-          if(typeof window.render === 'function') window.render();
-        } else {
-          window.addEventListener('load', ()=> {
-            if(typeof window.Game !== 'undefined') {
-              console.log('[CORE] start after load', lvl);
-              window.Game.start && window.Game.start(lvl);
-              if(typeof window.render === 'function') window.render();
-            } else {
-              console.warn('[CORE] Game not found after load');
-            }
-          });
-        }
-      }
-      startWhenReady();
-    } catch(e){
-      console.error('Game start failed', e);
-    }
-  })();
-  </script>
-
-  <!-- small helper: attach control buttons to global Game methods (if exist) -->
-  <script>
-    document.getElementById('restartBtn').addEventListener('click', ()=> { if(window.Game && Game.restart) Game.restart(); else console.warn('Game.restart not found'); });
-    document.getElementById('shuffleBtn').addEventListener('click', ()=> { if(window.Game && Game.shuffle) Game.shuffle(); else console.warn('Game.shuffle not found'); });
-    document.getElementById('endBtn').addEventListener('click', ()=> { if(window.Game && Game.end) Game.end(); else console.warn('Game.end not found'); });
-
-    // fast debug helper to inspect DOM from Eruda console
-    console.log('[UI] boardCard?', document.getElementById('boardCard'), 'gameGrid?', document.getElementById('gameGrid'));
-  </script>
+  <!-- responsive + bootstrap -->
+  <script src="js/responsive-grid.js"></script>
+  <script src="js/bootstrap-safe.js"></script>
 </body>
-  </html>
+</html>
