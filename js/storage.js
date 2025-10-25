@@ -1,9 +1,9 @@
-// छोटा localStorage wrapper
+// js/storage.js - minimal wrapper
 window.Store = {
-  get: function(k, def){
-    try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch(e){ return def; }
+  get(key, def){
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e){ return def; }
   },
-  set: function(k,v){
-    try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ console.warn('store.set failed', e); }
+  set(key, val){
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
   }
 };
