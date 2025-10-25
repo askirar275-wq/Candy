@@ -1,35 +1,51 @@
-:root{ --cell-size:64px; --gap:12px; --cols:6; --bg:#f6fbfc; }
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;background:linear-gradient(180deg,var(--bg),#eef7f7);color:#111}
-header.site-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:linear-gradient(90deg,#ffd7e8,#bfefff);position:sticky;top:0;z-index:40}
-.brand{font-weight:700}
-.topnav a{margin-left:12px;color:#1b6eff;text-decoration:none}
-main{padding:18px;max-width:920px;margin:0 auto}
+/* css/style.css - minimalist mobile-first styling (Hindi comments) */
+:root{
+  --bg: #f1fbff;
+  --card: #ffffff;
+  --accent: #ff6fb2;
+  --cell-size: 64px;
+  --gap: 12px;
+  --cols: 6;
+}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#f7fbff,#f0fbff);}
+.site-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(90deg,#ffd0e6,#cfefff);}
+.logo{font-weight:700}
+.top-nav a{margin-left:12px;color:#1466d6;text-decoration:none}
+.page{max-width:720px;margin:18px auto;padding:0 12px;}
+.card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 18px 40px rgba(20,30,50,0.06);margin-bottom:16px;}
+.buttons{display:flex;gap:12px;margin-top:12px}
+.btn{display:inline-block;padding:10px 16px;border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,0.06);cursor:pointer;text-decoration:none;color:#222}
+.btn.primary{background:#17a2ff;color:#fff;border:none}
 
-/* कार्ड जो गेम रखता है */
-.board-card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;box-shadow:0 20px 48px rgba(0,0,0,0.08);background:#fff;max-width:520px;margin:0 auto}
+.back{display:inline-block;color:#6a32a8;text-decoration:none;margin-bottom:6px}
+.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.level{display:block;padding:14px;background:#fff;border-radius:12px;text-align:center;text-decoration:none;color:#222;box-shadow:0 8px 20px rgba(0,0,0,0.04)}
+.level.locked{opacity:0.5}
 
-/* ग्रिड कंटेनर — कार्ड के अंदर स्क्रोल करेगा */
-.game-grid-container{width:100%;max-height:calc(100vh - 320px);overflow:auto;padding:8px;display:flex;justify-content:center;align-items:flex-start}
+.board-card{max-width:520px;margin:0 auto}
+.stats-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}
+.stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(10,20,40,0.06)}
+.stars{font-size:20px;color:#f5c518;margin:8px 0;text-align:center}
 
-/* ग्रिड */
-.game-grid{display:grid;gap:var(--gap,12px);grid-template-columns:repeat(var(--cols,6), var(--cell-size,64px));padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.98));box-shadow:inset 0 6px 14px rgba(0,0,0,0.03);justify-content:center}
+/* game grid container & grid */
+.game-grid-container{width:100%;max-height:calc(100vh - 360px);overflow:auto;padding:8px;display:flex;justify-content:center;}
+.game-grid{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--cols), var(--cell-size));padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.98));box-shadow:inset 0 6px 14px rgba(0,0,0,0.03);}
 
-/* सेल */
-.cell{width:var(--cell-size,64px);height:var(--cell-size,64px);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(0,0,0,0.06);transition:transform .16s ease,box-shadow .12s;position:relative;overflow:visible}
-.cell img{width:72%;height:72%;object-fit:contain;pointer-events:none}
-.cell.swapping{transform:scale(.96);box-shadow:0 8px 26px rgba(0,0,0,0.12)}
+.cell{width:var(--cell-size);height:var(--cell-size);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(0,0,0,0.06);position:relative;overflow:visible;touch-action:none;user-select:none}
+.cell img{width:72%;height:72%;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+.cell.dragging{opacity:0.85; transform:scale(1.05); z-index:50}
 .cell.invalid{animation:shake .18s}
-@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
 
-/* dragging clone */
-.dragging-clone{position:fixed;z-index:9999;width:56px;height:56px;transform:translate(-50%,-50%);pointer-events:none;transition:transform .08s linear}
+/* controls */
+.controls{display:flex;gap:12px;justify-content:center;margin-top:12px}
 
-/* stats & controls */
-.stats-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:6px}
-.stat{padding:12px 18px;border-radius:12px;background:rgba(255,255,255,0.95);box-shadow:0 8px 18px rgba(0,0,0,0.05);min-width:110px;text-align:center}
-.controls{display:flex;gap:12px;justify-content:center;margin-top:6px}
-.controls button{padding:10px 16px;border-radius:10px;border:1px solid #ddd;background:#fff}
+/* footer */
+.site-footer{text-align:center;padding:18px;color:#777}
 
-/* small screens */
-@media(max-width:480px){:root{--cell-size:48px;--gap:10px;--cols:5}.board-card{padding:12px}.game-grid-container{max-height:calc(100vh - 300px)}}
+/* responsive tweaks */
+@media(max-width:420px){
+  :root{--cell-size:48px;--gap:10px;--cols:5}
+  .game-grid-container{max-height:calc(100vh - 300px)}
+  .card{padding:12px}
+}
