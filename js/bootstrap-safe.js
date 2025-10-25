@@ -1,7 +1,9 @@
-// js/bootstrap-safe.js
+// js/bootstrap-safe.js (updated) — बेहतर error-logging और safe startup
 (function(){
   const log = (...a)=> console.log('[BOOT]', ...a);
   const warn = (...a)=> console.warn('[BOOT]', ...a);
+  const err = (...a)=> console.error('[BOOT]', ...a);
+
   function ensureDOM(){
     const needs = [
       { id:'boardCard', tag:'section', className:'card board-card' },
@@ -20,39 +22,77 @@
       } else log(`DOM '${item.id}' found`);
     });
   }
-  function waitForReady({timeout=4000,poll=80} = {}){
-    return new Promise((res,rej)=>{
+
+  function waitForLibs(timeout = 4000){
+    return new Promise((resolve, reject) => {
       const start = Date.now();
       function check(){
-        const hasDom = !!document.getElementById('gameGrid');
-        const GameReady = typeof window.Game !== 'undefined';
-        const UIReady = typeof window.UI !== 'undefined';
-        if(hasDom && GameReady && UIReady) return res({Game:window.Game,UI:window.UI});
-        if(Date.now()-start > timeout) return rej({hasDom,GameReady,UIReady});
-        setTimeout(check,poll);
+        const state = {
+          hasDOM: !!document.getElementById('gameGrid'),
+          GameReady: typeof window.Game !== 'undefined' && typeof window.Game.start === 'function',
+          UIReady: typeof window.UI !== 'undefined' && typeof window.UI.init === 'function'
+        };
+        // If Game ready OR UI ready we resolve (we can init in order below)
+        if(state.hasDOM && (state.GameReady || state.UIReady)){
+          return resolve(state);
+        }
+        if(Date.now() - start > timeout) return reject(state);
+        setTimeout(check, 80);
       }
       check();
     });
   }
+
   async function safeStart(){
     log('bootstrap safeStart');
-    ensureDOM();
     try {
-      await waitForReady({timeout:5000});
-    } catch(info){
-      warn('waitForReady timeout', info);
-    }
-    try {
-      if(window.UI && typeof window.UI.init === 'function'){ log('UI.init'); window.UI.init(); }
-      if(window.Game && typeof window.Game.start === 'function'){
-        const lvl = (new URLSearchParams(location.search)).get('level') || 1;
-        log('Game.start', lvl);
-        window.Game.start(lvl);
-      }
+      ensureDOM();
     } catch(e){
-      console.error('[BOOT] init error', e);
+      warn('ensureDOM failed', e);
+    }
+
+    try {
+      const info = await waitForLibs(5000).catch(x=> x);
+      log('waitForLibs result', info);
+
+      // If Game exists, start it first so state is available for UI
+      if(window.Game && typeof window.Game.start === 'function'){
+        try {
+          const lvlParam = (new URLSearchParams(location.search)).get('level') || 1;
+          log('Game.start =>', lvlParam);
+          window.Game.start(lvlParam);
+        } catch(e){
+          err('[BOOT] Game.start error', e);
+        }
+      } else {
+        log('Game not available yet; will try UI.init and Game later.');
+      }
+
+      // Now initialize UI if available
+      if(window.UI && typeof window.UI.init === 'function'){
+        try {
+          log('UI.init calling');
+          window.UI.init();
+        } catch(e){
+          err('[BOOT] UI.init error', e);
+        }
+      } else {
+        log('UI.init not available (will wait).');
+      }
+
+      // If Game exists but UI wasn't ready earlier, try to init UI again after small delay
+      if(window.Game && window.UI && typeof window.UI.init === 'function'){
+        try { window.UI.init(); } catch(e) { /* ignore */ }
+      }
+
+    } catch(e){
+      err('[BOOT] safeStart main error', e);
     }
   }
-  if(document.readyState==='complete' || document.readyState==='interactive'){ setTimeout(safeStart,40); }
-  else window.addEventListener('DOMContentLoaded', ()=> setTimeout(safeStart,40));
+
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(safeStart, 40);
+  } else {
+    window.addEventListener('DOMContentLoaded', ()=> setTimeout(safeStart, 40));
+  }
 })();
