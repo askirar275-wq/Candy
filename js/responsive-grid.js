@@ -1,24 +1,27 @@
+// grid responsive variables compute — include before UI render
 (function setupResponsiveGrid(){
   const gridEl = document.getElementById('gameGrid');
-  if(!gridEl) return;
-
-  function computeCols(){
-    const minCell = 56;
-    const gap = 12;
-    const maxCols = 8;
-    const minCols = 5;
-    const container = Math.min(window.innerWidth*0.92,720);
-    let cols = Math.floor((container + gap) / (minCell + gap));
-    cols = Math.max(minCols, Math.min(maxCols, cols));
-    gridEl.style.setProperty('--cols', cols);
-    // also set --cell-size so grid fits
-    const width = Math.min(container, window.innerWidth - 24);
-    const cellSize = Math.floor((width - (cols-1)*gap) / cols);
-    gridEl.style.setProperty('--cell-size', `${cellSize}px`);
+  function computeGridVars(){
+    if(!gridEl) return;
+    const minCell = 48, maxCell = 72, gap=12, minCols=5, maxCols=8;
+    const parent = gridEl.parentElement || document.body;
+    const avail = Math.min(parent.getBoundingClientRect().width || window.innerWidth, window.innerWidth - 32);
+    let chosen=minCols, chosenSize=minCell;
+    for(let cols=maxCols; cols>=minCols; cols--){
+      const requiredMin = cols*minCell + (cols-1)*gap;
+      if(requiredMin <= avail){
+        const size = Math.min(maxCell, Math.floor((avail - (cols-1)*gap)/cols));
+        chosen = cols; chosenSize = Math.max(minCell, size);
+        break;
+      }
+    }
+    document.documentElement.style.setProperty('--cols', chosen);
+    document.documentElement.style.setProperty('--cell-size', chosenSize+'px');
+    document.documentElement.style.setProperty('--gap', gap+'px');
+    console.log('[GRID] --cols', chosen, '--cell-size', chosenSize);
   }
-
-  let t;
-  window.addEventListener('resize', ()=> { clearTimeout(t); t = setTimeout(computeCols, 120); });
-  document.addEventListener('DOMContentLoaded', computeCols);
-  computeCols();
+  window.addEventListener('resize', ()=> setTimeout(computeGridVars,100));
+  window.addEventListener('load', computeGridVars);
+  document.addEventListener('DOMContentLoaded', computeGridVars);
+  computeGridVars();
 })();
