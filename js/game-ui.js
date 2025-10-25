@@ -1,56 +1,102 @@
-/* game-ui.js
-   UI + input handling + responsive grid setup + eruda init + safe sound/confetti usage
+/* game-ui.js  — Updated robust UI + input + eruda logging + safe image fallback
+   Replace your existing js/game-ui.js with this file.
 */
 
 (function(){
-  // Eruda init (if available) and safe logger
-  if(window.eruda) {
-    console.log('[ERUDA] Console initialized');
-  } else {
-    // optional: dynamic load eruda if you want (commented)
-    // const s = document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; document.head.appendChild(s);
+  // ---- Eruda friendly logger (works whether eruda present or not) ----
+  const Log = {
+    info: (...a)=>{ try{ console.log(...a); }catch{} },
+    warn: (...a)=>{ try{ console.warn(...a); }catch{} },
+    error: (...a)=>{ try{ console.error(...a); }catch{} }
+  };
+
+  Log.info('[UI] loading');
+
+  // Safe wrappers (if sound/confetti scripts not present)
+  const Sound = window.Sound || { play: (...a)=>Log.info('[SoundStub]', ...a), init: ()=>{} };
+  const Confetti = window.Confetti || { fire: ()=>Log.info('[ConfettiStub] fire') };
+
+  // Ensure boardCard exists (container card inside page). If not, create one and insert near top.
+  let boardCard = document.getElementById('boardCard');
+  if(!boardCard){
+    boardCard = document.createElement('section');
+    boardCard.id = 'boardCard';
+    boardCard.className = 'card board-card';
+    // try to insert under main content or at body start
+    const main = document.querySelector('main') || document.body;
+    main.insertBefore(boardCard, main.firstChild);
+    Log.info('[UI] created boardCard');
   }
-  const log = (...a)=>console.log(...a);
-  const warn = (...a)=>console.warn(...a);
-  const error = (...a)=>console.error(...a);
 
-  // safe wrappers
-  const Sound = window.Sound || { play: (...args)=>log('[SoundStub]', ...args), init: ()=>{} };
-  const Confetti = window.Confetti || { fire: ()=>log('[ConfettiStub] fire') };
-
-  // DOM references (create if missing)
-  function $(sel){ return document.querySelector(sel); }
-  const boardCard = document.getElementById('boardCard') || (function(){
-    const sec = document.createElement('section'); sec.className='card board-card'; sec.id='boardCard';
-    // try to insert into page main
-    const container = document.querySelector('main') || document.body;
-    container.appendChild(sec);
-    return sec;
-  })();
-
-  // make sure there's a grid element
+  // Ensure gameGrid exists
   let gameGrid = document.getElementById('gameGrid');
   if(!gameGrid){
     gameGrid = document.createElement('div');
     gameGrid.id = 'gameGrid';
     gameGrid.className = 'game-grid';
     boardCard.appendChild(gameGrid);
+    Log.info('[UI] created gameGrid');
   }
 
-  // stats elements (create if not present)
-  let scoreEl = document.getElementById('score') || (function(){ const d=document.createElement('span'); d.id='score'; d.textContent='0'; boardCard.insertAdjacentElement('afterbegin', d); return d; })();
-  let movesEl = document.getElementById('moves') || (function(){ const d=document.createElement('span'); d.id='moves'; d.textContent='30'; boardCard.insertAdjacentElement('afterbegin', movesEl? 'afterbegin':'afterbegin', d); return d; })();
-  let targetEl = document.getElementById('target') || (function(){ const d=document.createElement('span'); d.id='target'; d.textContent='600'; boardCard.insertAdjacentElement('afterbegin', targetEl? 'afterbegin':'afterbegin', d); return d; })();
+  // Create/ensure stats row (score/moves/target/timer)
+  function ensureStatsElements(){
+    let statsRow = boardCard.querySelector('.stats-row');
+    if(!statsRow){
+      statsRow = document.createElement('div');
+      statsRow.className = 'stats-row';
+      statsRow.style.display = 'flex';
+      statsRow.style.gap = '12px';
+      statsRow.style.flexWrap = 'wrap';
+      statsRow.style.alignItems = 'center';
+      statsRow.style.justifyContent = 'center';
+      // create four stat boxes
+      const makeStat = (id,label)=>{
+        const box = document.createElement('div');
+        box.className = 'stat';
+        box.style.padding = '12px 18px';
+        box.style.borderRadius = '12px';
+        box.style.background = 'rgba(255,255,255,0.95)';
+        box.style.boxShadow = '0 8px 18px rgba(0,0,0,0.05)';
+        box.style.fontWeight = '600';
+        box.style.minWidth = '110px';
+        const span = document.createElement('span');
+        span.id = id;
+        span.textContent = (id==='timer') ? '--:--' : '0';
+        const lbl = document.createElement('div');
+        lbl.style.fontSize = '12px';
+        lbl.style.opacity = '0.75';
+        lbl.textContent = label;
+        box.appendChild(lbl);
+        box.appendChild(span);
+        return box;
+      };
+      statsRow.appendChild(makeStat('score','Score:'));
+      statsRow.appendChild(makeStat('moves','Moves:'));
+      statsRow.appendChild(makeStat('target','Target:'));
+      statsRow.appendChild(makeStat('timer','Timer:'));
+      boardCard.insertBefore(statsRow, gameGrid);
+      Log.info('[UI] created stats-row');
+    }
+    // return elements
+    return {
+      scoreEl: document.getElementById('score'),
+      movesEl: document.getElementById('moves'),
+      targetEl: document.getElementById('target'),
+      timerEl: document.getElementById('timer')
+    };
+  }
 
-  // grid sizing responsive script (sets --cols / --cell-size). Place early.
+  const stats = ensureStatsElements();
+
+  // Responsive grid variables: compute --cols and --cell-size based on boardCard width
   (function setupResponsiveGrid(){
     const gridEl = gameGrid;
     if(!gridEl) return;
     function computeGridVars(){
-      const minCell = 48, maxCell = 72, gap = 12, minCols=5, maxCols=8;
-      const parent = gridEl.parentElement;
+      const minCell = 48, maxCell = 72, gap = 12, minCols = 5, maxCols = 8;
+      const parent = gridEl.parentElement || document.documentElement;
       const avail = Math.min(parent.getBoundingClientRect().width || window.innerWidth, window.innerWidth - 32);
-      let chosen=minCols, chosenSize=minCell;
+      let chosen = minCols, chosenSize = minCell;
       for(let cols=maxCols; cols>=minCols; cols--){
         const requiredMin = cols*minCell + (cols-1)*gap;
         if(requiredMin <= avail){
@@ -62,69 +108,101 @@
       document.documentElement.style.setProperty('--cols', chosen);
       document.documentElement.style.setProperty('--cell-size', chosenSize + 'px');
       document.documentElement.style.setProperty('--gap', gap + 'px');
-      log('[GRID] --cols', chosen, '--cell-size', chosenSize);
+      gridEl.style.gridTemplateColumns = `repeat(${chosen}, var(--cell-size, ${chosenSize}px))`;
+      Log.info('[GRID] --cols', chosen, '--cell-size', chosenSize);
     }
     computeGridVars();
-    let t; window.addEventListener('resize', ()=>{ clearTimeout(t); t=setTimeout(computeGridVars,120); });
+    let t; window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(computeGridVars,120); });
     window.addEventListener('load', computeGridVars);
   })();
 
-  // UI state
-  let dragging = null; // {r,c,el, startX,...}
-  let cols = 6, rows = 6;
-
-  // render function (reads Game._state)
-  function render(){
-    try {
-      if(!window.Game || !window.Game._state) {
-        log('[UI] Game state not yet ready');
-        return;
-      }
-      const s = window.Game._state;
-      cols = s.cols; rows = s.rows;
-      // update stats
-      scoreEl.textContent = s.score;
-      movesEl.textContent = s.moves;
-      targetEl.textContent = s.target;
-      // clear grid
-      gameGrid.innerHTML = '';
-      gameGrid.style.setProperty('--cols', cols);
-      // set grid template (fallback)
-      gameGrid.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size,64px))`;
-
-      // build cells
-      for(let r=0;r<rows;r++){
-        for(let c=0;c<cols;c++){
-          const cell = s.board[r][c];
-          const div = document.createElement('div');
-          div.className = 'cell';
-          div.dataset.r = r; div.dataset.c = c;
-          // image inside
-          const img = document.createElement('img');
-          img.draggable = false;
-          img.alt = cell.type || '';
-          // image src mapping — assume images in /assets/candies/<type>.png or use emoji fallback
-          const src = `assets/candies/${cell.type}.png`;
-          img.src = src;
-          img.onerror = function(){ /* fallback – emoji */ img.src=''; img.style.fontSize='28px'; img.textContent = emojiForType(cell.type); img.style.pointerEvents='none'; };
-          div.appendChild(img);
-          gameGrid.appendChild(div);
-        }
-      }
-    } catch(e){
-      error('[UI] render failed', e);
-    }
-  }
-
+  // Utility: emoji fallback for types (in case images missing)
   function emojiForType(type){
     if(!type) return '🍬';
-    if(type.indexOf('red')>=0) return '🔴';
-    if(type.indexOf('donut')>=0 || type.indexOf('donut')>=0) return '🍩';
-    if(type.indexOf('pink')>=0) return '🍭';
+    if(type.includes('red')) return '🔴';
+    if(type.includes('donut')) return '🍩';
+    if(type.includes('pink')) return '🍭';
+    if(type.includes('yellow')) return '🍋';
     return '🍬';
   }
 
-  // helpers to convert pixel/touch to cell coords
+  // Render function — robust with try/catch
+  function render(){
+    try {
+      if(!window.Game || !window.Game._state){
+        Log.warn('[UI] Game state not yet ready');
+        return;
+      }
+      const s = window.Game._state;
+      // update stats
+      stats.scoreEl.textContent = String(s.score || 0);
+      stats.movesEl.textContent = String(s.moves || 0);
+      stats.targetEl.textContent = String(s.target || 0);
+      stats.timerEl.textContent = (s.timerSec != null) ? formatTime(s.timerSec) : '--:--';
+
+      // ensure board array valid
+      if(!Array.isArray(s.board)) {
+        Log.warn('[UI] no board array yet');
+        gameGrid.innerHTML = '';
+        return;
+      }
+
+      // set grid template using cols from state if present
+      const cols = s.cols || (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols')) || 6);
+      gameGrid.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size, 64px))`;
+
+      // build DOM cells
+      gameGrid.innerHTML = '';
+      for(let r=0;r<s.rows;r++){
+        for(let c=0;c<s.cols;c++){
+          const cellData = (s.board[r] && s.board[r][c]) ? s.board[r][c] : null;
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.r = r; cell.dataset.c = c;
+          // inner content: try image first
+          if(cellData && cellData.type){
+            const img = document.createElement('img');
+            img.draggable = false;
+            // assuming asset names like 'candy-red' => 'candy-red.png'
+            const src = `assets/candies/${cellData.type}.png`;
+            img.src = src;
+            // if image loading fails, show emoji fallback
+            img.onerror = function(){
+              try { this.remove(); } catch(e){}
+              const fallback = document.createElement('div');
+              fallback.className = 'cell-emoji';
+              fallback.textContent = emojiForType(cellData.type);
+              fallback.style.fontSize = '26px';
+              fallback.style.pointerEvents = 'none';
+              cell.appendChild(fallback);
+            };
+            img.onload = function(){ /* nothing */ };
+            cell.appendChild(img);
+          } else {
+            // empty placeholder (shouldn't usually happen)
+            const ph = document.createElement('div');
+            ph.className = 'cell-empty'; ph.style.opacity = '0.0';
+            ph.textContent = '';
+            cell.appendChild(ph);
+          }
+          gameGrid.appendChild(cell);
+        }
+      }
+      Log.info('[UI] render board', s.rows, s.cols);
+    } catch(err){
+      Log.error('[UI] render failed', err);
+      // prevent throw further
+    }
+  }
+
+  function formatTime(sec){
+    if(sec == null) return '--:--';
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  // convert point to cell
   function getCellFromPoint(x,y){
     const el = document.elementFromPoint(x,y);
     if(!el) return null;
@@ -133,137 +211,131 @@
     return { r: parseInt(cell.dataset.r,10), c: parseInt(cell.dataset.c,10), el: cell };
   }
 
-  // dragging handlers (pointer events)
+  // Input (pointer/touch) handling
+  let dragging = null;
   function onPointerDown(e){
-    if(!window.Game || !window.Game._state) return;
-    if(window.Game._state.busy) return;
-    const p = (e.touches && e.touches[0]) || e;
-    const found = getCellFromPoint(p.clientX, p.clientY);
-    if(!found) return;
-    const s = window.Game._state;
-    dragging = {
-      r: found.r, c: found.c, startX: p.clientX, startY: p.clientY,
-      el: found.el
-    };
-    // prevent default to avoid scrolling
-    if(e.cancelable) e.preventDefault();
-    // visual press
-    found.el.classList.add('swapping');
+    try {
+      if(!window.Game || window.Game._state.busy) return;
+      const p = (e.touches && e.touches[0]) || e;
+      const found = getCellFromPoint(p.clientX, p.clientY);
+      if(!found) return;
+      dragging = { r: found.r, c: found.c, startX: p.clientX, startY: p.clientY, el: found.el };
+      if(e.cancelable) e.preventDefault();
+      found.el.classList.add('swapping');
+    } catch(err){ Log.error('onPointerDown', err); }
   }
   function onPointerMove(e){
-    if(!dragging) return;
-    const p = (e.touches && e.touches[0]) || e;
-    const dx = p.clientX - dragging.startX;
-    const dy = p.clientY - dragging.startY;
-    const absx = Math.abs(dx), absy = Math.abs(dy);
-    // if moved more than threshold, find target cell in that direction
-    const threshold = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')||64)/2) || 28;
-    let target = null;
-    if(absx > threshold || absy > threshold){
-      // determine direction
-      if(absx > absy){
-        // horizontal
-        const dir = dx>0 ? 1 : -1;
-        const tr = dragging.r, tc = dragging.c + dir;
-        if(tc>=0 && tc < window.Game._state.cols) target = {r:tr,c:tc};
-      } else {
-        // vertical
-        const dir = dy>0 ? 1 : -1;
-        const tr = dragging.r + dir, tc = dragging.c;
-        if(tr>=0 && tr < window.Game._state.rows) target = {r:tr,c:tc};
-      }
-      if(target){
-        // perform swap attempt
-        const did = window.Game.trySwap(dragging.r, dragging.c, target.r, target.c);
-        if(did){
-          // update UI render
-          render();
-          try { Sound.play('swap'); } catch(e){ log('swap sound failed', e); }
+    try {
+      if(!dragging) return;
+      const p = (e.touches && e.touches[0]) || e;
+      const dx = p.clientX - dragging.startX;
+      const dy = p.clientY - dragging.startY;
+      const absx = Math.abs(dx), absy = Math.abs(dy);
+      const cellSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 64;
+      const threshold = Math.max(18, Math.floor(cellSize/2));
+      if(absx > threshold || absy > threshold){
+        let target = null;
+        if(absx > absy){
+          const dir = dx>0 ? 1 : -1;
+          const tr = dragging.r, tc = dragging.c + dir;
+          if(tr>=0 && tr < window.Game._state.rows && tc>=0 && tc < window.Game._state.cols) target = {r:tr,c:tc};
         } else {
-          // invalid swap animation trigger
-          const originCell = document.querySelector(`.cell[data-r="${dragging.r}"][data-c="${dragging.c}"]`);
-          if(originCell){
-            originCell.classList.add('invalid');
-            setTimeout(()=> originCell.classList.remove('invalid'), 220);
-          }
+          const dir = dy>0 ? 1 : -1;
+          const tr = dragging.r + dir, tc = dragging.c;
+          if(tr>=0 && tr < window.Game._state.rows && tc>=0 && tc < window.Game._state.cols) target = {r:tr,c:tc};
         }
-        // cleanup dragging
-        cleanupDragging();
+        if(target){
+          // attempt swap via core
+          const did = window.Game.trySwap(dragging.r, dragging.c, target.r, target.c);
+          if(did){
+            try { Sound.play('swap'); } catch(e){ Log.warn('swap sound failed', e); }
+          } else {
+            // invalid: show invalid animation
+            const origin = document.querySelector(`.cell[data-r="${dragging.r}"][data-c="${dragging.c}"]`);
+            if(origin){
+              origin.classList.add('invalid');
+              setTimeout(()=> origin.classList.remove('invalid'), 220);
+            }
+          }
+          cleanupDrag();
+          // re-render after swap (Game.trySwap already mutates state)
+          render();
+        }
       }
-    }
+    } catch(err){ Log.error('onPointerMove', err); }
   }
-  function onPointerUp(e){
-    cleanupDragging();
-  }
-  function cleanupDragging(){
+  function onPointerUp(e){ cleanupDrag(); }
+  function cleanupDrag(){
     if(!dragging) return;
     if(dragging.el) dragging.el.classList.remove('swapping');
     dragging = null;
   }
 
-  // attach pointer / touch events to document for mobile friendliness
+  // attach inputs
   function attachInput(){
-    // touch
     document.addEventListener('touchstart', onPointerDown, {passive:false});
     document.addEventListener('touchmove', onPointerMove, {passive:false});
     document.addEventListener('touchend', onPointerUp, {passive:true});
-    // mouse fallback
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('mousemove', onPointerMove);
     document.addEventListener('mouseup', onPointerUp);
-    log('[UI] input handlers attached');
+    Log.info('[UI] input handlers attached');
   }
 
-  // listen to Game events (score updates, start, over etc)
+  // Listen to Game events to update UI reactively
   function attachGameEvents(){
-    window.addEventListener('game-ready', ()=>{ log('[UI] event: game-ready'); render(); });
-    window.addEventListener('game-started', (e)=>{ log('[UI] event: game-started', e.detail); render(); });
-    window.addEventListener('game-swap', (e)=>{ log('[UI] event: game-swap', e.detail); render(); });
-    window.addEventListener('move-used', (e)=>{ log('[UI] move-used', e.detail); movesEl.textContent = e.detail.moves; });
-    window.addEventListener('game-score', (e)=>{ scoreEl.textContent = e.detail.score; });
-    window.addEventListener('level-complete', (e)=>{ log('[UI] level complete', e.detail); /* show modal or UI */ });
-    window.addEventListener('game-over', (e)=>{ log('[UI] game-over', e.detail); /* show modal */ });
+    window.addEventListener('game-ready', ()=>{ Log.info('[UI] event: game-ready'); render(); });
+    window.addEventListener('game-started', (e)=>{ Log.info('[UI] event: game-started', e.detail); render(); });
+    window.addEventListener('game-swap', (e)=>{ Log.info('[UI] event: game-swap', e.detail); render(); });
+    window.addEventListener('move-used', (e)=>{ Log.info('[UI] move-used', e.detail); stats.movesEl.textContent = e.detail.moves; });
+    window.addEventListener('game-score', (e)=>{ Log.info('[UI] game-score', e.detail); stats.scoreEl.textContent = e.detail.score; });
+    window.addEventListener('level-complete', (e)=>{ Log.info('[UI] level-complete', e.detail); try{ Confetti.fire(); }catch{} });
+    window.addEventListener('game-over', (e)=>{ Log.info('[UI] game-over', e.detail); /* show modal if needed */});
   }
 
-  // UI init which waits for Game._state (event or polling)
+  // init UI; wait for Game state ready if needed
   function initUI(){
-    log('[UI] script ready');
-
+    Log.info('[UI] init');
     attachInput();
     attachGameEvents();
 
-    function startOnceReady(){
+    function tryStart(){
       if(window.Game && window.Game._state){
-        log('[UI] Game state found -> render');
+        Log.info('[UI] Game state found -> render');
         render();
-        // small live ticker for stats
+        // small polling to keep stats updated
         setInterval(()=> {
           if(window.Game && window.Game._state){
             const s = window.Game._state;
-            scoreEl.textContent = s.score;
-            movesEl.textContent = s.moves;
-            targetEl.textContent = s.target;
+            stats.scoreEl.textContent = String(s.score || 0);
+            stats.movesEl.textContent = String(s.moves || 0);
+            stats.targetEl.textContent = String(s.target || 0);
+            stats.timerEl.textContent = (s.timerSec != null) ? formatTime(s.timerSec) : '--:--';
           }
-        }, 250);
+        }, 300);
         return true;
       }
       return false;
     }
 
-    if(startOnceReady()) return;
-    window.addEventListener('game-ready', ()=> startOnceReady());
-    // fallback poll
-    const pid = setInterval(()=>{ if(startOnceReady()){ clearInterval(pid); } }, 120);
+    if(!tryStart()){
+      window.addEventListener('game-ready', tryStart);
+      const pid = setInterval(()=>{ if(tryStart()) clearInterval(pid); }, 150);
+    }
   }
 
-  // attach to load
   window.addEventListener('load', ()=> {
-    try { initUI(); log('[UI] loaded'); } catch(e){ error('[UI] init err', e); }
+    try {
+      initUI();
+      Log.info('[UI] loaded');
+    } catch(e){
+      Log.error('[UI] init error', e);
+    }
   });
 
-  // expose render for external use
+  // Expose a debug render (if needed)
   window.UI = window.UI || {};
   window.UI.render = render;
 
-  log('[UI] loaded');
+  Log.info('[UI] script loaded');
 })();
