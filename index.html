@@ -23,3 +23,12 @@
     </div>
   </div>
 </div>
+<!-- ✅ Eruda Debug Console -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  eruda.init({
+    tool: ['console', 'network', 'elements', 'resources'],
+    useShadowDom: true
+  });
+  console.log('%c🔍 Eruda Debug Console चालू हो गया है!', 'color:lime;font-size:16px;');
+</script>
