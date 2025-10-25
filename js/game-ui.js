@@ -1,222 +1,269 @@
-/* js/game-ui.js
-   UI renderer + drag/swipe handling + Eruda logs.
-   यह file game-core.js के बाद लोड होनी चाहिए।
+/* game-ui.js
+   UI + input handling + responsive grid setup + eruda init + safe sound/confetti usage
 */
 
 (function(){
-  // safety
-  if(!window.Game) {
-    console.error('[UI] Game core not found!');
-    return;
+  // Eruda init (if available) and safe logger
+  if(window.eruda) {
+    console.log('[ERUDA] Console initialized');
+  } else {
+    // optional: dynamic load eruda if you want (commented)
+    // const s = document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; document.head.appendChild(s);
+  }
+  const log = (...a)=>console.log(...a);
+  const warn = (...a)=>console.warn(...a);
+  const error = (...a)=>console.error(...a);
+
+  // safe wrappers
+  const Sound = window.Sound || { play: (...args)=>log('[SoundStub]', ...args), init: ()=>{} };
+  const Confetti = window.Confetti || { fire: ()=>log('[ConfettiStub] fire') };
+
+  // DOM references (create if missing)
+  function $(sel){ return document.querySelector(sel); }
+  const boardCard = document.getElementById('boardCard') || (function(){
+    const sec = document.createElement('section'); sec.className='card board-card'; sec.id='boardCard';
+    // try to insert into page main
+    const container = document.querySelector('main') || document.body;
+    container.appendChild(sec);
+    return sec;
+  })();
+
+  // make sure there's a grid element
+  let gameGrid = document.getElementById('gameGrid');
+  if(!gameGrid){
+    gameGrid = document.createElement('div');
+    gameGrid.id = 'gameGrid';
+    gameGrid.className = 'game-grid';
+    boardCard.appendChild(gameGrid);
   }
 
-  // cached DOM
-  const gridEl = document.getElementById('gameGrid');
-  const scoreEl = document.getElementById('score');
-  const movesEl = document.getElementById('moves');
-  const targetEl = document.getElementById('target');
-  const timerEl = document.getElementById('timer');
+  // stats elements (create if not present)
+  let scoreEl = document.getElementById('score') || (function(){ const d=document.createElement('span'); d.id='score'; d.textContent='0'; boardCard.insertAdjacentElement('afterbegin', d); return d; })();
+  let movesEl = document.getElementById('moves') || (function(){ const d=document.createElement('span'); d.id='moves'; d.textContent='30'; boardCard.insertAdjacentElement('afterbegin', movesEl? 'afterbegin':'afterbegin', d); return d; })();
+  let targetEl = document.getElementById('target') || (function(){ const d=document.createElement('span'); d.id='target'; d.textContent='600'; boardCard.insertAdjacentElement('afterbegin', targetEl? 'afterbegin':'afterbegin', d); return d; })();
 
-  // drag state
-  let dragging = null; // {startI,startJ, activeCloneEl}
-  let pointerId = null;
+  // grid sizing responsive script (sets --cols / --cell-size). Place early.
+  (function setupResponsiveGrid(){
+    const gridEl = gameGrid;
+    if(!gridEl) return;
+    function computeGridVars(){
+      const minCell = 48, maxCell = 72, gap = 12, minCols=5, maxCols=8;
+      const parent = gridEl.parentElement;
+      const avail = Math.min(parent.getBoundingClientRect().width || window.innerWidth, window.innerWidth - 32);
+      let chosen=minCols, chosenSize=minCell;
+      for(let cols=maxCols; cols>=minCols; cols--){
+        const requiredMin = cols*minCell + (cols-1)*gap;
+        if(requiredMin <= avail){
+          const size = Math.min(maxCell, Math.floor((avail - (cols-1)*gap)/cols));
+          chosen = cols; chosenSize = Math.max(minCell, size);
+          break;
+        }
+      }
+      document.documentElement.style.setProperty('--cols', chosen);
+      document.documentElement.style.setProperty('--cell-size', chosenSize + 'px');
+      document.documentElement.style.setProperty('--gap', gap + 'px');
+      log('[GRID] --cols', chosen, '--cell-size', chosenSize);
+    }
+    computeGridVars();
+    let t; window.addEventListener('resize', ()=>{ clearTimeout(t); t=setTimeout(computeGridVars,120); });
+    window.addEventListener('load', computeGridVars);
+  })();
 
-  // render grid from Game._state
+  // UI state
+  let dragging = null; // {r,c,el, startX,...}
+  let cols = 6, rows = 6;
+
+  // render function (reads Game._state)
   function render(){
-    const s = window.Game._state;
-    if(!s) return;
-    // update stats
-    scoreEl.textContent = s.score;
-    movesEl.textContent = s.moves;
-    targetEl.textContent = s.target;
-    timerEl.textContent = s.timerSeconds ? formatTime(s.timerSeconds) : '--:--';
-
-    // build grid
-    while(gridEl.firstChild) gridEl.removeChild(gridEl.firstChild);
-
-    gridEl.style.setProperty('--cols', s.cols);
-
-    for(let i=0;i<s.rows;i++){
-      for(let j=0;j<s.cols;j++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.i = i; cell.dataset.j = j;
-        const tile = s.board[i][j];
-        if(tile){
-          const img = document.createElement('img');
-          const idx = Math.max(0, Math.min(tile.type, 5));
-          img.src = (window.CANDY_IMAGES && window.CANDY_IMAGES[idx]) ? window.CANDY_IMAGES[idx] : `img/candy-${idx+1}.png`;
-          img.alt = 'candy';
-          cell.appendChild(img);
-
-          // mark special visually
-          if(tile.special){
-            cell.classList.add('special-'+tile.special);
-          }
-        } else {
-          // empty box (shouldn't normally happen after refill), keep blank
-        }
-
-        // pointer/touch handlers
-        cell.addEventListener('pointerdown', onPointerDown);
-        cell.addEventListener('pointerup', onPointerUp);
-        cell.addEventListener('pointercancel', onPointerCancel);
-        cell.addEventListener('pointermove', onPointerMove);
-
-        gridEl.appendChild(cell);
-      }
-    }
-    console.log('[UI] render board', s.rows, s.cols);
-  }
-
-  // format timer
-  function formatTime(sec){
-    const m = Math.floor(sec/60), s = sec%60;
-    return (m<10? '0'+m: m) + ':' + (s<10? '0'+s: s);
-  }
-
-  // helper: find cell element by i,j
-  function cellEl(i,j){
-    return gridEl.querySelector(`.cell[data-i="${i}"][data-j="${j}"]`);
-  }
-
-  // create dragging clone (visual) and track pointer
-  function createClone(x,y, srcImg){
-    const clone = document.createElement('img');
-    clone.src = srcImg;
-    clone.className = 'dragging-clone';
-    clone.style.left = x + 'px'; clone.style.top = y + 'px';
-    document.body.appendChild(clone);
-    return clone;
-  }
-
-  // pointer events
-  function onPointerDown(e){
-    e.preventDefault();
-    const el = e.currentTarget;
-    const i = parseInt(el.dataset.i,10), j = parseInt(el.dataset.j,10);
-    pointerId = e.pointerId;
-    el.setPointerCapture(pointerId);
-    // store start
-    const img = el.querySelector('img');
-    const src = img ? img.src : '';
-    dragging = { startI: i, startJ: j, lastX: e.clientX, lastY: e.clientY, clone: createClone(e.clientX, e.clientY, src), started:true };
-    console.log('[UI] pointerdown', i,j);
-  }
-
-  function onPointerMove(e){
-    if(!dragging || e.pointerId !== pointerId) return;
-    e.preventDefault();
-    dragging.lastX = e.clientX; dragging.lastY = e.clientY;
-    if(dragging.clone){
-      dragging.clone.style.left = e.clientX + 'px';
-      dragging.clone.style.top = e.clientY + 'px';
-    }
-  }
-
-  function onPointerCancel(e){
-    if(!dragging) return;
-    cleanupDrag();
-  }
-
-  function onPointerUp(e){
-    if(!dragging || e.pointerId !== pointerId) return;
-    const startI = dragging.startI, startJ = dragging.startJ;
-    const endEl = document.elementFromPoint(e.clientX, e.clientY);
-    const targetCell = findCellFromElement(endEl);
-    if(targetCell){
-      const endI = targetCell.i, endJ = targetCell.j;
-      // attempt swap
-      const res = window.Game.attemptSwap(startI, startJ, endI, endJ);
-      if(res && res.ok){
-        // play pop sound (Game handled scoring)
-        if(window.Sound) Sound.play('pop');
-      } else {
-        // invalid -> shake feedback
-        const el = cellEl(startI,startJ);
-        if(el){
-          el.classList.add('invalid');
-          setTimeout(()=>el.classList.remove('invalid'), 200);
-        }
-      }
-    } else {
-      // pointer released not on cell -> no-op
-    }
-    cleanupDrag();
-  }
-
-  function findCellFromElement(el){
-    while(el && el !== document) {
-      if(el.classList && el.classList.contains('cell')){
-        return { i: parseInt(el.dataset.i,10), j: parseInt(el.dataset.j,10) };
-      }
-      el = el.parentElement;
-    }
-    return null;
-  }
-
-  function cleanupDrag(){
-    if(dragging && dragging.clone){
-      try { document.body.removeChild(dragging.clone); } catch(e){}
-    }
-    dragging = null;
-    if(pointerId){
-      try { document.releasePointerCapture && document.releasePointerCapture(pointerId); } catch(e){}
-      pointerId = null;
-    }
-  }
-
-  // expose CANDY_IMAGES to UI (so image srcs can be set)
-  window.CANDY_IMAGES = [
-    'img/candy-1.png',
-    'img/candy-2.png',
-    'img/candy-3.png',
-    'img/candy-4.png',
-    'img/candy-5.png',
-    'img/candy-6.png'
-  ];
-
-  // initialize UI
-  function initUI(){
-    console.log('[UI] init');
-    // connect to Game state
-    if(!window.Game._state){
-      console.warn('[UI] Game state not yet ready');
-    }
-    // initial render
-    render();
-
-    // expose render globally (used by core start wrapper)
-    window.render = render;
-
-    // simple animation loop to refresh UI every 250ms if running (keeps stats fresh)
-    setInterval(()=> {
-      if(window.Game && window.Game._state) {
-        const s = window.Game._state;
-        // update elements quickly
-        scoreEl.textContent = s.score;
-        movesEl.textContent = s.moves;
-        targetEl.textContent = s.target;
-      }
-    }, 250);
-  }
-
-  // attach cleanup on unload
-  window.addEventListener('load', ()=> {
     try {
-      initUI();
-      console.log('[UI] loaded');
+      if(!window.Game || !window.Game._state) {
+        log('[UI] Game state not yet ready');
+        return;
+      }
+      const s = window.Game._state;
+      cols = s.cols; rows = s.rows;
+      // update stats
+      scoreEl.textContent = s.score;
+      movesEl.textContent = s.moves;
+      targetEl.textContent = s.target;
+      // clear grid
+      gameGrid.innerHTML = '';
+      gameGrid.style.setProperty('--cols', cols);
+      // set grid template (fallback)
+      gameGrid.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size,64px))`;
+
+      // build cells
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const cell = s.board[r][c];
+          const div = document.createElement('div');
+          div.className = 'cell';
+          div.dataset.r = r; div.dataset.c = c;
+          // image inside
+          const img = document.createElement('img');
+          img.draggable = false;
+          img.alt = cell.type || '';
+          // image src mapping — assume images in /assets/candies/<type>.png or use emoji fallback
+          const src = `assets/candies/${cell.type}.png`;
+          img.src = src;
+          img.onerror = function(){ /* fallback – emoji */ img.src=''; img.style.fontSize='28px'; img.textContent = emojiForType(cell.type); img.style.pointerEvents='none'; };
+          div.appendChild(img);
+          gameGrid.appendChild(div);
+        }
+      }
     } catch(e){
-      console.error('[UI] init failed', e);
+      error('[UI] render failed', e);
     }
+  }
+
+  function emojiForType(type){
+    if(!type) return '🍬';
+    if(type.indexOf('red')>=0) return '🔴';
+    if(type.indexOf('donut')>=0 || type.indexOf('donut')>=0) return '🍩';
+    if(type.indexOf('pink')>=0) return '🍭';
+    return '🍬';
+  }
+
+  // helpers to convert pixel/touch to cell coords
+  function getCellFromPoint(x,y){
+    const el = document.elementFromPoint(x,y);
+    if(!el) return null;
+    const cell = el.closest('.cell');
+    if(!cell) return null;
+    return { r: parseInt(cell.dataset.r,10), c: parseInt(cell.dataset.c,10), el: cell };
+  }
+
+  // dragging handlers (pointer events)
+  function onPointerDown(e){
+    if(!window.Game || !window.Game._state) return;
+    if(window.Game._state.busy) return;
+    const p = (e.touches && e.touches[0]) || e;
+    const found = getCellFromPoint(p.clientX, p.clientY);
+    if(!found) return;
+    const s = window.Game._state;
+    dragging = {
+      r: found.r, c: found.c, startX: p.clientX, startY: p.clientY,
+      el: found.el
+    };
+    // prevent default to avoid scrolling
+    if(e.cancelable) e.preventDefault();
+    // visual press
+    found.el.classList.add('swapping');
+  }
+  function onPointerMove(e){
+    if(!dragging) return;
+    const p = (e.touches && e.touches[0]) || e;
+    const dx = p.clientX - dragging.startX;
+    const dy = p.clientY - dragging.startY;
+    const absx = Math.abs(dx), absy = Math.abs(dy);
+    // if moved more than threshold, find target cell in that direction
+    const threshold = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')||64)/2) || 28;
+    let target = null;
+    if(absx > threshold || absy > threshold){
+      // determine direction
+      if(absx > absy){
+        // horizontal
+        const dir = dx>0 ? 1 : -1;
+        const tr = dragging.r, tc = dragging.c + dir;
+        if(tc>=0 && tc < window.Game._state.cols) target = {r:tr,c:tc};
+      } else {
+        // vertical
+        const dir = dy>0 ? 1 : -1;
+        const tr = dragging.r + dir, tc = dragging.c;
+        if(tr>=0 && tr < window.Game._state.rows) target = {r:tr,c:tc};
+      }
+      if(target){
+        // perform swap attempt
+        const did = window.Game.trySwap(dragging.r, dragging.c, target.r, target.c);
+        if(did){
+          // update UI render
+          render();
+          try { Sound.play('swap'); } catch(e){ log('swap sound failed', e); }
+        } else {
+          // invalid swap animation trigger
+          const originCell = document.querySelector(`.cell[data-r="${dragging.r}"][data-c="${dragging.c}"]`);
+          if(originCell){
+            originCell.classList.add('invalid');
+            setTimeout(()=> originCell.classList.remove('invalid'), 220);
+          }
+        }
+        // cleanup dragging
+        cleanupDragging();
+      }
+    }
+  }
+  function onPointerUp(e){
+    cleanupDragging();
+  }
+  function cleanupDragging(){
+    if(!dragging) return;
+    if(dragging.el) dragging.el.classList.remove('swapping');
+    dragging = null;
+  }
+
+  // attach pointer / touch events to document for mobile friendliness
+  function attachInput(){
+    // touch
+    document.addEventListener('touchstart', onPointerDown, {passive:false});
+    document.addEventListener('touchmove', onPointerMove, {passive:false});
+    document.addEventListener('touchend', onPointerUp, {passive:true});
+    // mouse fallback
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('mouseup', onPointerUp);
+    log('[UI] input handlers attached');
+  }
+
+  // listen to Game events (score updates, start, over etc)
+  function attachGameEvents(){
+    window.addEventListener('game-ready', ()=>{ log('[UI] event: game-ready'); render(); });
+    window.addEventListener('game-started', (e)=>{ log('[UI] event: game-started', e.detail); render(); });
+    window.addEventListener('game-swap', (e)=>{ log('[UI] event: game-swap', e.detail); render(); });
+    window.addEventListener('move-used', (e)=>{ log('[UI] move-used', e.detail); movesEl.textContent = e.detail.moves; });
+    window.addEventListener('game-score', (e)=>{ scoreEl.textContent = e.detail.score; });
+    window.addEventListener('level-complete', (e)=>{ log('[UI] level complete', e.detail); /* show modal or UI */ });
+    window.addEventListener('game-over', (e)=>{ log('[UI] game-over', e.detail); /* show modal */ });
+  }
+
+  // UI init which waits for Game._state (event or polling)
+  function initUI(){
+    log('[UI] script ready');
+
+    attachInput();
+    attachGameEvents();
+
+    function startOnceReady(){
+      if(window.Game && window.Game._state){
+        log('[UI] Game state found -> render');
+        render();
+        // small live ticker for stats
+        setInterval(()=> {
+          if(window.Game && window.Game._state){
+            const s = window.Game._state;
+            scoreEl.textContent = s.score;
+            movesEl.textContent = s.moves;
+            targetEl.textContent = s.target;
+          }
+        }, 250);
+        return true;
+      }
+      return false;
+    }
+
+    if(startOnceReady()) return;
+    window.addEventListener('game-ready', ()=> startOnceReady());
+    // fallback poll
+    const pid = setInterval(()=>{ if(startOnceReady()){ clearInterval(pid); } }, 120);
+  }
+
+  // attach to load
+  window.addEventListener('load', ()=> {
+    try { initUI(); log('[UI] loaded'); } catch(e){ error('[UI] init err', e); }
   });
 
-  // add some global shortcuts for debug (eruda console)
-  window._gameDebug = {
-    dumpState: ()=> { console.log(JSON.parse(JSON.stringify(window.Game._state))); },
-    findMatches: ()=> { console.log(window.Game._internal.findMatches()); },
-    applyGravity: ()=> { window.Game._internal.applyGravityAndRefill(); render(); }
-  };
+  // expose render for external use
+  window.UI = window.UI || {};
+  window.UI.render = render;
 
-  console.log('[UI] script ready');
+  log('[UI] loaded');
 })();
