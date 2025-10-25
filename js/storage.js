@@ -1,16 +1,9 @@
-// storage.js
-const Storage = {
-  key: 'candy_progress_v1',
-  load() {
-    try {
-      const s = localStorage.getItem(this.key);
-      return s ? JSON.parse(s) : {};
-    } catch(e){ return {}; }
+// छोटा localStorage wrapper
+window.Store = {
+  get: function(k, def){
+    try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch(e){ return def; }
   },
-  save(data){
-    try{ localStorage.setItem(this.key, JSON.stringify(data)); }catch(e){}
-  },
-  clear(){
-    try{ localStorage.removeItem(this.key); }catch(e){}
+  set: function(k,v){
+    try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ console.warn('store.set failed', e); }
   }
 };
