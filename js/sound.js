@@ -1,43 +1,25 @@
-// sound.js
-(function(global){
-  console.log('[SOUND] initializing');
-  const S = {};
-  const audioFiles = {
-    swap: 'sounds/swap.mp3',
-    pop:  'sounds/pop.mp3',
-    win:  'sounds/win.mp3',
-    lose: 'sounds/lose.mp3',
-    bg:   'sounds/bg.mp3'
-  };
-
+// सिंपल साउंड मैनेजर — assets/sound में swap.mp3 pop.mp3 win.mp3 bg.mp3 रखें
+window.Sound = (function(){
+  const names = { swap:'swap.mp3', pop:'pop.mp3', win:'win.mp3', bg:'bg.mp3' };
   const audios = {};
-  Object.keys(audioFiles).forEach(k=>{
-    try {
-      audios[k] = new Audio(audioFiles[k]);
-      audios[k].preload = 'auto';
-    } catch(e){
-      console.warn('[SOUND] load error', k, e);
-    }
-  });
-
-  audios.bg && (audios.bg.loop = true, audios.bg.volume = 0.28);
-
-  S.play = (name)=>{
-    if(!audios[name]) return console.warn('[SoundDebug] Sound object not found. Ensure js/sound.js is loaded.');
+  const base = 'sound'; // आपकी repo में sound/ फोल्डर नाम
+  Object.keys(names).forEach(k=>{
     try{
-      audios[name].currentTime = 0;
-      const p = audios[name].play();
-      if(p && p.catch) p.catch(e=>console.warn('[Sound] play blocked', e));
-      console.log('[SoundDebug] Sound.play("' + name + '")');
-    }catch(e){ console.warn('[Sound] err', e); }
+      const a = new Audio(`${base}/${names[k]}`);
+      a.preload='auto';
+      audios[k]=a;
+    }catch(e){ audios[k]=null; }
+  });
+  return {
+    init: function(){ console.log('[SOUND] initializing'); },
+    play: function(name){
+      try{
+        const a = audios[name];
+        if(!a) return console.warn('[Sound] missing', name);
+        a.currentTime = 0;
+        const p = a.play();
+        if(p && p.catch) p.catch(e=> console.warn('[Sound] play blocked', e));
+      }catch(e){ console.warn('[Sound] play error', e); }
+    }
   };
-  S.stop = (name)=> audios[name] && audios[name].pause();
-  S.startBG = ()=> audios.bg && audios.bg.play().catch(()=>console.log('[Sound] bg play blocked'));
-  S.muted = false;
-  S.setMuted = (m)=>{
-    S.muted = !!m;
-    Object.values(audios).forEach(a=>{ if(a) a.muted = S.muted; });
-  };
-
-  global.Sound = S;
-})(window);
+})();
