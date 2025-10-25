@@ -1,49 +1,40 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Level Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Candy Match — Level Map</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="site-header">
-    <div class="brand">🍬 Candy Match</div>
-    <nav class="topnav">
+    <div class="logo">🍬 Candy Match</div>
+    <nav class="top-nav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="game.html">Play</a>
+      <a href="play.html">Play</a>
     </nav>
   </header>
 
-  <main class="container">
+  <main class="page">
     <section class="card">
       <a class="back" href="index.html">← Home</a>
       <h1>Level Map</h1>
-      <div id="levelGrid" class="level-grid"></div>
-      <p><button id="resetProgress" class="btn">Reset Progress</button></p>
+      <div class="level-grid">
+        <!-- simple level buttons -->
+        <a class="level" href="play.html?level=1">Level 1<br><small>Play</small></a>
+        <a class="level" href="play.html?level=2">Level 2<br><small>Play</small></a>
+        <a class="level locked" href="#">Level 3<br><small>Locked</small></a>
+        <a class="level locked" href="#">Level 4<br><small>Locked</small></a>
+        <a class="level locked" href="#">Level 5<br><small>Locked</small></a>
+      </div>
     </section>
   </main>
 
-  <script src="js/storage.js"></script>
-  <script>
-    const LEVEL_COUNT = 9;
-    const grid = document.getElementById('levelGrid');
-    function renderMap(){
-      const unlocked = new Set(CMStorage.getUnlocked());
-      grid.innerHTML = '';
-      for(let i=1;i<=LEVEL_COUNT;i++){
-        const div = document.createElement('div');
-        div.className = 'level-card' + (unlocked.has(i) ? '' : ' locked');
-        const a = document.createElement('a');
-        a.href = unlocked.has(i) ? `game.html?level=${i}` : '#';
-        a.textContent = `Level ${i}`;
-        div.appendChild(a);
-        grid.appendChild(div);
-      }
-    }
-    renderMap();
-    document.getElementById('resetProgress').addEventListener('click', ()=>{ CMStorage.reset(); renderMap(); alert('Progress reset'); });
-  </script>
+  <footer class="site-footer">© Candy Match</footer>
+
+  <script src="js/eruda-init.js"></script>
+  <script src="js/responsive-grid.js"></script>
+  <script src="js/bootstrap-safe.js"></script>
 </body>
 </html>
