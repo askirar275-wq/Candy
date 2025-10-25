@@ -1,375 +1,304 @@
-/* js/game-core.js
-   गेम core (state, board generation, matching, gravity, scoring)
-   Hindi comments added.
+/* game-core.js
+   Core game logic: board state, match detection, gravity/refill, Game.start(), event dispatch
 */
 
 (function(){
-  // सिंपल namespace
-  window.Game = window.Game || {};
+  // lightweight Eruda logger fallback
+  function log(...args){ if(window.eruda) console.log(...args); else console.log(...args); }
+  function warn(...args){ if(window.eruda) console.warn(...args); else console.warn(...args); }
+  function err(...args){ if(window.eruda) console.error(...args); else console.error(...args); }
 
-  // कॉन्फ़िग
-  const CFG = {
-    defaultSize: 6,           // NxN board default
-    candyCount: 6,            // कितने अलग candies (image types)
-    baseScore: 10,            // प्रति candy base score (3-match के लिये)
-    comboBonus: 5,            // combo chain multiplier add
-    shuffleAttempts: 50       // shuffle attempts to avoid deadboard
+  // Config
+  const CANDY_TYPES = [
+    'candy-red','candy-green','candy-yellow','candy-pink','candy-donut','candy-ring'
+  ]; // map to img names or classes used by UI
+  const DEFAULT_COLS = 6;
+  const DEFAULT_ROWS = 6;
+
+  // Sound & Confetti safe wrappers
+  const Sound = window.Sound || {
+    play: (...a)=>{ log('[SoundStub] play', ...a); },
+    init: ()=>{ log('[SoundStub] init'); }
   };
+  const Confetti = window.Confetti || { fire: ()=>{ log('[Confetti] fire'); } };
 
-  // candy images (उदाहरण paths) — अपने project images के अनुसार बदलें
-  const CANDY_IMAGES = [
-    'img/candy-1.png',
-    'img/candy-2.png',
-    'img/candy-3.png',
-    'img/candy-4.png',
-    'img/candy-5.png',
-    'img/candy-6.png'
-  ];
+  // Game namespace
+  const Game = window.Game = window.Game || {};
 
-  // GAME state
+  // internal state
   const state = {
-    rows: CFG.defaultSize,
-    cols: CFG.defaultSize,
-    board: [],          // 2D array rows x cols : each cell {type:0..N-1, special:null|'striped'|'wrapped'|'colorbomb'}
+    cols: DEFAULT_COLS,
+    rows: DEFAULT_ROWS,
+    board: [],    // 2D array [r][c] of {type, id}
     score: 0,
     moves: 30,
     target: 600,
-    timerSeconds: null, // null = no timer
+    timerSec: null,
+    running: false,
     level: 1,
-    running: false
+    busy: false
   };
 
-  // Helper: create an empty board
-  function makeEmptyBoard(r,c){
-    const b = new Array(r);
-    for(let i=0;i<r;i++){
-      b[i] = new Array(c);
-      for(let j=0;j<c;j++) b[i][j] = null;
+  // small id generator
+  let idCounter = 1;
+  function makeCell(type){
+    return { id: idCounter++, type: type || randomCandy() };
+  }
+  function randomCandy(){
+    return CANDY_TYPES[Math.floor(Math.random()*CANDY_TYPES.length)];
+  }
+
+  // build initial board without immediate matches
+  function buildBoard(rows, cols){
+    state.rows = rows; state.cols = cols;
+    const b = [];
+    for(let r=0;r<rows;r++){
+      b[r]=[];
+      for(let c=0;c<cols;c++){
+        let cell;
+        do {
+          cell = makeCell(randomCandy());
+          b[r][c] = cell;
+        } while(checkImmediateMatch(b, r, c));
+      }
     }
+    state.board = b;
     return b;
   }
-
-  // Random candy type (0..candyCount-1)
-  function randCandy(){
-    return Math.floor(Math.random() * CFG.candyCount);
-  }
-
-  // Ensure initial board has no immediate matches (simple approach: fill and remove matches until clean)
-  function fillBoardNoMatches(){
-    const r = state.rows, c = state.cols;
-    state.board = makeEmptyBoard(r,c);
-    for(let i=0;i<r;i++){
-      for(let j=0;j<c;j++){
-        let tries=0;
-        do {
-          state.board[i][j] = { type: randCandy(), special: null };
-          tries++;
-          // break infinite loops
-          if(tries>20) break;
-        } while(createsImmediateMatch(i,j));
-      }
-    }
-  }
-
-  // Returns true if placing at i,j creates 3-in-row immediately
-  function createsImmediateMatch(i,j){
-    const val = state.board[i][j].type;
-    // horizontal check left 2
-    if(j>=2 && state.board[i][j-1] && state.board[i][j-2]){
-      if(state.board[i][j-1].type === val && state.board[i][j-2].type === val) return true;
-    }
-    // vertical check up 2
-    if(i>=2 && state.board[i-1][j] && state.board[i-2][j]){
-      if(state.board[i-1][j].type === val && state.board[i-2][j].type === val) return true;
-    }
+  // avoid creating immediate 3-in-a-row when initialising
+  function checkImmediateMatch(board, r, c){
+    const t = board[r][c].type;
+    // check left two
+    if(c>=2 && board[r][c-1] && board[r][c-2] && board[r][c-1].type === t && board[r][c-2].type === t) return true;
+    // check up two
+    if(r>=2 && board[r-1] && board[r-2] && board[r-1][c].type === t && board[r-2][c].type === t) return true;
     return false;
   }
 
-  // Utility: swap two cells (i1,j1) <-> (i2,j2)
-  function swapCells(i1,j1,i2,j2){
-    const tmp = state.board[i1][j1];
-    state.board[i1][j1] = state.board[i2][j2];
-    state.board[i2][j2] = tmp;
+  // utility swap (r1,c1) <-> (r2,c2)
+  function swapCells(r1,c1,r2,c2){
+    const tmp = state.board[r1][c1];
+    state.board[r1][c1] = state.board[r2][c2];
+    state.board[r2][c2] = tmp;
   }
 
-  // Find matches on current board.
-  // Returns array of match objects: {cells:[[i,j],...], type:'normal'|'4row'|'4col'|'5' ...}
-  function findMatches(){
-    const r = state.rows, c = state.cols;
-    const marked = makeEmptyBoard(r,c); // bool marks
-    const matches = [];
+  // find matches: returns array of groups [{cells:[{r,c}], type}]
+  function findAllMatches(){
+    const rows = state.rows, cols = state.cols;
+    const visited = Array(rows).fill(0).map(()=>Array(cols).fill(false));
+    const groups = [];
 
-    // horizontal runs
-    for(let i=0;i<r;i++){
-      let j=0;
-      while(j<c){
-        if(!state.board[i][j]) { j++; continue; }
-        const t = state.board[i][j].type;
-        let len = 1;
-        while(j+len < c && state.board[i][j+len] && state.board[i][j+len].type === t) len++;
-        if(len >= 3){
-          const cells = [];
-          for(let k=0;k<len;k++){ cells.push([i, j+k]); marked[i][j+k] = true; }
-          matches.push({ cells, kind:'h', len, type: t });
-        }
-        j += len;
-      }
-    }
-
-    // vertical runs
-    for(let j=0;j<c;j++){
-      let i=0;
-      while(i<r){
-        if(!state.board[i][j]) { i++; continue; }
-        const t = state.board[i][j].type;
-        let len = 1;
-        while(i+len < r && state.board[i+len][j] && state.board[i+len][j].type === t) len++;
-        if(len >= 3){
-          const cells = [];
-          for(let k=0;k<len;k++){ cells.push([i+k, j]); marked[i+k][j] = true; }
-          matches.push({ cells, kind:'v', len, type:t });
-        }
-        i += len;
-      }
-    }
-
-    // merge overlapping matches: if same color and share cells we keep both; we will remove all marked cells
-    return matches;
-  }
-
-  // remove matches, compute score, and produce special candies for 4/5 matches
-  // Returns total removed count and indicates specials created
-  function resolveMatchesAndDrop(){
-    const matches = findMatches();
-    if(matches.length === 0) return { removed:0, score:0, specials:[] };
-
-    // To avoid double-counting we will mark removed cells in a set
-    const toRemove = new Set();
-    let scoreGain = 0;
-    const specials = [];
-
-    for(const m of matches){
-      // mark each cell
-      for(const [i,j] of m.cells){
-        toRemove.add(i+','+j);
-      }
-      // scoring: base per candy * length * multiplier by type of match
-      // We'll set:
-      // 3-match: base * len
-      // 4-match: base*len + bonus
-      // 5-match: big bonus
-      if(m.len === 3){
-        scoreGain += CFG.baseScore * 3;
-      } else if(m.len === 4){
-        scoreGain += CFG.baseScore * 4 + 150;
-        // create striped candy at one of the matched cells (choose last)
-        specials.push({ at: m.cells[Math.floor(m.cells.length/2)], kind: 'striped', color: m.type });
-      } else if(m.len >= 5){
-        scoreGain += CFG.baseScore * m.len + 350;
-        // create color-bomb at a center cell
-        specials.push({ at: m.cells[Math.floor(m.cells.length/2)], kind: 'colorbomb', color: m.type });
-      } else {
-        scoreGain += CFG.baseScore * m.len;
-      }
-    }
-
-    // remove cells
-    for(const key of toRemove){
-      const [si,sj] = key.split(',').map(Number);
-      state.board[si][sj] = null;
-    }
-
-    // place specials (make sure target cell is null; otherwise find nearby)
-    for(const s of specials){
-      const [i,j] = s.at;
-      if(state.board[i][j] === null){
-        state.board[i][j] = { type: s.color, special: s.kind };
-      } else {
-        // find first empty neighbour
-        let placed = false;
-        const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
-        for(const d of dirs){
-          const ni=i+d[0], nj=j+d[1];
-          if(ni>=0 && ni<state.rows && nj>=0 && nj<state.cols && state.board[ni][nj]===null){
-            state.board[ni][nj] = { type: s.color, special: s.kind };
-            placed = true; break;
+    // horizontal
+    for(let r=0;r<rows;r++){
+      let start=0;
+      for(let c=1;c<=cols;c++){
+        const prev = (c-1>=0) ? state.board[r][c-1] : null;
+        const cur  = (c<cols) ? state.board[r][c] : null;
+        if(cur && prev && cur.type === prev.type) {
+          // continue run
+        } else {
+          const runLen = c - start;
+          if(runLen >= 3){
+            const type = state.board[r][start].type;
+            const cells = [];
+            for(let k=start;k<c;k++) cells.push({r, c:k});
+            groups.push({cells, type});
           }
-        }
-        if(!placed){
-          // find any null
-          for(let ii=0; ii<state.rows && !placed; ii++){
-            for(let jj=0; jj<state.cols && !placed; jj++){
-              if(state.board[ii][jj]===null){ state.board[ii][jj] = { type:s.color, special:s.kind }; placed=true; }
-            }
-          }
+          start = c;
         }
       }
     }
-
-    // gravity/refill
-    let removedCount = toRemove.size;
-    scoreGain = Math.round(scoreGain);
-    state.score += scoreGain;
-
-    applyGravityAndRefill();
-
-    return { removed: removedCount, score: scoreGain, specials };
+    // vertical
+    for(let c=0;c<cols;c++){
+      let start=0;
+      for(let r=1;r<=rows;r++){
+        const prev = (r-1>=0) ? state.board[r-1][c] : null;
+        const cur  = (r<rows) ? state.board[r][c] : null;
+        if(cur && prev && cur.type === prev.type){
+          // continue
+        } else {
+          const runLen = r - start;
+          if(runLen >= 3){
+            const type = state.board[start][c].type;
+            const cells=[];
+            for(let k=start;k<r;k++) cells.push({r:k, c});
+            groups.push({cells, type});
+          }
+          start = r;
+        }
+      }
+    }
+    return groups;
   }
 
-  // gravity: for each column, make candies fall down and fill from top with new random candies
+  // clear groups (removes cells -> marks null), returns total removed count
+  function clearGroups(groups){
+    let removed = 0;
+    groups.forEach(g=>{
+      g.cells.forEach(cell=>{
+        if(state.board[cell.r][cell.c]) {
+          state.board[cell.r][cell.c] = null;
+          removed++;
+        }
+      });
+    });
+    return removed;
+  }
+
+  // apply gravity & refill: columns fall down, new cells on top
   function applyGravityAndRefill(){
-    const r = state.rows, c = state.cols;
-    for(let col=0; col<c; col++){
-      const stack = [];
-      for(let row=r-1; row>=0; row--){
-        if(state.board[row][col]) stack.push(state.board[row][col]);
+    const rows = state.rows, cols = state.cols;
+    for(let c=0;c<cols;c++){
+      let write = rows-1;
+      for(let r=rows-1;r>=0;r--){
+        if(state.board[r][c]){
+          if(write !== r){
+            state.board[write][c] = state.board[r][c];
+            state.board[r][c] = null;
+          }
+          write--;
+        }
       }
-      // fill from bottom
-      let row = r-1;
-      for(const v of stack){
-        state.board[row][col] = v;
-        row--;
-      }
-      // remaining top cells fill
-      while(row >= 0){
-        state.board[row][col] = { type: randCandy(), special: null };
-        row--;
+      // fill empty on top
+      for(let r=write;r>=0;r--){
+        state.board[r][c] = makeCell(randomCandy());
       }
     }
   }
 
-  // Check whether any possible move exists (simple brute force swap test)
-  function hasPossibleMoves(){
-    const r=state.rows, c=state.cols;
-    function testSwap(i1,j1,i2,j2){
-      swapCells(i1,j1,i2,j2);
-      const ok = findMatches().length > 0;
-      swapCells(i1,j1,i2,j2); // revert
-      return ok;
-    }
-    for(let i=0;i<r;i++){
-      for(let j=0;j<c;j++){
-        if(j+1<c && testSwap(i,j,i,j+1)) return true;
-        if(i+1<r && testSwap(i,j,i+1,j)) return true;
-      }
-    }
-    return false;
+  // score calculation: base 100 per candy, combos + multipliers
+  function computeScoreForRemoved(count){
+    // basic: 100 per candy, bonus for >3
+    const base = 100 * count;
+    const bonus = (count>=4) ? (count-3)*150 : 0;
+    return base + bonus;
   }
 
-  // shuffle board randomly until hasPossibleMoves true or attempts exhausted
-  function shuffleBoard(){
-    const r=state.rows,c=state.cols;
-    for(let attempt=0; attempt<CFG.shuffleAttempts; attempt++){
-      // randomize types
-      for(let i=0;i<r;i++){
-        for(let j=0;j<c;j++){
-          state.board[i][j] = { type: randCandy(), special: null };
-        }
-      }
-      // ensure no immediate matches
-      for(let i=0;i<r;i++){
-        for(let j=0;j<c;j++){
-          if(createsImmediateMatch(i,j)) state.board[i][j] = { type: randCandy(), special: null };
-        }
-      }
-      if(hasPossibleMoves()) return true;
+  // process matches until no more auto-matches
+  function resolveAllMatches(){
+    let totalRemoved = 0;
+    let totalScore = 0;
+    while(true){
+      const groups = findAllMatches();
+      if(groups.length === 0) break;
+      const removed = clearGroups(groups);
+      const s = computeScoreForRemoved(removed);
+      totalRemoved += removed;
+      totalScore += s;
+      applyGravityAndRefill();
     }
-    return false;
+    if(totalRemoved>0){
+      state.score += totalScore;
+      // notify listeners
+      window.dispatchEvent(new CustomEvent('game-score', { detail: { score: state.score } }));
+      return { removed: totalRemoved, score: totalScore };
+    }
+    return null;
   }
 
-  // PUBLIC API
-  window.Game.start = function(level = 1){
-    console.log('[CORE] init start level', level);
-    state.level = level;
-    // set difficulty based on level (simple)
-    state.rows = CFG.defaultSize;
-    state.cols = CFG.defaultSize;
-    state.score = 0;
-    state.moves = 30;
-    state.target = 600 * (Math.ceil(level/1)); // each level target up
-    state.timerSeconds = null;
-    fillBoardNoMatches();
-    // ensure possible moves
-    if(!hasPossibleMoves()){
-      shuffleBoard();
+  // trySwap: swap two adjacent cells, if creates matches keep, else swap back and return false
+  function trySwap(r1,c1,r2,c2){
+    if(state.busy) return false;
+    // ensure adjacency
+    const dr = Math.abs(r1-r2), dc = Math.abs(c1-c2);
+    if((dr+dc)!==1) return false;
+    state.busy = true;
+    swapCells(r1,c1,r2,c2);
+    let groups = findAllMatches();
+    if(groups.length === 0){
+      // invalid swap, revert
+      swapCells(r1,c1,r2,c2);
+      state.busy = false;
+      window.dispatchEvent(new CustomEvent('swap-invalid',{detail:{r1,c1,r2,c2}}));
+      return false;
     }
-    state.running = true;
-    // expose state for UI
-    window.Game._state = state;
-    console.log('[CORE] start level', level, 'size', state.rows, state.cols);
-  };
+    // valid swap; one move used
+    state.moves = Math.max(0, state.moves-1);
+    window.dispatchEvent(new CustomEvent('move-used',{detail:{moves:state.moves}}));
+    // clear and resolve chain reactions
+    let res = clearGroups(groups);
+    applyGravityAndRefill();
+    // chain resolve (loop)
+    let extra = resolveAllMatches();
+    let gained = 0;
+    if(extra) gained = extra.score;
+    else {
+      // compute score for first removed
+      gained = computeScoreForRemoved(res);
+      state.score += gained;
+    }
+    // sound
+    try { Sound.play('pop'); } catch(e){ warn('sound pop failed', e); }
+    // notify
+    window.dispatchEvent(new CustomEvent('game-swap', { detail: { r1,c1,r2,c2, gained } }));
+    state.busy = false;
 
-  window.Game.restart = function(){
-    console.log('[CORE] restart');
-    window.Game.start(state.level);
-  };
+    // check win
+    if(state.score >= state.target){
+      try { Sound.play('win'); } catch(e) {}
+      try { Confetti.fire(); } catch(e) {}
+      window.dispatchEvent(new CustomEvent('level-complete',{detail:{level:state.level, score:state.score}}));
+      // stop running
+      state.running = false;
+    } else if(state.moves <= 0){
+      window.dispatchEvent(new CustomEvent('game-over',{detail:{score:state.score}}));
+      state.running = false;
+    }
 
-  window.Game.shuffle = function(){
-    console.log('[CORE] shuffle');
-    shuffleBoard();
-    if(typeof window.render === 'function') window.render();
-  };
+    return true;
+  }
 
-  window.Game.end = function(){
-    console.log('[CORE] end');
-    state.running = false;
-  };
+  // public API
+  Game._state = state;
+  Game.buildBoard = buildBoard;
+  Game.trySwap = trySwap;
+  Game.resolveAllMatches = resolveAllMatches;
 
-  // attempt swap triggered by UI; returns {ok:bool, matches:...}
-  window.Game.attemptSwap = function(i1,j1,i2,j2){
-    // only adjacent allowed
-    const di = Math.abs(i1-i2), dj = Math.abs(j1-j2);
-    if((di===1 && dj===0) || (di===0 && dj===1)){
-      swapCells(i1,j1,i2,j2);
-      // find matches
-      const matches = findMatches();
-      if(matches.length > 0){
-        // successful swap, consume a move
-        state.moves = Math.max(0, state.moves-1);
-        // play swap sound
-        if(window.Sound) Sound.play('swap');
-        // resolve matches repeatedly until none
-        let totalGain=0, totalRemoved=0;
-        do {
-          const res = resolveMatchesAndDrop();
-          totalRemoved += res.removed;
-          totalGain += res.score;
-          // small safety: break if nothing removed
-          if(res.removed===0) break;
-        } while(findMatches().length>0);
-        // check win
-        if(state.score >= state.target){
-          if(window.Sound) Sound.play('win');
-          if(window.Confetti) Confetti.fire({ count: 40 });
-          console.log('[CORE] level complete');
-        }
-        // if moves finished -> end
-        if(state.moves <= 0){
-          state.running = false;
-          console.log('[CORE] moves finished');
-        }
-        // ensure board has possible moves else shuffle
-        if(!hasPossibleMoves()){
-          console.log('[CORE] no moves left -> shuffle');
-          shuffleBoard();
-        }
-        if(typeof window.render === 'function') window.render();
-        return { ok:true, removed: totalRemoved, score: totalGain };
-      } else {
-        // revert swap, invalid move
-        swapCells(i1,j1,i2,j2);
-        if(window.Sound) Sound.play('invalid'); // optional sound
-        return { ok:false };
-      }
-    } else {
-      return { ok:false, reason:'not-adjacent' };
+  Game.start = function(level){
+    try {
+      log('[CORE] start level', level);
+      const cols = DEFAULT_COLS;
+      const rows = DEFAULT_ROWS;
+      state.level = parseInt(level||1,10);
+      state.target = 600 * state.level; // simple scaling
+      state.score = 0;
+      state.moves = 30;
+      state.timerSec = null;
+      state.running = true;
+      state.busy = false;
+      buildBoard(rows, cols);
+      // dispatch ready
+      try { window.dispatchEvent(new Event('game-ready')); } catch(e){ log('[CORE] dispatch failed', e); }
+      log('[CORE] started & dispatched game-ready');
+      // auto-resolve any initial accidental matches (shouldn't be)
+      resolveAllMatches();
+      window.dispatchEvent(new CustomEvent('game-started', {detail:{level:state.level}}));
+    } catch(e){
+      err('[CORE] start failed', e);
     }
   };
 
-  // Expose some helpers
-  window.Game._internal = {
-    findMatches, applyGravityAndRefill, resolveMatchesAndDrop
+  // helper for index.js starter if needed
+  window.addEventListener('load', ()=> {
+    // if URL has ?level=... and Game.start not called, do a safe start
+    const url = new URL(location.href);
+    const lvl = parseInt(url.searchParams.get('level')||'1',10);
+    // only start if not started already
+    if(!state.running){
+      try {
+        // small defer to let UI scripts attach listeners
+        setTimeout(()=> {
+          if(!state.running) Game.start(lvl);
+        }, 120);
+      } catch(e){ err('autostart failed', e); }
+    }
+  });
+
+  // Expose debug
+  Game._debug = {
+    findAllMatches, clearGroups, applyGravityAndRefill, computeScoreForRemoved
   };
 
-  console.log('[CORE] loaded');
+  log('[CORE] loaded');
+
 })();
