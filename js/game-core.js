@@ -1,108 +1,130 @@
-// Game core: state, build, match detect, swap, gravity, events
+// js/game-core.js - core game logic (grid, swap, match, gravity)
+// simple 6-type candy match; tile ids 1..6
 window.Game = (function(){
-  const TYPES = ['candy1','candy2','candy3','candy4','candy5','candy6']; // image names (images/candy1.png etc.)
-  const state = { rows:7, cols:6, board:[], score:0, moves:30, target:600, level:1 };
-  function randType(){ return TYPES[Math.floor(Math.random()*TYPES.length)]; }
-  function buildBoard(r,c){
-    const b = Array.from({length:r}, ()=> Array.from({length:c}, ()=> ({ type: randType() })));
-    return b;
+  const rows = 6, cols = 6; // default grid
+  let state = {
+    level:1, rows, cols, board:[], score:0, moves:30, target:600, timer:0, running:false
+  };
+
+  function randInt(n){ return Math.floor(Math.random()*n); }
+
+  function makeBoard(){
+    state.board = [];
+    for(let r=0;r<state.rows;r++){
+      const row = [];
+      for(let c=0;c<state.cols;c++){
+        row.push(1 + randInt(6));
+      }
+      state.board.push(row);
+    }
+    // ensure no immediate matches: simple shuffle check
+    removeAllMatches();
+    return state.board;
   }
-  function dispatch(name, detail){ window.dispatchEvent(new CustomEvent(name, { detail })); }
-  function detectMatches(board){
-    const rows=board.length, cols=board[0].length, res=[];
-    const add = (r,c)=> res.push({r,c});
-    // horizontal
-    for(let r=0;r<rows;r++){
-      let t=null, start=0, len=0;
-      for(let c=0;c<=cols;c++){
-        const cur = (c<cols && board[r][c]) ? board[r][c].type : null;
-        if(cur && cur===t){ len++; } else {
-          if(len>=3) for(let k=start;k<start+len;k++) add(r,k);
-          t=cur; start=c; len=1;
+
+  function inBounds(r,c){ return r>=0 && r<state.rows && c>=0 && c<state.cols; }
+
+  // swap two positions (r1,c1) <-> (r2,c2)
+  function swap(r1,c1,r2,c2){
+    if(!inBounds(r1,c1)||!inBounds(r2,c2)) return false;
+    const t = state.board[r1][c1];
+    state.board[r1][c1] = state.board[r2][c2];
+    state.board[r2][c2] = t;
+    return true;
+  }
+
+  // find all matches (>=3) return list of coords
+  function findMatches(){
+    const toClear = new Set();
+    // rows
+    for(let r=0;r<state.rows;r++){
+      let start=0;
+      for(let c=1;c<=state.cols;c++){
+        if(c<state.cols && state.board[r][c]===state.board[r][start]) continue;
+        const len = c-start;
+        if(len>=3){
+          for(let k=start;k<c;k++) toClear.add(r+','+k);
         }
+        start=c;
       }
     }
-    // vertical
-    for(let c=0;c<cols;c++){
-      let t=null, start=0, len=0;
-      for(let r=0;r<=rows;r++){
-        const cur = (r<rows && board[r][c]) ? board[r][c].type : null;
-        if(cur && cur===t){ len++; } else {
-          if(len>=3) for(let k=start;k<start+len;k++) res.push({r:k,c});
-          t=cur; start=r; len=1;
+    // cols
+    for(let c=0;c<state.cols;c++){
+      let start=0;
+      for(let r=1;r<=state.rows;r++){
+        if(r<state.rows && state.board[r][c]===state.board[start][c]) continue;
+        const len = r-start;
+        if(len>=3){
+          for(let k=start;k<r;k++) toClear.add(k+','+c);
         }
+        start=r;
       }
     }
-    // uniq
-    const keys = new Set(); return res.filter(p=>{ const k = `${p.r},${p.c}`; if(keys.has(k)) return false; keys.add(k); return true; });
+    return Array.from(toClear).map(s=> s.split(',').map(Number));
   }
-  function clearMatches(board){
-    const found = detectMatches(board);
-    if(found.length===0) return 0;
-    found.forEach(f=> board[f.r][f.c] = null);
-    const gained = found.length * 10;
-    state.score += gained;
-    dispatch('score-changed', { score: state.score });
-    Sound.play('pop');
-    return found.length;
+
+  function removeAllMatches(){
+    let matches = findMatches();
+    let total = 0;
+    while(matches.length){
+      // clear set
+      matches.forEach(([r,c]) => state.board[r][c] = 0);
+      total += matches.length;
+      applyGravity();
+      refillBoard();
+      matches = findMatches();
+    }
+    return total;
   }
-  function gravityAndRefill(board){
-    const rows=board.length, cols=board[0].length;
-    for(let c=0;c<cols;c++){
-      let write = rows-1;
-      for(let r=rows-1;r>=0;r--){ if(board[r][c]){ board[write][c] = board[r][c]; write--; } }
-      for(let r=write;r>=0;r--) board[r][c] = { type: randType() };
+
+  function applyGravity(){
+    for(let c=0;c<state.cols;c++){
+      let write = state.rows-1;
+      for(let r=state.rows-1;r>=0;r--){
+        if(state.board[r][c] !== 0){
+          state.board[write][c] = state.board[r][c];
+          write--;
+        }
+      }
+      for(let r=write;r>=0;r--) state.board[r][c] = 0;
     }
   }
 
-  return {
-    init: function(){ console.log('[CORE] init'); },
-    start: function(level){
-      state.level = level||1;
-      state.rows = 7; state.cols = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols')) || 6;
-      state.board = buildBoard(state.rows, state.cols);
-      state.score = 0; state.moves = 30; state.target = state.level * 600;
-      dispatch('game-ready', { state: JSON.parse(JSON.stringify(state)) });
-      // remove initial accidental matches
-      for(let i=0;i<6;i++){ if(clearMatches(state.board)===0) break; gravityAndRefill(state.board); }
-      dispatch('game-start', { state: JSON.parse(JSON.stringify(state)) });
-      dispatch('board-changed', { board: state.board });
-    },
-    getState: function(){ return JSON.parse(JSON.stringify(state)); },
-    trySwap: function(r1,c1,r2,c2){
-      try{
-        const b = state.board;
-        // bounds
-        if(!b[r1]||!b[r2]) return false;
-        const tmp = b[r1][c1]; b[r1][c1] = b[r2][c2]; b[r2][c2] = tmp;
-        const matches = detectMatches(b);
-        if(matches.length===0){
-          // revert
-          const tmp2 = b[r1][c1]; b[r1][c1] = b[r2][c2]; b[r2][c2] = tmp2;
-          return false;
-        }
-        state.moves = Math.max(0, state.moves-1);
-        dispatch('moves-changed', { moves: state.moves });
-        // collapse loop
-        let total=0;
-        while(true){
-          const ccount = clearMatches(b);
-          if(ccount===0) break;
-          total += ccount;
-          gravityAndRefill(b);
-          dispatch('board-changed', { board: b });
-        }
-        dispatch('swap-ok', { from:{r:r1,c:c1}, to:{r:r2,c:c2}, cleared: total });
-        if(state.score >= state.target){
-          dispatch('level-complete', { score: state.score });
-        }
-        if(state.moves<=0) dispatch('game-over', { score: state.score });
-        return true;
-      }catch(e){ console.error('swap err',e); return false; }
-    },
-    shuffle: function(){
-      state.board = buildBoard(state.rows, state.cols);
-      dispatch('board-changed', { board: state.board });
+  function refillBoard(){
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        if(state.board[r][c]===0) state.board[r][c] = 1 + Math.floor(Math.random()*6);
+      }
     }
-  };
+  }
+
+  function checkAndResolve(){
+    const matches = findMatches();
+    if(matches.length===0) return 0;
+    matches.forEach(([r,c])=> state.board[r][c] = 0);
+    applyGravity();
+    refillBoard();
+    // scoring: each cleared tile = 10 points
+    const points = matches.length * 10;
+    state.score += points;
+    return points;
+  }
+
+  function start(level){
+    state.level = Number(level) || 1;
+    state.score = 0;
+    state.moves = 30;
+    state.rows = rows; state.cols = cols;
+    state.target = state.level * 600;
+    state.board = makeBoard();
+    state.running = true;
+    // dispatch event
+    window.dispatchEvent(new CustomEvent('game-ready', { detail: { state } }));
+    window.dispatchEvent(new CustomEvent('game-started', { detail: { level: state.level } }));
+    return state;
+  }
+
+  function getState(){ return JSON.parse(JSON.stringify(state)); }
+
+  return { start, swap, findMatches, applyGravity, refillBoard, checkAndResolve, getState, makeBoard };
 })();
