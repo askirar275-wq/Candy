@@ -1,4 +1,4 @@
-// js/game.js — Final Update (with sound + screen fix + swipe logic)
+// js/game.js — Final Update with BG Music + All Sounds + Fixed Layout
 
 window.Game = (function () {
   const C = {
@@ -19,7 +19,7 @@ window.Game = (function () {
   const targetEl = () => document.getElementById("target");
   const levelTitleEl = () => document.getElementById("levelTitle");
 
-  /* ✅ Responsive grid setup */
+  /* Responsive grid setup */
   (function setupResponsiveGrid() {
     const grid = document.getElementById("gameGrid");
     if (!grid) return;
@@ -49,7 +49,6 @@ window.Game = (function () {
     });
   })();
 
-  /* ✅ Utility */
   const idx = (r, c) => r * C.cols + c;
   const rc = (i) => [Math.floor(i / C.cols), i % C.cols];
   const rand = (n) => Math.floor(Math.random() * n) + 1;
@@ -77,10 +76,8 @@ window.Game = (function () {
     attachSwipe();
   }
 
-  /* ✅ Match logic */
   function findMatches() {
     const matched = new Set();
-
     // horizontal
     for (let r = 0; r < C.rows; r++) {
       let run = 1;
@@ -110,7 +107,6 @@ window.Game = (function () {
       if (run >= C.matchMin)
         for (let k = 0; k < run; k++) matched.add(idx(C.rows - 1 - k, c));
     }
-
     return [...matched];
   }
 
@@ -136,11 +132,10 @@ window.Game = (function () {
     }
   }
 
-  /* ✅ Swipe logic */
+  /* Swipe logic */
   function attachSwipe() {
     const g = gridEl();
     let start = null;
-
     g.querySelectorAll(".cell").forEach((cell) => {
       cell.addEventListener("pointerdown", (e) => {
         start = parseInt(e.currentTarget.dataset.i);
@@ -159,12 +154,10 @@ window.Game = (function () {
 
   async function trySwap(a, b) {
     if (inAction || a === b) return;
-    const [ar, ac] = rc(a),
-      [br, bc] = rc(b);
+    const [ar, ac] = rc(a), [br, bc] = rc(b);
     if (Math.abs(ar - br) + Math.abs(ac - bc) !== 1) return;
     inAction = true;
 
-    // swap tiles
     [grid[a], grid[b]] = [grid[b], grid[a]];
     Sound.play("swap");
     renderGrid();
@@ -172,7 +165,6 @@ window.Game = (function () {
 
     const matches = findMatches();
     if (!matches.length) {
-      // invalid swap, revert
       [grid[a], grid[b]] = [grid[b], grid[a]];
       renderGrid();
       Sound.play("lose");
@@ -201,7 +193,8 @@ window.Game = (function () {
     inAction = false;
   }
 
-  /* ✅ HUD / End conditions */
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
   function updateHUD() {
     scoreEl().textContent = score;
     movesEl().textContent = moves;
@@ -211,38 +204,19 @@ window.Game = (function () {
   function checkEnd() {
     if (score >= target) {
       Sound.play("win");
+      stopBG();
       showEnd(true);
     } else if (moves <= 0) {
       Sound.play("lose");
+      stopBG();
       showEnd(false);
     }
   }
 
   function showEnd(win) {
-    const p = document.getElementById("endPanel");
-    const t = document.getElementById("endTitle");
-    const i = document.getElementById("endInfo");
-    t.textContent = win ? `Level ${level} Complete!` : "Game Over";
-    i.textContent = `Score: ${score}`;
-    p.classList.remove("hidden");
+    alert(win ? `🎉 Level ${level} Complete!` : "💔 Game Over!");
   }
 
-  /* ✅ Helpers */
-  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-  /* ✅ Buttons */
-  function setupButtons() {
-    document.getElementById("restartBtn").onclick = () => start(level);
-    document.getElementById("shuffleBtn").onclick = () => {
-      grid.sort(() => Math.random() - 0.5);
-      renderGrid();
-    };
-    document.getElementById("endBtn").onclick = () => showEnd(false);
-    document.getElementById("replayBtn").onclick = () => start(level);
-    document.getElementById("nextBtn").onclick = () => start(level + 1);
-  }
-
-  /* ✅ Start game */
   function start(lvl = 1) {
     level = lvl;
     score = 0;
@@ -251,18 +225,38 @@ window.Game = (function () {
     buildGrid();
     renderGrid();
     updateHUD();
-    document.getElementById("endPanel").classList.add("hidden");
-    levelTitleEl().textContent = `Level ${lvl}`;
+    startBG();
   }
 
-  /* ✅ Public methods */
+  /* ✅ Background Music Controls */
+  let bgAudio = null;
+  let isMuted = false;
+
+  function startBG() {
+    if (bgAudio) bgAudio.pause();
+    bgAudio = new Audio("sounds/bg.mp3");
+    bgAudio.loop = true;
+    bgAudio.volume = isMuted ? 0 : 0.5;
+    bgAudio.play().catch(() => {});
+  }
+
+  function stopBG() {
+    if (bgAudio) bgAudio.pause();
+  }
+
+  function toggleMute() {
+    isMuted = !isMuted;
+    if (bgAudio) bgAudio.volume = isMuted ? 0 : 0.5;
+    document.getElementById("muteBtn").textContent = isMuted ? "🔇 Unmute" : "🔊 Mute";
+  }
+
   window.addEventListener("load", () => {
     Sound.load("swap", "sounds/swap.mp3");
     Sound.load("pop", "sounds/pop.mp3");
     Sound.load("win", "sounds/win.mp3");
     Sound.load("lose", "sounds/lose.mp3");
     Sound.load("bg", "sounds/bg.mp3");
-    setupButtons();
+    document.getElementById("muteBtn").onclick = toggleMute;
     start(1);
   });
 
