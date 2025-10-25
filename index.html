@@ -1,119 +1,590 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Demo</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Candy Match — Demo</title>
+
+<!-- BASIC STYLES (mobile friendly) -->
+<style>
+  :root{
+    --bg1: #ffd0e8;
+    --bg2: #fbeef7;
+    --cell-size:64px;
+    --gap:12px;
+    --cols:6;
+  }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+  body{
+    background: linear-gradient(180deg,var(--bg1),var(--bg2));
+    -webkit-font-smoothing:antialiased;
+    color:#111;
+    padding: 8px;
+  }
+
+  /* top nav */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px; padding:10px 6px;}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700}
+  .navlinks a{margin-left:12px;color:#0b79ff;text-decoration:underline}
+
+  /* page container */
+  .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,0.06);max-width:720px;margin:12px auto;}
+  h1{margin:0 0 12px 0;font-size:28px}
+
+  /* small subtitle */
+  .lead{color:#666;margin-bottom:10px}
+
+  /* map grid */
+  .level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0;}
+  .lvl{background:#f7f9fc;border-radius:10px;padding:12px;text-align:center;box-shadow:0 6px 14px rgba(0,0,0,0.03)}
+  .lvl.locked{opacity:0.5}
+  .btn{display:inline-block;background:#1da1ff;color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none}
+
+  /* board card (game) */
+  .board-card{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;background:#fff;max-width:520px;margin:12px auto;box-shadow:0 18px 40px rgba(0,0,0,0.06)}
+  .stats-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .stat{background: #fafafa;padding:10px 14px;border-radius:12px;box-shadow:0 10px 22px rgba(0,0,0,0.04)}
+
+  /* grid container that scrolls if needed */
+  .game-grid-container{width:100%;max-height: calc(100vh - 360px); overflow:auto; display:flex;justify-content:center;align-items:flex-start;padding:6px}
+  .game-grid{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--cols), var(--cell-size));padding:10px;border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.98));box-shadow:inset 0 6px 14px rgba(0,0,0,0.03)}
+  .cell{width:var(--cell-size);height:var(--cell-size);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(0,0,0,0.06);position:relative;touch-action:none;user-select:none}
+  .cell img{width:74%;height:74%;object-fit:contain;pointer-events:none; -webkit-user-drag:none}
+  .cell.empty{background:transparent;box-shadow:none}
+  .controls{display:flex;gap:8px;justify-content:center;margin-top:10px}
+  .control-btn{background:#fff;padding:10px 14px;border-radius:10px;border:1px solid #ddd}
+
+  /* dragging clone */
+  .dragging-clone{position:fixed;z-index:9999;width:var(--cell-size);height:var(--cell-size);transform:translate(-50%,-50%);pointer-events:none;transition:transform 0.08s linear}
+  .cell.swapping{transform:scale(.96);box-shadow:0 10px 26px rgba(0,0,0,0.12)}
+  .cell.invalid{animation:shake .18s}
+  @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+
+  /* responsive tweaks */
+  @media (max-width:520px){
+    :root{--cell-size:52px;--gap:10px;--cols:5}
+    .level-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (min-width:900px){
+    :root{--cell-size:72px;--gap:12px;--cols:8}
+  }
+
+  /* footer */
+  .foot{text-align:center;color:#666;margin:24px 0}
+</style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">🍬 Candy Match</div>
-    <nav class="top-nav">
-      <a href="#home">Home</a>
-      <a href="#map">Map</a>
-      <a href="#play">Play</a>
-      <a href="#about">About</a>
-    </nav>
-  </header>
 
-  <main id="app">
-    <!-- Pages: sections shown/hidden by router -->
-    <section id="page-home" class="page card">
-      <h1>कैंडी मैच</h1>
-      <p class="lead">मैच. पॉप. मुस्कुराओ!</p>
+<!-- top -->
+<div class="topbar">
+  <div class="brand">🍬 <strong>Candy Match</strong></div>
+  <div class="navlinks">
+    <a href="#home">Home</a>
+    <a href="#map">Map</a>
+    <a href="#play">Play</a>
+    <a href="#about">About</a>
+  </div>
+</div>
+
+<!-- HOME -->
+<section id="home" class="page">
+  <div class="card">
+    <h1>कैंडी मैच</h1>
+    <div class="lead">Match. Pop. Smile! — नीचे Play पर क्लिक करें → Map → कोई Level चुनें।</div>
+    <div style="display:flex;gap:8px">
+      <a class="btn" href="#play">Play</a>
+      <a class="btn" href="#map" style="background:#fff;color:#1da1ff;border:1px solid #ddd">Map</a>
+    </div>
+    <div style="margin-top:12px"><a href="#settings">Settings</a> · <a href="#about">About</a></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="map" class="page" style="display:none">
+  <div class="card">
+    <a href="#home" style="text-decoration:none;color:#6b46c1">← Home</a>
+    <h1 style="margin-top:6px">Level Map</h1>
+    <div style="margin:8px 0"><button id="resetProgress" class="control-btn">प्रगति रीसेट करें</button></div>
+    <div class="level-grid" id="levelGrid"></div>
+  </div>
+</section>
+
+<!-- PLAY (game) -->
+<section id="play" class="page" style="display:none">
+  <div class="board-card" role="application">
+    <a href="#map" style="text-decoration:none;color:#6b46c1">← Map</a>
+    <h1 id="levelTitle">Level 1</h1>
+
+    <div class="stats-row">
+      <div class="stat">Score: <span id="score">0</span></div>
+      <div class="stat">Moves: <span id="moves">30</span></div>
+      <div class="stat">Target: <span id="target">600</span></div>
+      <div class="stat">Timer: <span id="timer">--:--</span></div>
+    </div>
+
+    <div class="game-grid-container">
+      <div id="gameGrid" class="game-grid" aria-label="Game board"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:8px">
       <div class="controls">
-        <a class="btn primary" href="#play">Play</a>
-        <a class="btn" href="#map">Map</a>
+        <button id="restartBtn" class="control-btn">Restart</button>
+        <button id="shuffleBtn" class="control-btn">Shuffle</button>
+        <button id="endBtn" class="control-btn">End</button>
       </div>
-      <p class="links"><a href="#map">Level Map</a> · <a href="#settings">Settings</a> · <a href="#about">About</a></p>
-    </section>
+    </div>
 
-    <section id="page-map" class="page card">
-      <a class="back" href="#home">← Home</a>
-      <h2>Level Map</h2>
-      <div id="levelGrid" class="level-grid"></div>
-      <button id="resetProgress" class="btn">Reset Progress</button>
-    </section>
+  </div>
+</section>
 
-    <section id="page-play" class="page card">
-      <a class="back" href="#map">← Map</a>
-      <h2 id="levelTitle">Level 1</h2>
+<!-- Settings & About -->
+<section id="settings" class="page" style="display:none">
+  <div class="card">
+    <a href="#home" style="text-decoration:none;color:#6b46c1">← Back</a>
+    <h2>Settings</h2>
+    <label><input type="checkbox" id="muteSound"> Mute Sound</label>
+  </div>
+</section>
 
-      <div class="stats-row">
-        <div class="stat">Score: <span id="score">0</span></div>
-        <div class="stat">Moves: <span id="moves">30</span></div>
-        <div class="stat">Target: <span id="target">600</span></div>
-        <div class="stat">Timer: <span id="timer">--:--</span></div>
-      </div>
+<section id="about" class="page" style="display:none">
+  <div class="card">
+    <a href="#home" style="text-decoration:none;color:#6b46c1">← Back</a>
+    <h2>About</h2>
+    <p>Simple Candy Match demo — मोबाइल-friendly और smooth animations के साथ।</p>
+  </div>
+</section>
 
-      <div class="board-card">
-        <div id="gameControls" class="controls">
-          <button id="restartBtn" class="btn">Restart</button>
-          <button id="shuffleBtn" class="btn">Shuffle</button>
-          <button id="endBtn" class="btn">End</button>
-        </div>
+<div class="foot">© Candy Match</div>
 
-        <div class="game-grid-container">
-          <div id="gameGrid" class="game-grid" aria-hidden="false"></div>
-        </div>
-      </div>
+<!-- DRAG CLONE -->
+<div id="dragClone" class="dragging-clone" style="display:none"></div>
 
-      <div id="endPanel" class="card hidden">
-        <h3 id="endTitle">Level Complete!</h3>
-        <p id="endInfo"></p>
-        <div class="controls">
-          <button id="replayBtn" class="btn">Replay</button>
-          <button id="nextBtn" class="btn">Next</button>
-          <a class="btn" href="#map">Map</a>
-        </div>
-      </div>
-    </section>
+<!-- SCRIPT: Game + UI -->
+<script>
+/*
+  Simple Candy Match demo (single file).
+  Required assets (put in your repo):
+  - images/candy1.png ... candy6.png  (or use same-named icons)
+  - sounds/bg.mp3, swap.mp3, pop.mp3, win.mp3, lose.mp3
+*/
 
-    <section id="page-settings" class="page card">
-      <a class="back" href="#home">← Back</a>
-      <h2>Settings</h2>
-      <label><input id="muteSound" type="checkbox"> Mute Sound</label>
-    </section>
+(() => {
 
-    <section id="page-about" class="page card">
-      <a class="back" href="#home">← Back</a>
-      <h2>About</h2>
-      <p>Simple Candy Match demo — मोबाइल-friendly और smooth animations के साथ।</p>
-    </section>
-  </main>
+  /* ----------------------
+     Configuration / assets
+     ---------------------- */
+  const CANDY_COUNT = 6;            // different candy types (index 0..CANDY_COUNT-1)
+  const ROWS = 7;                  // rows
+  const COLS = 7;                  // base columns (responsive script may change CSS var)
+  const START_MOVES = 30;
+  const START_TARGET = 600;
 
-  <footer class="site-footer">© Candy Match</footer>
+  // image base paths - make sure these exist in repo
+  const IMG_PATH = 'images'; // images/candy1.png ... candy6.png
+  const SOUND_PATH = 'sounds'; // sounds/bg.mp3 swap.mp3 pop.mp3 win.mp3 lose.mp3
 
-  <!-- scripts -->
-  <script src="js/storage.js"></script>
-  <script src="js/sound.js"></script>
-  <script src="js/game.js"></script>
-  <script>
-    // छोटा router: hash changes पर page दिखाएँ
-    (function(){
-      function showPage(name){
-        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-        const el = document.getElementById('page-' + name);
-        if(el) el.classList.remove('hidden');
+  /* ----------------------
+     Utility: DOM helpers
+     ---------------------- */
+  const $ = (id) => document.getElementById(id);
+
+  /* ----------------------
+     Simple Sound helper
+     ---------------------- */
+  const Sound = {
+    enabled: true,
+    audios: {},
+    load() {
+      // load names (if files missing, ignore silently)
+      const map = { bg: 'bg.mp3', swap: 'swap.mp3', pop: 'pop.mp3', win: 'win.mp3', lose: 'lose.mp3' };
+      Object.entries(map).forEach(([k, f])=>{
+        const path = `${SOUND_PATH}/${f}`;
+        const a = new Audio(path);
+        a.preload = 'auto';
+        a.loop = (k==='bg');
+        this.audios[k] = a;
+      });
+    },
+    play(name){
+      if(!this.enabled) return;
+      const a = this.audios[name];
+      if(!a) return;
+      try{
+        a.currentTime = 0;
+        a.play().catch(()=>{/* autoplay blocked on mobile; user must interact */});
+      }catch(e){}
+    },
+    stop(name){
+      const a = this.audios[name];
+      if(a){ a.pause(); a.currentTime=0; }
+    },
+    setMuted(m){
+      this.enabled = !m;
+      if(m) { Object.values(this.audios).forEach(a=>a.pause()); }
+      else { this.play('bg'); }
+    }
+  };
+
+  /* ----------------------
+     Responsive grid script
+     ---------------------- */
+  function setupResponsiveGridVars(){
+    const gridEl = $('gameGrid');
+    function compute(){
+      if(!gridEl) return;
+      const parent = gridEl.parentElement;
+      const avail = Math.min(parent.getBoundingClientRect().width, window.innerWidth - 32);
+      const minCell = 48, maxCell = 72, gap = 12, minCols = 5, maxCols = 8;
+      let chosenCols = minCols, chosenSize = minCell;
+      for(let cols=maxCols; cols>=minCols; cols--){
+        const reqMin = cols*minCell + (cols-1)*gap;
+        if(reqMin <= avail){
+          const size = Math.min(maxCell, Math.floor((avail - (cols-1)*gap)/cols));
+          chosenCols = cols; chosenSize = Math.max(minCell, size);
+          break;
+        }
       }
-      function route(){
-        const hash = location.hash.replace('#','') || 'home';
-        // map, play => special handling
-        if(hash.startsWith('play')){
-          // format: play?level=2 handled by game module
-          showPage('play');
-          window.Game && window.Game.startFromHash();
-        } else if(hash.startsWith('map')) {
-          showPage('map');
-          window.Game && window.Game.renderLevelMap();
-        } else if(hash.startsWith('settings')) showPage('settings');
-        else if(hash.startsWith('about')) showPage('about');
-        else showPage('home');
+      document.documentElement.style.setProperty('--cols', chosenCols);
+      document.documentElement.style.setProperty('--cell-size', chosenSize + 'px');
+      document.documentElement.style.setProperty('--gap', gap + 'px');
+    }
+    compute();
+    window.addEventListener('resize', ()=>{ clearTimeout(window._rg); window._rg = setTimeout(compute,100); });
+    window.addEventListener('load', compute);
+  }
+
+  /* ----------------------
+     Game state
+     ---------------------- */
+  let state = {
+    rows: ROWS,
+    cols: COLS,
+    board: [], // 2d array [r][c] -> candy index or null
+    score: 0,
+    moves: START_MOVES,
+    target: START_TARGET,
+    level: 1,
+    dragging: null, // {r,c,el}
+    lock: false
+  };
+
+  /* ----------------------
+     Helper: random candy not forming immediate match
+     ---------------------- */
+  function randCandy(){
+    return Math.floor(Math.random()*CANDY_COUNT);
+  }
+  function initialBoard(){
+    const b = [];
+    for(let r=0;r<state.rows;r++){
+      b[r]=[];
+      for(let c=0;c<state.cols;c++){
+        b[r][c]=randCandy();
       }
-      window.addEventListener('hashchange', route);
-      window.addEventListener('load', ()=>{ route(); });
-    })();
-  </script>
-</body>
-  </html>
+    }
+    // ensure no immediate matches at start (simple pass)
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        let tries=0;
+        while(hasMatchAt(b,r,c) && tries<10){
+          b[r][c]=randCandy(); tries++;
+        }
+      }
+    }
+    return b;
+  }
+
+  /* ----------------------
+     Match detection helpers
+     - findMatches(board): returns array of positions to clear
+     - hasMatchAt(board,r,c): true if tile at r,c is part of 3-in-line
+     ---------------------- */
+  function hasMatchAt(b,r,c){
+    const val = b[r][c];
+    if(val==null) return false;
+    // horizontal
+    let cnt=1;
+    for(let x=c-1;x>=0 && b[r][x]===val;x--) cnt++;
+    for(let x=c+1;x<state.cols && b[r][x]===val;x++) cnt++;
+    if(cnt>=3) return true;
+    // vertical
+    cnt=1;
+    for(let y=r-1;y>=0 && b[y][c]===val;y--) cnt++;
+    for(let y=r+1;y<state.rows && b[y][c]===val;y++) cnt++;
+    if(cnt>=3) return true;
+    return false;
+  }
+
+  function findAllMatches(b){
+    const remove = [];
+    const mark = Array.from({length:state.rows},()=>Array(state.cols).fill(false));
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        const val = b[r][c];
+        if(val==null) continue;
+        // horizontal run
+        let end=c+1;
+        while(end<state.cols && b[r][end]===val) end++;
+        const len = end-c;
+        if(len>=3){
+          for(let x=c;x<end;x++) mark[r][x]=true;
+        }
+        // vertical run
+        end=r+1;
+        while(end<state.rows && b[end][c]===val) end++;
+        const lenv = end-r;
+        if(lenv>=3){
+          for(let y=r;y<end;y++) mark[y][c]=true;
+        }
+      }
+    }
+    for(let r=0;r<state.rows;r++) for(let c=0;c<state.cols;c++) if(mark[r][c]) remove.push([r,c]);
+    return remove;
+  }
+
+  /* ----------------------
+     Render
+     ---------------------- */
+  function renderBoard(){
+    const container = $('gameGrid');
+    container.innerHTML='';
+    container.style.setProperty('--cols', state.cols);
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        const cell = document.createElement('div');
+        cell.className='cell';
+        cell.dataset.r=r; cell.dataset.c=c;
+        const val = state.board[r][c];
+        if(val==null){
+          cell.classList.add('empty');
+        } else {
+          const img = document.createElement('img');
+          // use candy images candy1..candy6
+          img.src = `${IMG_PATH}/candy${(val% CANDY_COUNT)+1}.png`;
+          img.alt='candy';
+          cell.appendChild(img);
+        }
+        attachTouchHandlers(cell);
+        container.appendChild(cell);
+      }
+    }
+  }
+
+  /* ----------------------
+     Swap two tiles (r1,c1) <-> (r2,c2)
+     visually animate by re-rendering after swap
+     ---------------------- */
+  function swapTiles(r1,c1,r2,c2){
+    const tmp = state.board[r1][c1];
+    state.board[r1][c1] = state.board[r2][c2];
+    state.board[r2][c2] = tmp;
+  }
+
+  /* ----------------------
+     Apply gravity: for each column, drop tiles down and fill top with random
+     returns number of new tiles filled
+     ---------------------- */
+  function applyGravityAndRefill(){
+    let filled=0;
+    for(let c=0;c<state.cols;c++){
+      let write = state.rows-1;
+      for(let r=state.rows-1;r>=0;r--){
+        if(state.board[r][c]!=null){
+          if(write!==r){
+            state.board[write][c] = state.board[r][c];
+            state.board[r][c] = null;
+          }
+          write--;
+        }
+      }
+      // fill remaining with random
+      for(let r=write;r>=0;r--){
+        state.board[r][c]=randCandy();
+        filled++;
+      }
+    }
+    return filled;
+  }
+
+  /* ----------------------
+     Main loop: after a swap, check matches, remove, gravity/refill until no matches
+     ---------------------- */
+  async function resolveMatchesCascade(){
+    state.lock=true;
+    let totalRemoved=0;
+    while(true){
+      const matches = findAllMatches(state.board);
+      if(matches.length===0) break;
+      // score per tile = 100 (simple)
+      totalRemoved += matches.length;
+      // remove tiles
+      matches.forEach(([r,c])=> state.board[r][c]=null);
+      renderBoard();
+      Sound.play('pop');
+      // small pause to let user see
+      await sleep(220);
+      // gravity & refill
+      applyGravityAndRefill();
+      renderBoard();
+      await sleep(220);
+    }
+    // update score (simple)
+    if(totalRemoved>0){
+      state.score += totalRemoved * 100;
+      $('score').textContent = state.score;
+    }
+    state.lock=false;
+  }
+
+  /* ----------------------
+     Player actions
+     ---------------------- */
+  function startLevel(l){
+    state.level = Number(l) || 1;
+    state.rows = ROWS;
+    state.cols = COLS;
+    state.board = initialBoard();
+    state.score = 0;
+    state.moves = START_MOVES;
+    state.target = START_TARGET;
+    $('score').textContent = state.score;
+    $('moves').textContent = state.moves;
+    $('target').textContent = state.target;
+    $('levelTitle').textContent = 'Level ' + state.level;
+    renderBoard();
+    Sound.play('bg');
+  }
+
+  function restartLevel(){
+    startLevel(state.level);
+  }
+
+  function shuffleBoard(){
+    // shuffle simple: flatten, shuffle, refill
+    const arr = state.board.flat().filter(v=>v!=null);
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    // fill board row-major
+    let idx=0;
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        state.board[r][c] = arr[idx++] ?? randCandy();
+      }
+    }
+    renderBoard();
+  }
+
+  /* ----------------------
+     Helpers: sleep
+     ---------------------- */
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  /* ----------------------
+     Touch / mouse drag handlers
+     - basic drag detection, compute target cell by elementFromPoint,
+       swap if adjacent; if swap doesn't create match, swap back and play invalid
+     ---------------------- */
+  function attachTouchHandlers(cell){
+    let startX=0, startY=0, dragging=false, startR, startC;
+    function getRC(el){
+      return {r: Number(el.dataset.r), c: Number(el.dataset.c)};
+    }
+    function onDown(e){
+      if(state.lock) return;
+      e.preventDefault();
+      const p = e.touches ? e.touches[0] : e;
+      startX = p.clientX; startY = p.clientY;
+      dragging=true;
+      const rc = getRC(cell); startR=rc.r; startC=rc.c;
+      state.dragging = {r:startR,c:startC, el:cell};
+      // show clone
+      const clone = $('dragClone');
+      const img = cell.querySelector('img');
+      if(img){
+        clone.style.background = 'white';
+        clone.style.borderRadius='12px';
+        clone.style.display='block';
+        clone.innerHTML = img.outerHTML;
+        clone.style.left = p.clientX + 'px';
+        clone.style.top = p.clientY + 'px';
+      }
+    }
+    function onMove(e){
+      if(!dragging) return;
+      const p = e.touches ? e.touches[0] : e;
+      const dx = p.clientX - startX, dy = p.clientY - startY;
+      const absx = Math.abs(dx), absy = Math.abs(dy);
+      // update clone position
+      const clone = $('dragClone');
+      if(clone.style.display!=='none'){ clone.style.left = p.clientX + 'px'; clone.style.top = p.clientY + 'px'; }
+      // if moved enough, determine direction
+      if(Math.max(absx,absy) > 18){
+        // determine neighbor cell in direction of swipe
+        let dr=0, dc=0;
+        if(absx>absy){
+          dc = dx>0 ? 1 : -1;
+        } else {
+          dr = dy>0 ? 1 : -1;
+        }
+        const tr = startR + dr, tc = startC + dc;
+        if(tr<0||tr>=state.rows||tc<0||tc>=state.cols) return;
+        // attempt swap
+        dragging=false; // prevent repeating
+        trySwapAndResolve(startR,startC,tr,tc);
+      }
+    }
+    function onUp(e){
+      dragging=false;
+      const clone = $('dragClone');
+      clone.style.display='none';
+      state.dragging = null;
+    }
+    cell.addEventListener('touchstart', onDown, {passive:false});
+    cell.addEventListener('mousedown', onDown);
+    window.addEventListener('touchmove', onMove, {passive:false});
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  /* ----------------------
+     Swap attempt logic:
+     - swap tiles
+     - check if swap creates any matches (either pos), if not swap back (invalid)
+     - if valid: decrement moves, then resolve cascade
+     ---------------------- */
+  async function trySwapAndResolve(r1,c1,r2,c2){
+    if(state.lock) return;
+    // must be adjacent
+    const d = Math.abs(r1-r2) + Math.abs(c1-c2);
+    if(d!==1) return;
+    // perform swap visually
+    swapTiles(r1,c1,r2,c2);
+    renderBoard();
+    // play swap sound
+    Sound.play('swap');
+
+    // check for matches
+    if(hasMatchAt(state.board,r1,c1) || hasMatchAt(state.board,r2,c2)){
+      // valid
+      state.moves = Math.max(0, state.moves-1);
+      $('moves').textContent = state.moves;
+      await resolveMatchesCascade();
+      // check win/loss
+      if(state.score >= state.target){
+        Sound.play('win');
+        alert('स्तर पूरा हुआ!'); // simple dialog
+      } else if(state.moves<=0){
+        Sound.play('lose');
+        alert('खेल समाप्त — Moves खत्म');
+      }
+    } else {
+      // invalid -> swap back and play invalid animation / sound
+      await sleep(160);
+      swapTiles(r1,c1,r2,c2);
+      renderBoard();
+      // small feedback
+      const c = document.querySelector(`.cell[data-r="${r1}"][data-c="${c1}"]`);
+      if(c){ c.classList.add('invalid'); setTimeout(()=>c.classList.remove('invali
