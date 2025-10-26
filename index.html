@@ -7,25 +7,33 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
+
   <div id="app">
-    <!-- 🏠 Home Page -->
+    <!-- HOME -->
     <main id="home" class="page active">
       <div class="hero-card">
-        <h1>🍭 Candy Match</h1>
-        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-        <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
-        <button id="btn-map" class="btn">🗺️ Level Map</button>
+        <div class="hero-top">
+          <img src="images/candy-icon.png" alt="logo" class="hero-logo" />
+          <h1>🍭 Candy Match</h1>
+        </div>
+        <p class="hero-sub">🍂🍂!</p>
+        <div class="hero-actions">
+          <button id="btn-start" class="btn primary full">🎮 खेल शुरू करें</button>
+          <button id="btn-map" class="btn full">🗺️ Level Map</button>
+          <button id="btn-shop" class="btn full">🛒 Shop</button>
+        </div>
+        <p class="hero-footer">Made with ❤️ — Arun App Studio</p>
       </div>
     </main>
 
-    <!-- 🗺️ Level Map -->
+    <!-- LEVEL MAP -->
     <section id="map" class="page hidden">
       <button class="btn back" data-go="home">← Home</button>
       <h2>Level Map</h2>
       <div id="levels" class="levels"></div>
     </section>
 
-    <!-- 🎮 Game -->
+    <!-- GAME -->
     <section id="game" class="page hidden">
       <header class="game-header">
         <button class="btn back" data-go="map">← Map</button>
@@ -47,10 +55,10 @@
     </section>
   </div>
 
-  <!-- Scripts -->
+  <!-- SCRIPTS -->
   <script src="js/storage.js" defer></script>
   <script src="js/safe-ui.js" defer></script>
   <script src="js/level-map.js" defer></script>
   <script src="js/game.js" defer></script>
 </body>
-          </html>
+</html>
