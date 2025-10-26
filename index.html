@@ -3,61 +3,134 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Simple</title>
-
-  <link rel="stylesheet" href="css/style.css">
-
-  <!-- Eruda (mobile console) - optional; इंटरनेट चाहिए -->
-  <script>
-    (function(){
-      const load = true; // अगर नहीं चाहिए तो false कर दें
-      if(!load) return;
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      s.onload = function(){ eruda.init(); console.log('[ERUDA] iniciado'); };
-      document.head.appendChild(s);
-    })();
-  </script>
+  <title>Candy Match</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">🍬 Candy Match</div>
-    <nav class="nav-links">
-      <a href="#">Home</a>
-      <a href="#">Map</a>
-      <a href="#">Play</a>
-    </nav>
-  </header>
+<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
 
-  <main>
-    <section class="card board-card" id="boardCard" aria-live="polite">
-      <a class="back" href="#">← Map</a>
-      <h1 id="levelTitle">Level 1</h1>
+  <div id="app">
+    <!-- 🏠 Home Page -->
+    <main id="home" class="page">
+      <div class="hero-card">
+        <h1>🍭 Candy Match</h1>
+        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+        <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
+        <button id="btn-map" class="btn" data-go="map">🗺️ Level Map</button>
+      </div>
+    </main>
 
-      <div class="stats-row">
-        <div class="stat">Score: <span id="score">0</span></div>
-        <div class="stat">Moves: <span id="moves">30</span></div>
-        <div class="stat">Target: <span id="target">600</span></div>
-        <div class="stat">Timer: <span id="timer">--:--</span></div>
+    <!-- 🗺️ Level Map Page -->
+    <section id="map" class="page hidden">
+      <button class="back btn" data-go="home">← Home</button>
+      <h2>Level Map</h2>
+      <div id="levels" class="levels"></div>
+    </section>
+
+    <!-- 🎯 Game Page -->
+    <section id="game" class="page hidden">
+      <header class="game-header">
+        <button class="back btn" data-go="map">← Map</button>
+        <div class="stats">
+          <div>Score: <span id="score">0</span></div>
+          <div>Coins: <span id="coins">0</span></div>
+          <div>Level: <span id="level-num">1</span></div>
+        </div>
+      </header>
+
+      <!-- 🎮 Game Board -->
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
       </div>
 
-      <div class="game-grid-container">
-        <div id="gameGrid" class="game-grid" role="application" aria-label="Candy board"></div>
-      </div>
-
+      <!-- 🔘 Game Controls -->
       <div class="controls">
-        <button id="restartBtn" class="btn">Restart</button>
-        <button id="shuffleBtn" class="btn">Shuffle</button>
-        <button id="endBtn" class="btn">End</button>
+        <button id="btn-restart" class="btn">🔁 Restart</button>
+        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
       </div>
     </section>
-  </main>
+  </div>
 
-  <footer class="footer">© Candy Match</footer>
+  <!-- ---------- SCRIPTS: सही order ज़रूरी है ---------- -->
+  <!-- storage / helpers -->
+  <script defer src="js/storage.js"></script>
 
-  <!-- Confetti, Sound and Game logic -->
-  <script src="js/confetti.js"></script>
-  <script src="js/sound.js"></script>
-  <script src="js/game.js"></script>
+  <!-- UI helpers (eruda / safe-ui etc) -->
+  <script defer src="js/safe-ui.js"></script>
+
+  <!-- Game core - MUST load BEFORE level-map (so it defines CandyGame) -->
+  <script defer src="js/game.js"></script>
+
+  <!-- Level map uses CandyGame.startLevel -> must be after game.js -->
+  <script defer src="js/level-map.js"></script>
+
+  <!-- optional shop logic -->
+  <script defer src="js/shop.js"></script>
+
+  <!-- Small runtime check (helps debugging): agar CandyGame available na ho to console warning. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Small check to help debugging:
+      if (!window.CandyGame) {
+        console.warn('Warning: window.CandyGame is not defined yet. Ensure js/game.js sets window.CandyGame = CandyGame;');
+      } else {
+        console.log('CandyGame ready');
+      }
+
+      // Basic router for the three pages (home / map / game)
+      function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        const page = document.getElementById(id);
+        if (page) page.classList.remove('hidden');
+      }
+
+      // button navigation shortcuts
+      document.querySelectorAll('[data-go]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const target = btn.getAttribute('data-go');
+          if (target) showPage(target);
+        });
+      });
+
+      // Start button on home -> go to map (or start game directly as you prefer)
+      const btnStart = document.getElementById('btn-start');
+      if (btnStart) {
+        btnStart.addEventListener('click', () => {
+          // By default show level map so player can pick a level
+          showPage('map');
+        });
+      }
+
+      // Attach back buttons (they have data-go attributes already)
+      document.querySelectorAll('.back[data-go]').forEach(b => {
+        b.addEventListener('click', () => {
+          const g = b.getAttribute('data-go');
+          if (g) showPage(g);
+        });
+      });
+
+      // Hook restart / shuffle to global CandyGame if available
+      const r = document.getElementById('btn-restart');
+      const s = document.getElementById('btn-shuffle');
+      if (r) r.addEventListener('click', () => {
+        if (window.CandyGame && typeof window.CandyGame.restart === 'function') {
+          window.CandyGame.restart();
+        } else console.warn('CandyGame.restart not available');
+      });
+      if (s) s.addEventListener('click', () => {
+        if (window.CandyGame && typeof window.CandyGame.shuffle === 'function') {
+          window.CandyGame.shuffle();
+        } else console.warn('CandyGame.shuffle not available');
+      });
+
+      // If level map wants to auto-render levels, call its init if present
+      if (window.LevelMap && typeof window.LevelMap.init === 'function') {
+        window.LevelMap.init();
+      } else {
+        // Level map might initialize itself in its own file; this is just safety.
+        console.log('LevelMap init: ', !!window.LevelMap);
+      }
+    });
+  </script>
+
 </body>
 </html>
