@@ -1,35 +1,35 @@
-// js/sound.js - safe sound wrapper with blocked/play fallback
-window.Sound = (function(){
+// sound.js - simple wrapper
+const Sound = (function(){
   const sounds = {};
-  let bg = null;
-  function load(name, url){
-    try {
-      const a = new Audio(url);
-      a.preload = 'auto';
-      sounds[name] = a;
-      console.log('[Sound] loaded', name, url);
-    } catch(e){ console.warn('[Sound] load failed', name, e); }
+  let enabled = true;
+  function load(name, src){
+    const a = new Audio();
+    a.src = src;
+    a.preload = 'auto';
+    sounds[name]=a;
   }
-  function play(name){
-    try {
-      const a = sounds[name];
-      if(!a) { console.warn('[SoundDebug] sound not found', name); return; }
-      const p = a.play();
-      if(p && p.catch) p.catch(err=> console.warn('[Sound] play blocked', err));
-    } catch(e){ console.warn('[Sound] play error', e); }
+  function play(name, opts={}){
+    if(!enabled) return;
+    const a = sounds[name];
+    if(!a) { console.warn('[Sound] not found', name); return; }
+    // clone to allow overlapping
+    const clone = a.cloneNode();
+    clone.volume = ('volume' in opts)? opts.volume : 1;
+    const p = clone.play();
+    if(p && p.catch) p.catch(err=> console.warn('[Sound] play blocked', err));
   }
-  function playBg(){
-    try {
-      if(!sounds.bg) return;
-      sounds.bg.loop = true;
-      const p = sounds.bg.play();
-      if(p && p.catch) p.catch(()=> console.warn('[Sound] bg play blocked'));
-    } catch(e){}
+  function bgPlay(name){
+    const a = sounds[name];
+    if(!a) return;
+    a.loop = true;
+    a.play().catch(e=> console.warn('[Sound] bg play blocked', e));
   }
-  // preload expected files (you must have these in /sound)
-  load('pop','sound/pop.mp3');
-  load('swap','sound/swap.mp3');
-  load('win','sound/win.mp3');
-  load('bg','sound/bg.mp3');
-  return { load, play, playBg };
+  function setEnabled(v){ enabled = !!v; }
+  return { load, play, bgPlay, setEnabled };
 })();
+
+// preload common files (paths used in this project)
+Sound.load('pop','sound/pop.mp3');
+Sound.load('swap','sound/pop.mp3');
+Sound.load('win','sound/win.mp3');
+Sound.load('bg','sound/bg.mp3');
