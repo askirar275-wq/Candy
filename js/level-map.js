@@ -1,24 +1,40 @@
-// js/level-map.js - render a map with clickable levels
-const LevelMap = (function(){
-  const container = document.getElementById('mapGrid');
-  function render(){
-    if(!container) return;
-    container.innerHTML = '';
-    // show 12 levels for demo
-    for(let i=1;i<=12;i++){
-      const card = document.createElement('div');
-      card.className = 'level-card' + (Storage.isUnlocked(i) ? '' : ' locked');
-      card.innerHTML = `<div class="thumb"><img src="images/candy1.png" alt=""></div>
-        <div class="txt">Level ${i}</div>
-        <div class="sub">${Storage.isUnlocked(i) ? 'Play' : 'Locked'}</div>`;
-      card.dataset.level = i;
-      card.addEventListener('click', (e)=>{
-        const lvl = Number(card.dataset.level);
-        if(!Storage.isUnlocked(lvl)){ alert('Level locked — complete previous levels to unlock'); return; }
-        location.hash = '#game?level=' + lvl;
-      });
-      container.appendChild(card);
+// simple level map UI that reads maxLevel from localStorage
+(function(){
+  function init(){
+    const btnMap = document.getElementById('btn-map');
+    const btnStart = document.getElementById('btn-start');
+    const levelsEl = document.getElementById('levels');
+    const pages = document.querySelectorAll('.page');
+
+    btnMap?.addEventListener('click', ()=>{ showPage('map'); renderLevels(); });
+    btnStart?.addEventListener('click', ()=>{ CandyGame.startLevel(1); showPage('game'); });
+    document.querySelectorAll('.back').forEach(b=>b.addEventListener('click', ()=>{ const g=b.dataset.go; showPage(g); }));
+
+    renderLevels();
+  }
+
+  function showPage(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    document.getElementById(id)?.classList.remove('hidden');
+  }
+
+  function renderLevels(){
+    const levelsEl = document.getElementById('levels');
+    const max = Number(localStorage.getItem('maxLevel')||1);
+    levelsEl.innerHTML = '';
+    for(let i=1;i<=30;i++){
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = 'Level '+i;
+      if(i>max){ btn.disabled=true; btn.textContent = 'Level '+i+' 🔒'; }
+      else btn.addEventListener('click', ()=>{ CandyGame.startLevel(i); });
+      levelsEl.appendChild(btn);
     }
   }
-  return { render };
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    init();
+    // init game engine after UI prepared
+    if(window.CandyGame && typeof window.CandyGame.init==='function') window.CandyGame.init();
+  });
 })();
