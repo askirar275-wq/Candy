@@ -1,271 +1,273 @@
-/* CandyGame core */
+// CandyGame engine - simple, mobile friendly
 const CandyGame = (function(){
-  const boardEl = UI.$('#board');
-  const scoreEl = UI.$('#score');
-  const coinsEl = UI.$('#coins');
-  const levelEl = UI.$('#level-num');
-  const restartBtn = UI.$('#btn-restart');
-  const shuffleBtn = UI.$('#btn-shuffle');
+  const boardEl = document.getElementById('board');
+  const SCORE = document.getElementById('score');
+  const COINS = document.getElementById('coins');
+  const LEVEL_NUM = document.getElementById('level-num');
 
-  const rows = 8, cols = 8; // grid
-  const candyTypes = [
-    'images/c1.png','images/c2.png','images/c3.png',
-    'images/c4.png','images/c5.png','images/c6.png'
-  ];
+  // config
+  const COLS = 8;
+  const ROWS = 8;
+  const TYPES = 6; // number of candy images available (1..TYPES)
+  const TILE_SIZE = 54; // used to set CSS grid size (JS sets grid-template)
 
-  let grid = []; // length rows*cols, each: {type: index}
-  let score = 0, coins = 0, currentLevel = 1;
-  let selectedIndex = null;
-  let checking = false;
+  let grid = []; // 2D array [r][c] each value 1..TYPES
+  let score = 0;
+  let coins = 0;
+  let currentLevel = 1;
+  let isProcessing = false;
 
-  // Ensure board grid styles
-  function setupGridUI(){
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    boardEl.innerHTML = '';
+  // helper: random int
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+  // set board CSS grid
+  function setupGridStyle(){
+    boardEl.style.gridTemplateColumns = `repeat(${COLS}, ${TILE_SIZE}px)`;
+    boardEl.style.gridTemplateRows = `repeat(${ROWS}, ${TILE_SIZE}px)`;
     boardEl.style.gap = '10px';
-    for(let i=0;i<rows*cols;i++){
-      const sq = document.createElement('div');
-      sq.className = 'square';
-      sq.dataset.index = i;
-      sq.addEventListener('click', onSquareClick);
-      // touch (for swipes)
-      let startX=0, startY=0;
-      sq.addEventListener('touchstart', e=>{
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-      }, {passive:true});
-      sq.addEventListener('touchend', e=>{
-        const dx = e.changedTouches[0].clientX - startX;
-        const dy = e.changedTouches[0].clientY - startY;
-        const absdx = Math.abs(dx), absdy = Math.abs(dy);
-        const idx = Number(sq.dataset.index);
-        if(Math.max(absdx,absdy) < 20) return; // tap already handled
-        if(absdx>absdy){
-          if(dx>0) trySwap(idx, idx+1); else trySwap(idx, idx-1);
-        } else {
-          if(dy>0) trySwap(idx, idx+cols); else trySwap(idx, idx-cols);
-        }
-      }, {passive:true});
-      boardEl.appendChild(sq);
-    }
   }
 
-  function randType(){ return Math.floor(Math.random()*candyTypes.length); }
-
-  function fillInitial(){
-    grid = new Array(rows*cols).fill(null).map(()=>({type: randType()}));
-    // avoid starting with matches
-    removeInitialMatches();
-    render();
-  }
-
-  function removeInitialMatches(){
-    let changed = true;
-    while(changed){
-      changed = false;
-      const matches = findMatches();
-      if(matches.length){
-        changed = true;
-        matches.forEach(idx=>{
-          grid[idx] = {type: randType()};
-        });
+  // create initial grid avoiding immediate matches
+  function createInitialGrid(){
+    grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        let v;
+        do {
+          v = randInt(1,TYPES);
+          grid[r][c] = v;
+        } while(hasImmediateMatchAt(r,c));
       }
     }
   }
 
-  function render(){
-    const squares = boardEl.children;
-    for(let i=0;i<rows*cols;i++){
-      const s = squares[i];
-      s.classList.remove('selected');
-      const img = s.querySelector('img');
-      if(img) s.removeChild(img);
-      const cell = grid[i];
-      if(cell){
-        const im = document.createElement('img');
-        im.src = candyTypes[cell.type];
-        im.alt = 'candy';
-        s.appendChild(im);
-      }
-    }
-    scoreEl.textContent = score;
-    coinsEl.textContent = coins;
-    levelEl.textContent = currentLevel;
+  function hasImmediateMatchAt(r,c){
+    const v = grid[r][c];
+    if(c>=2 && grid[r][c-1]===v && grid[r][c-2]===v) return true;
+    if(r>=2 && grid[r-1][c]===v && grid[r-2][c]===v) return true;
+    return false;
   }
 
-  function getRow(i){ return Math.floor(i/cols); }
-  function isAdjacent(a,b){
-    if(b<0 || b>=rows*cols) return false;
-    const ra = getRow(a), rb = getRow(b);
-    return (Math.abs(a-b) === 1 && ra===rb) || Math.abs(a-b) === cols;
-  }
-
-  function onSquareClick(e){
-    const idx = Number(e.currentTarget.dataset.index);
-    if(selectedIndex===null){
-      selectedIndex = idx;
-      e.currentTarget.classList.add('selected');
-    } else {
-      if(idx === selectedIndex){
-        // deselect
-        boardEl.children[selectedIndex].classList.remove('selected');
-        selectedIndex = null;
-      } else if(isAdjacent(idx, selectedIndex)){
-        trySwap(selectedIndex, idx);
-        boardEl.children[selectedIndex].classList.remove('selected');
-        selectedIndex = null;
-      } else {
-        // new selection
-        boardEl.children[selectedIndex].classList.remove('selected');
-        selectedIndex = idx;
-        e.currentTarget.classList.add('selected');
+  // render board DOM
+  function renderBoard(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.dataset.r = r; tile.dataset.c = c;
+        const img = document.createElement('img');
+        const val = grid[r][c];
+        img.src = `images/candy${val}.png`; // ensure images exist
+        img.alt = 'candy';
+        tile.appendChild(img);
+        boardEl.appendChild(tile);
       }
     }
   }
 
-  function trySwap(a,b){
-    if(checking) return;
-    if(b<0 || b>=rows*cols) return;
-    if(!isAdjacent(a,b)) return;
-    checking = true;
-    swapCells(a,b);
-    const matches = findMatches();
-    if(matches.length){
-      // good swap
-      doMatches();
-    } else {
-      // revert
-      setTimeout(()=>{ swapCells(a,b); checking=false; render(); }, 180);
-    }
-    render();
+  // swap two positions in grid and update DOM
+  function swapPositions(r1,c1,r2,c2){
+    const t = grid[r1][c1]; grid[r1][c1] = grid[r2][c2]; grid[r2][c2] = t;
   }
 
-  function swapCells(a,b){
-    const tmp = grid[a];
-    grid[a] = grid[b];
-    grid[b] = tmp;
-  }
-
-  // find all matching indices (3 or more in row or column)
+  // match detection (returns set of coords to remove)
   function findMatches(){
-    const matches = new Set();
+    const remove = new Set();
     // rows
-    for(let r=0;r<rows;r++){
-      let start = r*cols;
-      let runType = grid[start].type;
-      let runLen = 1;
-      for(let c=1;c<cols;c++){
-        const idx = start+c;
-        if(grid[idx].type === runType){ runLen++; }
-        else {
-          if(runLen>=3){
-            for(let k=0;k<runLen;k++) matches.add(start + c-1-k);
-          }
-          runType = grid[idx].type;
-          runLen = 1;
+    for(let r=0;r<ROWS;r++){
+      let runVal = grid[r][0], runStart = 0;
+      for(let c=1;c<=COLS;c++){
+        const val = grid[r][c] ?? null;
+        if(val===runVal) continue;
+        const runLen = c - runStart;
+        if(runVal && runLen>=3){
+          for(let k=runStart;k<c;k++) remove.add(`${r},${k}`);
         }
+        runVal = val; runStart = c;
       }
-      if(runLen>=3) for(let k=0;k<runLen;k++) matches.add(start + cols-1 - k);
     }
     // cols
-    for(let c=0;c<cols;c++){
-      let start = c;
-      let runType = grid[start].type;
-      let runLen = 1;
-      for(let r=1;r<rows;r++){
-        const idx = r*cols + c;
-        if(grid[idx].type === runType){ runLen++; }
-        else {
-          if(runLen>=3){
-            for(let k=0;k<runLen;k++) matches.add((r-1-k)*cols + c);
-          }
-          runType = grid[idx].type;
-          runLen = 1;
+    for(let c=0;c<COLS;c++){
+      let runVal = grid[0][c], runStart = 0;
+      for(let r=1;r<=ROWS;r++){
+        const val = grid[r]?.[c] ?? null;
+        if(val===runVal) continue;
+        const runLen = r - runStart;
+        if(runVal && runLen>=3){
+          for(let k=runStart;k<r;k++) remove.add(`${k},${c}`);
         }
+        runVal = val; runStart = r;
       }
-      if(runLen>=3) for(let k=0;k<runLen;k++) matches.add((rows-1-k)*cols + c);
     }
-    return Array.from(matches);
+    // convert to array of coords
+    return Array.from(remove).map(s=>s.split(',').map(x=>Number(x)));
   }
 
-  // remove matches, collapse, refill — loop until no more matches
-  async function doMatches(){
+  // remove matched, increase score, set nulls
+  function removeMatches(coords){
+    if(coords.length===0) return 0;
+    for(const [r,c] of coords) grid[r][c] = 0;
+    score += coords.length * 10;
+    SCORE.textContent = score;
+    return coords.length;
+  }
+
+  // gravity: for each column, let numbers fall and refill at top
+  function applyGravity(){
+    for(let c=0;c<COLS;c++){
+      let write = ROWS-1;
+      for(let r=ROWS-1;r>=0;r--){
+        if(grid[r][c] && grid[r][c]!==0){
+          grid[write][c] = grid[r][c];
+          write--;
+        }
+      }
+      // fill rest with new candies
+      for(let r=write;r>=0;r--) grid[r][c] = randInt(1,TYPES);
+    }
+  }
+
+  // animate DOM to reflect grid (simple: re-render images)
+  function refreshDOM(){
+    const tiles = boardEl.querySelectorAll('.tile');
+    tiles.forEach(tile=>{
+      const r = Number(tile.dataset.r), c = Number(tile.dataset.c);
+      const img = tile.querySelector('img');
+      img.src = `images/candy${grid[r][c]}.png`;
+    });
+  }
+
+  // core loop: after swap or init - resolve matches repeatedly
+  async function resolveMatchesLoop(){
+    isProcessing = true;
     let totalRemoved = 0;
-    let loop=0;
     while(true){
       const matches = findMatches();
       if(matches.length===0) break;
-      loop++;
-      // remove
-      matches.forEach(i => grid[i] = null);
-      totalRemoved += matches.length;
-      score += matches.length * 10;
-      render();
-      // wait animation
-      await new Promise(r=>setTimeout(r, 250));
-      // collapse columns
-      for(let c=0;c<cols;c++){
-        let write = (rows-1)*cols + c;
-        for(let r=rows-1;r>=0;r--){
-          const idx = r*cols + c;
-          if(grid[idx]!==null){
-            grid[write] = grid[idx];
-            if(write!==idx) grid[idx] = null;
-            write -= cols;
-          }
-        }
-        // fill remaining with new candies
-        for(let rr = Math.floor(write/cols); rr>=0; rr--){
-          const id = rr*cols + c;
-          grid[id] = {type: randType()};
-        }
+      const removed = removeMatches(matches);
+      totalRemoved += removed;
+      // show disappear animation by temporarily hiding matched tiles
+      for(const [r,c] of matches){
+        const selector = `.tile[data-r="${r}"][data-c="${c}"] img`;
+        const el = boardEl.querySelector(selector);
+        if(el) el.style.opacity = 0;
       }
-      render();
-      await new Promise(r=>setTimeout(r, 180));
-      // prevent infinite loops
-      if(loop>20) break;
+      await sleep(220);
+      applyGravity();
+      refreshDOM();
+      await sleep(160);
     }
-    checking = false;
-    // after finishing, award coins & maybe unlock next level
-    coins += Math.floor(totalRemoved/5);
-    Storage.set('coins', coins);
-    // simple check for level complete (score goal: level*500)
-    const goal = (currentLevel*500);
-    if(score >= goal){
-      // unlock next
-      const next = currentLevel+1;
-      window.LevelMapUI && window.LevelMapUI.unlock(next);
-      alert('Level complete! अगला level अनलॉक हुआ।');
-    }
-    render();
+    isProcessing = false;
+    return totalRemoved;
   }
 
-  // shuffle grid randomly
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  // check if swap is adjacency
+  function isAdjacent(r1,c1,r2,c2){
+    const dr = Math.abs(r1-r2), dc = Math.abs(c1-c2);
+    return (dr+dc)===1;
+  }
+
+  // swap with validation: if swap produces a match, keep else swap back
+  async function trySwap(r1,c1,r2,c2){
+    if(isProcessing) return false;
+    if(!isAdjacent(r1,c1,r2,c2)) return false;
+    swapPositions(r1,c1,r2,c2);
+    refreshDOM();
+    // check immediate matches
+    const matches = findMatches();
+    if(matches.length>0){
+      await resolveMatchesLoop();
+      return true;
+    } else {
+      // swap back
+      await sleep(160);
+      swapPositions(r1,c1,r2,c2);
+      refreshDOM();
+      return false;
+    }
+  }
+
+  // shuffle grid
   function shuffleGrid(){
-    for(let i=grid.length-1;i>0;i--){
+    // flatten values and shuffle
+    const arr = [];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) arr.push(grid[r][c]);
+    for(let i=arr.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
-      const tmp = grid[i]; grid[i]=grid[j]; grid[j]=tmp;
+      [arr[i],arr[j]] = [arr[j],arr[i]];
     }
-    render();
+    // write back
+    let k=0;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) { grid[r][c]=arr[k++]; }
+    refreshDOM();
   }
 
-  // public method to start level
-  function startLevel(level=1){
-    currentLevel = level;
-    score = 0;
-    coins = Storage.get('coins', 0) || 0;
-    setupGridUI();
-    fillInitial();
-    render();
+  // tile input handling (mouse + touch)
+  function bindInput(){
+    let startR=-1,startC=-1, isTouch=false;
+
+    function getTileFromEvent(e){
+      const t = e.target.closest('.tile');
+      if(!t) return null;
+      return {r: Number(t.dataset.r), c: Number(t.dataset.c)};
+    }
+
+    // pointerdown / touchstart
+    boardEl.addEventListener('pointerdown', (e) => {
+      if(isProcessing) return;
+      const tile = getTileFromEvent(e);
+      if(!tile) return;
+      startR = tile.r; startC = tile.c;
+      isTouch = true;
+    });
+
+    // pointerup / touchend -> on release, decide swap by target tile
+    boardEl.addEventListener('pointerup', async (e) => {
+      if(!isTouch) return;
+      const tile = getTileFromEvent(e);
+      if(!tile){ startR=-1; startC=-1; return;}
+      const ok = await trySwap(startR,startC,tile.r,tile.c);
+      isTouch = false; startR=-1; startC=-1;
+      return ok;
+    });
+
+    // also handle swipe by tracking move (pointermove)
+    let lastMove = null;
+    boardEl.addEventListener('pointermove', (e) => {
+      if(startR<0) return;
+      const tile = getTileFromEvent(e);
+      if(!tile) return;
+      // if moved to adjacent tile, trigger swap
+      if(isAdjacent(startR,startC,tile.r,tile.c) && (!lastMove || lastMove.r!==tile.r || lastMove.c!==tile.c)){
+        trySwap(startR,startC,tile.r,tile.c);
+        lastMove = tile;
+        startR=-1; startC=-1;
+      }
+    });
+  }
+
+  // public methods
+  async function startLevel(level = 1){
+    if(isProcessing) return;
+    currentLevel = Number(level)||1;
+    LEVEL_NUM.textContent = currentLevel;
+    score = 0; SCORE.textContent = score;
+    coins = Storage.get('coins',0); COINS.textContent = coins;
+
+    setupGridStyle();
+    createInitialGrid();
+    renderBoard();
+    // small auto-resolve just in case
+    await resolveMatchesLoop();
+    bindInput();
+
     UI.showPage('game');
+    UI.log('CandyEngine ready');
   }
 
-  // bind buttons
-  restartBtn && restartBtn.addEventListener('click', ()=> startLevel(currentLevel));
-  shuffleBtn && shuffleBtn.addEventListener('click', ()=> { shuffleGrid(); });
-
-  // expose
-  window.CandyGame = { startLevel };
-
-  return { startLevel };
+  // expose shuffle and startLevel
+  return { startLevel, shuffleGrid };
 })();
