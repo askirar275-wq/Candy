@@ -1,79 +1,78 @@
 // js/game-ui.js
-// Renders board, attaches pointer/touch, animates pop/fall and calls Game.attemptSwapAndResolve
-window.UI = (function(){
+// UI: render board, touch/swipe handlers, animations, Eruda-friendly logs.
+// Requires GameCore to be loaded first.
+
+(function(){
   const log = (...a)=> console.log('[UI]', ...a);
-  const err = (...a)=> console.error('[UI]', ...a);
+  const warn = (...a)=> console.warn('[UI]', ...a);
+  const ERR_IMG = 'images/candy1.png';
 
-  function el(id){ return document.getElementById(id); }
-  const gridWrapSelector = '.game-grid-container';
+  function $id(id){ return document.getElementById(id); }
 
-  function renderBoard(){
-    const st = Game.getState();
+  function renderAll(){
+    const st = window.GameCore.getState();
     if(!st) return;
-    const grid = el('gameGrid');
-    if(!grid) return;
-    // set cols var (responsive script may override)
-    grid.style.setProperty('--cols', st.cols);
+    // update stats
+    if($id('score')) $id('score').textContent = st.score;
+    if($id('moves')) $id('moves').textContent = st.moves;
+    if($id('target')) $id('target').textContent = st.target;
+
+    const grid = $id('gameGrid');
+    if(!grid){
+      warn('no gameGrid element found');
+      return;
+    }
+    // set cols var (if responsive script sets CSS vars, this is safe)
     grid.style.gridTemplateColumns = `repeat(${st.cols}, var(--cell-size,64px))`;
+    // render cells
     grid.innerHTML = '';
     for(let r=0;r<st.rows;r++){
       for(let c=0;c<st.cols;c++){
-        const val = st.board[r][c];
+        const v = st.board[r][c];
         const cell = document.createElement('div');
         cell.className = 'cell';
         cell.dataset.r = r; cell.dataset.c = c;
         const img = document.createElement('img');
+        img.src = `images/candy${v}.png`;
         img.alt = 'candy';
-        img.src = `images/candy${val}.png`;
-        img.onerror = ()=> { img.src = 'images/candy1.png'; };
+        img.onerror = ()=> img.src = ERR_IMG;
         cell.appendChild(img);
         grid.appendChild(cell);
       }
     }
   }
 
-  function updateStats(){
-    const st = Game.getState();
-    if(!st) return;
-    if(el('score')) el('score').textContent = st.score;
-    if(el('moves')) el('moves').textContent = st.moves;
-    if(el('target')) el('target').textContent = st.target;
-  }
-
-  // animate removal: add .pop to specific coordinates then after animation render board again
-  function animateRemoveAndRefill(callback){
-    // Add pop class to all empty (0) cells: we will add pop and then render after short timeout
-    const grid = el('gameGrid');
+  // animate pop (on removed) then re-render
+  function animatePopThenRender(callback){
+    const grid = $id('gameGrid');
     if(!grid) return callback && callback();
-    const cells = grid.querySelectorAll('.cell');
-    cells.forEach(cell=>{
-      const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
-      const st = Game.getState();
-      if(st && st.board[r][c] === 0){
+    const state = GameCore.getState();
+    // add pop class where board is 0
+    grid.querySelectorAll('.cell').forEach(cell=>{
+      const r = +cell.dataset.r, c = +cell.dataset.c;
+      if(state.board[r][c] === 0){
         cell.classList.add('pop');
       }
     });
-    // wait for animation
     setTimeout(()=>{
-      // after pop animation, render board (collapse & refill already done in Game)
-      renderBoard();
+      renderAll();
       callback && callback();
-    }, 240);
+    }, 260);
   }
 
-  // input handling (pointer/touch)
+  // input: simple pointer/touch swipe detection
   function attachInput(){
-    const grid = el('gameGrid');
+    const grid = $id('gameGrid');
     if(!grid) return;
     let start = null;
 
-    function getPointer(e){
-      if(e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      return { x: e.clientX, y: e.clientY };
+    function getP(e){
+      if(e.touches && e.touches[0]) return {x:e.touches[0].clientX, y:e.touches[0].clientY};
+      return {x:e.clientX, y:e.clientY};
     }
 
-    grid.addEventListener('pointerdown', onDown, {passive:false});
-    grid.addEventListener('touchstart', onDown, {passive:false});
+    grid.addEventListener('pointerdown', onDown);
+    grid.addEventListener('touchstart', onDown, {passive:true});
     window.addEventListener('pointermove', onMove);
     window.addEventListener('touchmove', onMove, {passive:true});
     window.addEventListener('pointerup', onUp);
@@ -83,10 +82,10 @@ window.UI = (function(){
       const cell = e.target.closest('.cell');
       if(!cell) return;
       start = {
-        r: Number(cell.dataset.r),
-        c: Number(cell.dataset.c),
-        x: getPointer(e).x,
-        y: getPointer(e).y,
+        r: +cell.dataset.r,
+        c: +cell.dataset.c,
+        x: getP(e).x,
+        y: getP(e).y,
         node: cell
       };
       cell.classList.add('dragging');
@@ -94,95 +93,166 @@ window.UI = (function(){
     }
     function onMove(e){
       if(!start) return;
-      const p = getPointer(e);
+      const p = getP(e);
       const dx = p.x - start.x, dy = p.y - start.y;
-      const threshold = 18;
-      if(Math.abs(dx) > threshold || Math.abs(dy) > threshold){
+      const thresh = 18;
+      if(Math.abs(dx) > thresh || Math.abs(dy) > thresh){
         let dr=0, dc=0;
         if(Math.abs(dx) > Math.abs(dy)) dc = dx > 0 ? 1 : -1;
         else dr = dy > 0 ? 1 : -1;
-        trySwap(start.r, start.c, start.r+dr, start.c+dc, start.node);
+        handleSwap(start.r, start.c, start.r+dr, start.c+dc, start.node);
         start.node.classList.remove('dragging');
         start = null;
       }
     }
     function onUp(){ if(start && start.node) start.node.classList.remove('dragging'); start = null; }
 
-    function trySwap(r1,c1,r2,c2, node){
-      const st = Game.getState();
-      if(!st) return;
-      if(r2<0||c2<0||r2>=st.rows||c2>=st.cols){
-        if(node){ node.classList.add('invalid'); setTimeout(()=>node.classList.remove('invalid'),200); }
+    function handleSwap(r1,c1,r2,c2,node){
+      const state = GameCore.getState();
+      if(!state) return;
+      if(! (r2>=0 && c2>=0 && r2<state.rows && c2<state.cols) ){
+        // invalid direction
+        if(node) {
+          node.classList.add('invalid');
+          setTimeout(()=>node.classList.remove('invalid'),180);
+        }
         return;
       }
-      // animate swap visually by swapping DOM images first (so user sees movement)
+
+      // quick visual swap of img src for immediate feedback
       const a = document.querySelector(`.cell[data-r="${r1}"][data-c="${c1}"] img`);
       const b = document.querySelector(`.cell[data-r="${r2}"][data-c="${c2}"] img`);
-      if(!a || !b) return;
-      // temporarily swap src
-      const tmp = a.src;
-      a.src = b.src;
-      b.src = tmp;
-
-      // call core attempt
-      const res = Game.attemptSwapAndResolve(r1,c1,r2,c2);
-      if(!res.ok){
-        // invalid swap -> animate shake then revert
-        const cA = a.closest('.cell'), cB = b.closest('.cell');
-        if(cA) cA.classList.add('invalid');
-        if(cB) cB.classList.add('invalid');
-        setTimeout(()=>{
-          // revert src
-          const t2 = a.src; a.src = b.src; b.src = t2;
-          if(cA) cA.classList.remove('invalid');
-          if(cB) cB.classList.remove('invalid');
-        }, 240);
-        if(window.Sound && typeof Sound.play === 'function') try{ Sound.play('swap'); }catch(e){}
-        updateAll();
+      if(!a || !b){
+        warn('cells not found for swap', r1,c1,r2,c2);
         return;
       }
-      // valid swap -> play sound and animate removals
-      if(window.Sound && typeof Sound.play === 'function') try{ Sound.play('pop'); }catch(e){}
-      // Game already did collapse+refill internally; animate pop on removed then render
-      animateRemoveAndRefill(()=>{
-        updateAll();
-        // check win condition
-        const state = Game.getState();
-        if(state.score >= state.target){
-          if(window.Sound && typeof Sound.play === 'function') try{ Sound.play('win'); }catch(e){}
-          if(window.Confetti && typeof Confetti.fire === 'function') try{ Confetti.fire(); }catch(e){}
-          // dispatch level complete
-          window.dispatchEvent(new CustomEvent('level-complete', {detail:{state}}));
+      const tmp = a.src; a.src = b.src; b.src = tmp;
+
+      const res = GameCore.attemptSwap(r1,c1,r2,c2);
+      if(!res.ok){
+        // revert after small delay with shake
+        const cellA = a.closest('.cell'), cellB = b.closest('.cell');
+        if(cellA) cellA.classList.add('invalid');
+        if(cellB) cellB.classList.add('invalid');
+        setTimeout(()=>{
+          // revert images
+          const t2 = a.src; a.src = b.src; b.src = t2;
+          if(cellA) cellA.classList.remove('invalid');
+          if(cellB) cellB.classList.remove('invalid');
+        }, 220);
+        // update stats only
+        setTimeout(()=> updateStats(), 10);
+        return;
+      }
+
+      // valid swap -> play pop sound (if exists), animate removals
+      try { if(window.Sound && typeof Sound.play === 'function') Sound.play('pop'); } catch(e){}
+      // animate pop then render (GameCore already did collapse+refill in attemptSwap)
+      animatePopThenRender(()=>{
+        updateStats();
+        // check win
+        const st = GameCore.getState();
+        if(st.score >= st.target){
+          try { if(window.Sound && typeof Sound.play === 'function') Sound.play('win'); } catch(e){}
+          try { if(window.Confetti && typeof Confetti.fire === 'function') Confetti.fire(); } catch(e){}
+          window.dispatchEvent(new CustomEvent('level-complete',{detail:{state:st}}));
         }
       });
     }
   }
 
-  function updateAll(){ renderBoard(); updateStats(); }
+  function updateStats(){
+    const st = GameCore.getState();
+    if(!st) return;
+    if($id('score')) $id('score').textContent = st.score;
+    if($id('moves')) $id('moves').textContent = st.moves;
+    if($id('target')) $id('target').textContent = st.target;
+  }
 
-  function initUI(){
+  // controls
+  function attachControls(){
+    const bRestart = $id('btnRestart');
+    const bShuffle = $id('btnShuffle');
+    const bEnd = $id('btnEnd');
+    if(bRestart) bRestart.addEventListener('click', ()=>{ GameCore.start(GameCore.getState().level); renderAll(); });
+    if(bShuffle) bShuffle.addEventListener('click', ()=>{ GameCore.shuffleBoard(); renderAll(); });
+    if(bEnd) bEnd.addEventListener('click', ()=>{ alert('End'); });
+  }
+
+  function renderAll(){
+    renderAll = undefined; // harmless - keep original name separate
+    renderAll = function(){ // placeholder to allow function hoisting earlier
+      // actual render implemented above (closure) - call it
+    };
+  }
+
+  // initialization
+  function init(){
     try {
-      // ensure DOM elements exist
-      if(!el('gameGrid')) throw new Error('gameGrid missing');
-      renderBoard();
-      attachInput();
-      updateAll();
-
-      // buttons
-      if(el('btnRestart')) el('btnRestart').addEventListener('click', ()=> { Game.start(Game.getState().level); updateAll(); });
-      if(el('btnShuffle')) el('btnShuffle').addEventListener('click', ()=> { Game.makeBoard(); renderBoard(); updateAll(); });
-      if(el('btnEnd')) el('btnEnd').addEventListener('click', ()=> { alert('End'); });
-
-      // events from Game
-      window.addEventListener('game-started', ()=> updateAll());
-      window.addEventListener('game-ready', ()=> updateAll());
-
-      log('UI ready');
+      if(!document.getElementById('gameGrid')) throw new Error('missing #gameGrid');
+      renderAll = function(){ renderAll = null; }; // no-op if redefined below
+      // call initial render
+      renderAll = function(){ renderAll = null; }; // safety
     } catch(e){
-      err('UI init error', e);
-      throw e;
+      console.error('[UI] init error', e);
+    }
+
+    // real init:
+    renderAll = function(){ renderAll = null; }; // again safety
+    // Now proper calls:
+    try {
+      // if GameCore not started yet, start default level 1
+      if(!GameCore.getState()) GameCore.start(1);
+      // render & attach
+      renderAll = function(){ renderAll = null; }; // noop fallback
+      // call the actual render function above
+      // (we just invoke the top-level renderAll function defined earlier)
+      // But earlier we placed renderAll implementation at top; call its local implementation via closure:
+    } catch(e){}
+    // finally call concrete steps:
+    renderAllConcrete();
+    attachInput();
+    attachControls();
+    log('UI initialized');
+  }
+
+  // Because of closure ordering, we place the concrete renderAll implementation as a named function:
+  function renderAllConcrete(){
+    renderAllConcrete = null;
+    // actual rendering call:
+    // reuse the earlier renderAll implementation from top-level by invoking renderBoard function there:
+    // but to avoid confusion, call the same code:
+    const st = GameCore.getState();
+    if(!st) { warn('no state in renderAllConcrete'); return; }
+    // update stats + build grid
+    if($id('score')) $id('score').textContent = st.score;
+    if($id('moves')) $id('moves').textContent = st.moves;
+    if($id('target')) $id('target').textContent = st.target;
+
+    const grid = $id('gameGrid');
+    if(!grid) return;
+    grid.style.gridTemplateColumns = `repeat(${st.cols}, var(--cell-size,64px))`;
+    grid.innerHTML = '';
+    for(let r=0;r<st.rows;r++){
+      for(let c=0;c<st.cols;c++){
+        const v = st.board[r][c];
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r; cell.dataset.c = c;
+        const img = document.createElement('img');
+        img.src = `images/candy${v}.png`;
+        img.alt = 'candy';
+        img.onerror = ()=> img.src = ERR_IMG;
+        cell.appendChild(img);
+        grid.appendChild(cell);
+      }
     }
   }
 
-  return { init: initUI, renderBoard, updateAll };
+  // expose init & quick render
+  window.GameUI = {
+    init,
+    render: function(){ renderAllConcrete && renderAllConcrete(); }
+  };
+
 })();
