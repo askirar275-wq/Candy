@@ -1,27 +1,40 @@
-const LevelMap = (() => {
-  const maxLevel = 10;
-  let unlocked = Storage.get("unlocked", [1]);
-  const levelsDiv = document.getElementById("levels");
+document.addEventListener('DOMContentLoaded', () => {
+  const levelsContainer = document.getElementById('levels');
+  const total = 40; // जितने लेवल चाहिए
+  const unlocked = Storage.get('unlockedLevels', 1); // default 1 unlocked
 
-  function render() {
-    levelsDiv.innerHTML = "";
-    for (let i = 1; i <= maxLevel; i++) {
-      const div = document.createElement("div");
-      div.className = "level-item";
-      div.innerHTML = unlocked.includes(i)
-        ? `<button class="btn" data-level="${i}">Level ${i}</button>`
-        : `<button class="btn" disabled>🔒 Locked</button>`;
-      levelsDiv.appendChild(div);
+  // Populate
+  for(let i=1;i<=total;i++){
+    const row = document.createElement('div');
+    row.className = 'level-row';
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = `Level ${i}`;
+    if(i > unlocked){
+      btn.disabled = true;
+      btn.textContent = `Level ${i} 🔒`;
+    } else {
+      btn.addEventListener('click', ()=> {
+        // unlock into game
+        CandyGame.startLevel(i);
+      });
     }
+    row.appendChild(btn);
+    levelsContainer.appendChild(row);
   }
 
-  document.addEventListener("click", (e) => {
-    if (e.target.dataset.level) {
-      const level = +e.target.dataset.level;
-      Game.startLevel(level);
-      showPage("game");
-    }
+  // wire home/map buttons
+  document.getElementById('btn-map').addEventListener('click', ()=> {
+    document.getElementById('home').classList.add('hidden');
+    document.getElementById('map').classList.remove('hidden');
   });
 
-  return { render };
-})();
+  // back buttons
+  document.querySelectorAll('.back').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+      const go = b.getAttribute('data-go') || 'home';
+      document.getElementById(go).classList.remove('hidden');
+    });
+  });
+});
