@@ -3,221 +3,61 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match — Level</title>
+  <title>Candy Match — Simple</title>
 
-  <!-- मुख्य style (अपनी existing css को रखें या merge कर दें) -->
   <link rel="stylesheet" href="css/style.css">
 
-  <!-- छोटा safety inline CSS जो board area center करेगा अगर external css मिस हो जाए -->
-  <style>
-    :root{ --bg:#f7fbfc; }
-    body{ margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: linear-gradient(180deg,#fff,#f0fbff); color:#111; }
-    .topbar{ display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background: linear-gradient(90deg,#ffcfe6,#d6f7ff); box-shadow:0 2px 8px rgba(0,0,0,0.06); position:sticky; top:0; z-index:40; }
-    .brand{ font-weight:700; display:flex; gap:8px; align-items:center; }
-    .navlinks a{ margin-left:12px; color:#1677ff; text-decoration:none; font-weight:500; }
-    main{ padding:18px; max-width:720px; margin:0 auto 48px; }
-
-    /* card container for board & stats */
-    .card.board-card{ background:#fff; border-radius:18px; padding:18px; box-shadow:0 18px 40px rgba(10,20,30,0.06); margin-bottom:22px; }
-
-    .stats-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:flex-start; margin-bottom:14px; }
-    .stat { background: #fff; padding:12px 18px; border-radius:14px; box-shadow:0 8px 20px rgba(10,20,40,0.04); font-weight:600; }
-    .stats-grid { display:flex; gap:10px; flex-wrap:wrap; }
-
-    /* board container (scrollable inside card) */
-    .game-grid-container {
-      width:100%;
-      max-height: calc(100vh - 320px); /* tweak अगर header बड़ा हो */
-      overflow:auto;
-      padding:8px;
-      display:flex;
-      justify-content:center;
-      align-items:flex-start;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    /* default grid — responsive-grid.js से --cols and --cell-size set होंगे */
-    .game-grid{
-      display:grid;
-      gap: var(--gap, 12px);
-      grid-template-columns: repeat(var(--cols,6), var(--cell-size, 64px));
-      justify-content:center;
-      padding:10px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
-      border-radius:12px;
-    }
-
-    .cell{
-      width:var(--cell-size,64px);
-      height:var(--cell-size,64px);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:12px;
-      background:#fff;
-      box-shadow:0 10px 26px rgba(0,0,0,0.06);
-      user-select:none;
-      position:relative;
-      transition: transform 0.16s ease, box-shadow 0.12s;
-    }
-    .cell img{ width:72%; height:72%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; }
-
-    /* controls */
-    .controls{ display:flex; gap:12px; justify-content:center; margin-top:12px; padding:8px 0; }
-    .btn{ background:#fff; border-radius:12px; padding:10px 18px; box-shadow:0 8px 18px rgba(0,0,0,0.06); border:1px solid rgba(0,0,0,0.06); cursor:pointer; }
-    .btn:active{ transform: translateY(1px); }
-
-    /* small screens */
-    @media (max-width:480px){
-      .stats-row{ justify-content:space-between; }
-    }
-
-    /* small visual for fixed floating debug button (optional) */
-    .dev-gear{ position:fixed; right:12px; bottom:88px; width:56px; height:56px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,0.12); }
-  </style>
+  <!-- Eruda (mobile console) - optional; इंटरनेट चाहिए -->
+  <script>
+    (function(){
+      const load = true; // अगर नहीं चाहिए तो false कर दें
+      if(!load) return;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.onload = function(){ eruda.init(); console.log('[ERUDA] iniciado'); };
+      document.head.appendChild(s);
+    })();
+  </script>
 </head>
 <body>
-  <!-- top nav -->
-  <header class="topbar" role="banner">
-    <div class="brand">🍬 <span>Candy Match</span></div>
-    <nav class="navlinks" role="navigation" aria-label="site">
-      <a href="index.html">Home</a>
-      <a href="map.html">Map</a>
-      <a href="play.html">Play</a>
-      <a href="about.html">About</a>
+  <header class="topbar">
+    <div class="brand">🍬 Candy Match</div>
+    <nav class="nav-links">
+      <a href="#">Home</a>
+      <a href="#">Map</a>
+      <a href="#">Play</a>
     </nav>
   </header>
 
   <main>
-    <!-- Page title / breadcrumb -->
-    <p><a href="map.html" style="color:#6b42d4; text-decoration:none;">← Map</a></p>
-    <h1 style="font-size:36px; margin:6px 0 8px 0;">Level <span id="levelNumber">1</span></h1>
-
-    <!-- Card: stats + board -->
     <section class="card board-card" id="boardCard" aria-live="polite">
-      <!-- stats row -->
-      <div class="stats-row" role="region" aria-label="Game stats">
+      <a class="back" href="#">← Map</a>
+      <h1 id="levelTitle">Level 1</h1>
+
+      <div class="stats-row">
         <div class="stat">Score: <span id="score">0</span></div>
         <div class="stat">Moves: <span id="moves">30</span></div>
         <div class="stat">Target: <span id="target">600</span></div>
         <div class="stat">Timer: <span id="timer">--:--</span></div>
       </div>
 
-      <!-- stars (visual) -->
-      <div style="text-align:center; margin-bottom:8px; color:#f5c542; font-size:22px;">★ ★ ★</div>
-
-      <!-- grid container -->
       <div class="game-grid-container">
-        <div id="gameGrid" class="game-grid" role="application" aria-label="Candy board" style="--cols:6;">
-          <!-- cells will be rendered here by game-ui.js -->
-        </div>
+        <div id="gameGrid" class="game-grid" role="application" aria-label="Candy board"></div>
       </div>
 
-      <!-- controls -->
-      <div class="controls" role="group" aria-label="game controls">
+      <div class="controls">
         <button id="restartBtn" class="btn">Restart</button>
         <button id="shuffleBtn" class="btn">Shuffle</button>
         <button id="endBtn" class="btn">End</button>
       </div>
     </section>
-
-    <footer style="text-align:center; padding:18px 0; color:#777;">© Candy Match</footer>
   </main>
 
-  <!-- floating dev gear (optional) -->
-  <div class="dev-gear" title="Developer">
-    ⚙
-  </div>
+  <footer class="footer">© Candy Match</footer>
 
-  <!-- optional: include Eruda for mobile console (helps debug). Remove if not wanted. -->
-  <script>
-    /* Eruda loader (only loads when user opens console) */
-    (function(){
-      try {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/eruda'; // CDN link (internet required)
-        s.onload = function(){ eruda.init(); console.log('[ERUDA] Console initialized'); };
-        document.head.appendChild(s);
-      } catch(e){ console.warn('Eruda load failed', e); }
-    })();
-  </script>
-
-  <!-- external JS files (आपके repo में यह filenames होनी चाहिए) -->
-  <!-- confetti और sound optional हैं पर जोड़ने से effects & sounds मिलेंगे -->
+  <!-- Confetti, Sound and Game logic -->
   <script src="js/confetti.js"></script>
   <script src="js/sound.js"></script>
-
-  <!-- helper: responsive grid (compute --cols, --cell-size) -->
-  <script src="js/responsive-grid.js"></script>
-
-  <!-- core logic और UI scripts (आपके existing js files) -->
-  <script src="js/game-core.js"></script>
-  <script src="js/game-ui.js"></script>
   <script src="js/game.js"></script>
-  <script src="js/storage.js"></script>
-
-  <!-- autoplay wrapper: start game when DOM ready -->
-  <script>
-    (function(){
-      document.addEventListener('DOMContentLoaded', ()=>{
-        try {
-          // debug helper
-          console.log('[BOOT] bootstrap safeStart');
-
-          // check DOM elements
-          const boardCard = document.getElementById('boardCard');
-          const gridEl = document.getElementById('gameGrid');
-          if(!boardCard) throw new Error("DOM 'boardCard' not found");
-          if(!gridEl) throw new Error("DOM 'gameGrid' not found");
-
-          // check required objects (these should be defined by your JS files)
-          if(typeof GameCore === 'undefined') console.warn('[BOOT] Warning: GameCore missing (js/game-core.js)');
-          if(typeof GameUI  === 'undefined') console.warn('[BOOT] Warning: GameUI missing (js/game-ui.js)');
-
-          // get level param (optional)
-          const params = new URLSearchParams(location.search);
-          const lvl = Number(params.get('level') || 1);
-          document.getElementById('levelNumber').textContent = lvl;
-
-          // safe start functions (only call if available)
-          if(typeof GameCore !== 'undefined' && typeof GameCore.start === 'function'){
-            GameCore.start(lvl);
-            console.log('[BOOT] GameCore.start called', lvl);
-          }
-          if(typeof GameUI !== 'undefined' && typeof GameUI.init === 'function'){
-            GameUI.init({
-              gridEl: gridEl,
-              scoreEl: document.getElementById('score'),
-              movesEl: document.getElementById('moves'),
-              targetEl: document.getElementById('target'),
-              timerEl: document.getElementById('timer'),
-              restartBtn: document.getElementById('restartBtn'),
-              shuffleBtn: document.getElementById('shuffleBtn'),
-              endBtn: document.getElementById('endBtn')
-            });
-            console.log('[BOOT] GameUI.init called');
-          }
-
-          // final state log
-          if(typeof GameCore !== 'undefined' && typeof GameCore.getState === 'function'){
-            console.log('[BOOT] game started, state:', GameCore.getState());
-          } else {
-            console.log('[BOOT] game modules loaded (some APIs not present)');
-          }
-        } catch(err){
-          console.error('[BOOT] init error', err && (err.stack || err.message || err));
-          // Eruda/console में error दिखाई देगी — developer को मदद मिलेगी
-        }
-      });
-    })();
-  </script>
-
-  <!-- optional tiny fallback audio elements (if sound.js expects <audio> tags) -->
-  <audio id="bg-audio" loop preload="auto">
-    <source src="sound/bg.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="pop-audio" preload="auto">
-    <source src="sound/pop.mp3" type="audio/mpeg">
-  </audio>
 </body>
-        </html>
+</html>
