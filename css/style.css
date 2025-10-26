@@ -1,55 +1,55 @@
-/* Basic mobile-friendly styling */
-:root{
-  --card-bg: rgba(255,255,255,0.92);
-  --accent: #ff6fa3;
-}
-
-*{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
-body{margin:0;min-height:100vh;background-size:cover;background-position:center}
-.page{padding:22px}
+/* basic reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+.page{padding:24px}
 .hidden{display:none}
 
-/* Home hero */
+/* Home card */
 .hero-card{
-  max-width:720px;margin:40px auto;padding:36px;border-radius:18px;background:var(--card-bg);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  text-align:center;
+  max-width:520px;margin:40px auto;padding:40px;background:rgba(255,255,255,0.9);
+  border-radius:18px;box-shadow:0 12px 24px rgba(0,0,0,0.12);text-align:center;
 }
-.hero-card h1{font-size:38px;margin:0 0 6px;color:#ff2e8c}
-.hero-card p{margin:0 0 18px;color:#222;opacity:.8}
-.btn{display:inline-block;padding:12px 20px;border-radius:40px;border:0;background:#fff;box-shadow:0 6px 14px rgba(0,0,0,0.08);cursor:pointer;margin:6px}
-.btn.primary{background:linear-gradient(180deg,#ff81b6,#ff3f8f);color:#fff;font-weight:600}
+.hero-card h1{font-size:40px;color:#ff2b84;margin-bottom:12px}
+.hero-card p{color:#444;margin-bottom:18px}
 
-/* Game header */
-.game-header{display:flex;align-items:center;gap:18px;padding:12px 16px}
-.game-header .stats{display:flex;gap:18px;align-items:center;font-weight:600}
-.back{padding:10px 14px;border-radius:12px}
+/* buttons */
+.btn{display:inline-block;padding:12px 22px;border-radius:28px;background:#fff;border:0;box-shadow:0 6px 12px rgba(0,0,0,0.08);margin:6px;font-size:18px}
+.btn.primary{background:linear-gradient(180deg,#ff7fb6,#ff4f90);color:#fff;border:none;box-shadow:0 10px 18px rgba(255,79,144,0.25)}
+.back.btn{border-radius:12px;padding:10px 14px}
 
-/* Board wrap */
-.board-wrap{max-width:720px;margin:18px auto;padding:18px;border-radius:20px;background:linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.85));box-shadow:0 12px 36px rgba(0,0,0,0.08)}
-.board{display:grid;margin:6px auto;touch-action:none} /* grid-template set by JS */
+/* header stats */
+.game-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;max-width:1100px;margin:8px auto}
+.stats{display:flex;gap:18px;align-items:center}
+.stats div{background:rgba(255,255,255,0.9);padding:10px 14px;border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,0.06);font-weight:700}
 
-/* square */
-.square{
-  width:46px;height:46px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.06);
-  transition: transform .18s ease, box-shadow .18s;
-  user-select:none;
+/* board */
+.board-wrap{max-width:720px;margin:18px auto;padding:18px}
+.board{
+  background:rgba(255,255,255,0.95);
+  border-radius:18px;padding:16px;display:grid;
+  gap:10px; /* will be overwritten by .board[data-size] inline logic in JS */
+  justify-content:center;align-items:center;
+  box-shadow:0 18px 30px rgba(0,0,0,0.08);
+  touch-action: none;
 }
-.square img{max-width:70%;max-height:70%;pointer-events:none}
 
-/* selected highlight */
-.square.selected{transform:scale(1.08);box-shadow:0 10px 22px rgba(0,0,0,0.12)}
-
-/* controls */
-.controls{display:flex;gap:20px;justify-content:center;margin:18px 0}
-
-/* level buttons list */
-.levels{display:flex;flex-direction:column;gap:12px;max-width:720px;margin:12px auto}
-.level-btn{padding:12px;background:var(--card-bg);border-radius:14px;box-shadow:0 6px 14px rgba(0,0,0,.06);cursor:pointer}
-
-/* responsive */
-@media(min-width:720px){
-  .board{width:560px}
-  .square{width:64px;height:64px;border-radius:16px}
+/* each tile */
+.tile{
+  width:54px;height:54px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 12px rgba(0,0,0,0.04);overflow:hidden;user-select:none;
 }
+.tile img{width:72%;height:72%;object-fit:contain;pointer-events:none}
+
+/* controls centered */
+.controls{display:flex;gap:24px;justify-content:center;margin:18px auto;max-width:720px}
+@media (max-width:420px){
+  .hero-card h1{font-size:32px}
+  .board{padding:10px}
+  .tile{width:46px;height:46px}
+  .btn{font-size:16px;padding:10px 16px}
+}
+
+/* level buttons grid */
+.levels{display:flex;flex-direction:column;gap:12px;max-width:640px}
+.level-item{background:rgba(255,255,255,0.95);padding:14px;border-radius:14px;box-shadow:0 10px 20px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center}
+.level-item.locked{opacity:0.5}
