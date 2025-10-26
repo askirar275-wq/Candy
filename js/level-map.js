@@ -1,40 +1,30 @@
-// simple level map UI that reads maxLevel from localStorage
+// level map UI
 (function(){
-  function init(){
-    const btnMap = document.getElementById('btn-map');
-    const btnStart = document.getElementById('btn-start');
-    const levelsEl = document.getElementById('levels');
-    const pages = document.querySelectorAll('.page');
+  const levelsContainer = UI.$('#levels');
+  if(!levelsContainer) return;
+  const unlocked = Storage.get('unlockedLevels', [1]);
 
-    btnMap?.addEventListener('click', ()=>{ showPage('map'); renderLevels(); });
-    btnStart?.addEventListener('click', ()=>{ CandyGame.startLevel(1); showPage('game'); });
-    document.querySelectorAll('.back').forEach(b=>b.addEventListener('click', ()=>{ const g=b.dataset.go; showPage(g); }));
-
-    renderLevels();
-  }
-
-  function showPage(id){
-    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-    document.getElementById(id)?.classList.remove('hidden');
-  }
-
-  function renderLevels(){
-    const levelsEl = document.getElementById('levels');
-    const max = Number(localStorage.getItem('maxLevel')||1);
-    levelsEl.innerHTML = '';
+  function render(){
+    levelsContainer.innerHTML = '';
     for(let i=1;i<=30;i++){
       const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.textContent = 'Level '+i;
-      if(i>max){ btn.disabled=true; btn.textContent = 'Level '+i+' 🔒'; }
-      else btn.addEventListener('click', ()=>{ CandyGame.startLevel(i); });
-      levelsEl.appendChild(btn);
+      btn.className = 'level-btn';
+      btn.textContent = `Level ${i} — Goal: ${i*500}`;
+      if(unlocked.includes(i)){
+        btn.onclick = ()=> CandyGame.startLevel(i);
+      } else {
+        btn.disabled = true;
+        btn.textContent += ' 🔒';
+      }
+      levelsContainer.appendChild(btn);
     }
   }
 
-  window.addEventListener('DOMContentLoaded', ()=>{
-    init();
-    // init game engine after UI prepared
-    if(window.CandyGame && typeof window.CandyGame.init==='function') window.CandyGame.init();
-  });
+  render();
+  // expose reload for later
+  window.LevelMapUI = { render, unlock(level){
+    const u = Storage.get('unlockedLevels', [1]);
+    if(!u.includes(level)) { u.push(level); Storage.set('unlockedLevels', u); }
+    render();
+  }};
 })();
