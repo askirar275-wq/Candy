@@ -1,142 +1,348 @@
-const Game = (() => {
-  const boardEl = document.getElementById("board");
-  const scoreEl = document.getElementById("score");
-  const coinsEl = document.getElementById("coins");
-  const levelEl = document.getElementById("level-num");
+/* js/game.js */
+/* Simple but working match-3 engine:
+   - 8x8 board
+   - 6 candy types (images: images/candy1.png .. candy6.png)
+   - click/tap select then click neighbor to swap OR touch-swipe to swap
+   - matches removed, gravity, refill, score updated
+   - CandyGame.startLevel(n) exposed
+*/
 
-  const rows = 8, cols = 8;
-  const candyImgs = [
-    "images/candy1.png",
-    "images/candy2.png",
-    "images/candy3.png",
-    "images/candy4.png",
-    "images/candy5.png",
-    "images/candy6.png"
-  ];
+const CandyGame = (function(){
+  const cols = 8, rows = 8;
+  const types = 6; // candy1..candy6
+  let board = new Array(rows*cols).fill(0);
+  let selectedIndex = null;
+  let score = 0;
+  let coins = 0;
+  let levelNum = 1;
+  let boardEl, scoreEl, coinsEl, levelEl;
+  let isProcessing = false;
 
-  let grid = [];
-  let score = 0, coins = 0, level = 1;
-  let first = null, second = null, locked = false;
+  function randCandy(){ return Math.floor(Math.random()*types) + 1; }
 
-  function randomCandy() {
-    return Math.floor(Math.random() * candyImgs.length);
-  }
+  function idx(r,c){ return r*cols + c; }
+  function rc(i){ return [Math.floor(i/cols), i%cols]; }
 
-  function makeGrid() {
-    grid = Array.from({ length: rows }, () => Array(cols).fill(0));
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        grid[r][c] = randomCandy();
+  // create initial board without immediate matches
+  function createBoard(){
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        let i = idx(r,c);
+        do {
+          board[i] = randCandy();
+        } while (createsMatchAt(i));
       }
     }
   }
 
-  function drawGrid() {
-    boardEl.innerHTML = "";
-    grid.forEach((row, r) => {
-      row.forEach((val, c) => {
-        const tile = document.createElement("div");
-        tile.className = "tile";
-        tile.dataset.row = r;
-        tile.dataset.col = c;
-        const img = document.createElement("img");
-        img.src = candyImgs[val];
-        tile.appendChild(img);
-        boardEl.appendChild(tile);
-      });
+  // check if placing current board[i] causes immediate match (used while populating)
+  function createsMatchAt(i){
+    const [r,c] = rc(i);
+    const val = board[i];
+    // horizontal left 2
+    if(c>=2 && board[idx(r,c-1)]===val && board[idx(r,c-2)]===val) return true;
+    // vertical up 2
+    if(r>=2 && board[idx(r-1,c)]===val && board[idx(r-2,c)]===val) return true;
+    return false;
+  }
+
+  // render
+  function render(){
+    if(!boardEl) return;
+    boardEl.innerHTML = '';
+    for(let i=0;i<rows*cols;i++){
+      const div = document.createElement('div');
+      div.className = 'tile';
+      div.dataset.index = i;
+      const n = board[i];
+      const img = document.createElement('img');
+      img.alt = 'candy';
+      img.src = `images/candy${n}.png`;
+      div.appendChild(img);
+      // selected UI
+      if(selectedIndex === i) div.classList.add('selected');
+      boardEl.appendChild(div);
+    }
+    // update stats UI
+    scoreEl.textContent = score;
+    coinsEl.textContent = coins;
+    levelEl.textContent = levelNum;
+  }
+
+  // neighbours?
+  function isNeighbor(a,b){
+    const [ra,ca] = rc(a);
+    const [rb,cb] = rc(b);
+    const dr = Math.abs(ra-rb);
+    const dc = Math.abs(ca-cb);
+    return (dr+dc)===1;
+  }
+
+  // swap in array
+  function swap(i,j){
+    const t = board[i]; board[i]=board[j]; board[j]=t;
+  }
+
+  // find matches (return array of indices to remove)
+  function findMatches(){
+    const remove = new Set();
+    // horizontal
+    for(let r=0;r<rows;r++){
+      let runVal = null, runStart=0;
+      for(let c=0;c<=cols;c++){
+        const i = idx(r,c);
+        const val = (c<cols)? board[i] : null;
+        if(val === runVal){
+          // continue
+        } else {
+          const runLen = c - runStart;
+          if(runVal !== null && runLen >= 3){
+            for(let k=runStart;k<c;k++) remove.add(idx(r,k));
+          }
+          runVal = val;
+          runStart = c;
+        }
+      }
+    }
+    // vertical
+    for(let c=0;c<cols;c++){
+      let runVal = null, runStart=0;
+      for(let r=0;r<=rows;r++){
+        const i = (r<rows)? idx(r,c) : null;
+        const val = (r<rows)? board[i] : null;
+        if(val === runVal){
+        } else {
+          const runLen = r - runStart;
+          if(runVal !== null && runLen >= 3){
+            for(let k=runStart;k<r;k++) remove.add(idx(k,c));
+          }
+          runVal = val;
+          runStart = r;
+        }
+      }
+    }
+    return Array.from(remove);
+  }
+
+  // remove indices -> set to 0, add score
+  function removeMatches(indices){
+    indices.forEach(i=>{
+      board[i] = 0;
+      score += 10;
     });
   }
 
-  function swap(r1, c1, r2, c2) {
-    const temp = grid[r1][c1];
-    grid[r1][c1] = grid[r2][c2];
-    grid[r2][c2] = temp;
-  }
-
-  function checkMatches() {
-    const toRemove = [];
-    // Rows
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols - 2; c++) {
-        const v = grid[r][c];
-        if (v === grid[r][c + 1] && v === grid[r][c + 2]) {
-          toRemove.push([r, c], [r, c + 1], [r, c + 2]);
+  // gravity + refill
+  function collapseAndRefill(){
+    for(let c=0;c<cols;c++){
+      let write = rows-1;
+      for(let r=rows-1;r>=0;r--){
+        const i = idx(r,c);
+        if(board[i] !== 0){
+          if(write !== r){
+            board[idx(write,c)] = board[i];
+            board[i] = 0;
+          }
+          write--;
         }
       }
-    }
-    // Columns
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows - 2; r++) {
-        const v = grid[r][c];
-        if (v === grid[r + 1][c] && v === grid[r + 2][c]) {
-          toRemove.push([r, c], [r + 1, c], [r + 2, c]);
-        }
-      }
-    }
-    return toRemove;
-  }
-
-  function removeMatches(matches) {
-    matches.forEach(([r, c]) => (grid[r][c] = null));
-    score += matches.length * 10;
-    scoreEl.textContent = score;
-  }
-
-  function gravity() {
-    for (let c = 0; c < cols; c++) {
-      let pointer = rows - 1;
-      for (let r = rows - 1; r >= 0; r--) {
-        if (grid[r][c] !== null) {
-          grid[pointer][c] = grid[r][c];
-          pointer--;
-        }
-      }
-      for (let r = pointer; r >= 0; r--) {
-        grid[r][c] = randomCandy();
+      // fill remaining at top
+      for(let r=write; r>=0; r--){
+        board[idx(r,c)] = randCandy();
       }
     }
   }
 
-  function handleTileClick(e) {
-    if (locked) return;
-    const tile = e.target.closest(".tile");
-    if (!tile) return;
-    const r = +tile.dataset.row;
-    const c = +tile.dataset.col;
+  // attempt swap and resolve matches; if no match revert
+  async function trySwap(i,j){
+    if(isProcessing) return;
+    if(!isNeighbor(i,j)) return;
+    isProcessing = true;
+    swap(i,j);
+    render();
+    await sleep(150);
+    let matches = findMatches();
+    if(matches.length === 0){
+      // revert
+      swap(i,j);
+      render();
+      await sleep(120);
+      isProcessing = false;
+      return;
+    }
+    // resolve chain
+    while(matches.length){
+      removeMatches(matches);
+      render();
+      await sleep(150);
+      collapseAndRefill();
+      render();
+      await sleep(180);
+      matches = findMatches();
+    }
+    // after all resolved
+    isProcessing = false;
+    unlockNextIfNeeded();
+  }
 
-    if (!first) {
-      first = { r, c };
-      tile.classList.add("selected");
+  // small util
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  // event handlers - click select & swap
+  function onTileClick(e){
+    if(isProcessing) return;
+    const t = e.target.closest('.tile');
+    if(!t) return;
+    const i = Number(t.dataset.index);
+    if(selectedIndex === null){
+      selectedIndex = i;
+      render();
     } else {
-      second = { r, c };
-      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
-      swap(first.r, first.c, second.r, second.c);
-      drawGrid();
-      const matches = checkMatches();
-      if (matches.length) {
-        removeMatches(matches);
-        gravity();
-        drawGrid();
+      if(i === selectedIndex){
+        selectedIndex = null;
+        render();
+      } else if(isNeighbor(i, selectedIndex)){
+        const a = selectedIndex; selectedIndex = null;
+        trySwap(a, i);
       } else {
-        swap(first.r, first.c, second.r, second.c);
-        drawGrid();
+        // change selection
+        selectedIndex = i;
+        render();
       }
-      first = second = null;
     }
   }
 
-  function startLevel(lvl = 1) {
-    level = lvl;
-    score = 0;
-    scoreEl.textContent = "0";
-    levelEl.textContent = level;
-    makeGrid();
-    drawGrid();
-    boardEl.addEventListener("click", handleTileClick);
+  // touch swipe support
+  let touchStart = null;
+  function onTouchStart(e){
+    if(isProcessing) return;
+    const t = e.target.closest('.tile');
+    if(!t) return;
+    touchStart = {x: e.touches ? e.touches[0].clientX : e.clientX, y: e.touches ? e.touches[0].clientY : e.clientY, idx: Number(t.dataset.index)};
+  }
+  function onTouchEnd(e){
+    if(!touchStart || isProcessing) { touchStart = null; return; }
+    const endX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
+    const endY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+    const dx = endX - touchStart.x;
+    const dy = endY - touchStart.y;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    let targetIdx = null;
+    const [r,c] = rc(touchStart.idx);
+    if(Math.max(absX,absY) < 20){
+      // treat as tap
+      const fake = {target: document.querySelector(`.tile[data-index="${touchStart.idx}"]`)};
+      onTileClick(fake);
+      touchStart = null;
+      return;
+    }
+    if(absX > absY){
+      // horizontal swipe
+      if(dx > 0) { if(c < cols-1) targetIdx = idx(r, c+1); }
+      else { if(c > 0) targetIdx = idx(r, c-1); }
+    } else {
+      // vertical swipe
+      if(dy > 0) { if(r < rows-1) targetIdx = idx(r+1, c); }
+      else { if(r > 0) targetIdx = idx(r-1, c); }
+    }
+    if(targetIdx !== null){
+      trySwap(touchStart.idx, targetIdx);
+    }
+    touchStart = null;
   }
 
-  document.getElementById("btn-restart").addEventListener("click", () => startLevel(level));
-  document.getElementById("btn-shuffle").addEventListener("click", () => { makeGrid(); drawGrid(); });
+  // shuffle board (randomize)
+  function shuffleBoard(){
+    if(isProcessing) return;
+    // basic shuffle
+    for(let i=0;i<board.length;i++){
+      const j = Math.floor(Math.random()*board.length);
+      const t = board[i]; board[i] = board[j]; board[j] = t;
+    }
+    // ensure no immediate matches
+    for(let i=0;i<board.length;i++){
+      if(createsMatchAt(i)){
+        board[i] = randCandy();
+      }
+    }
+    render();
+  }
 
-  return { startLevel };
+  // level unlock logic (store)
+  function unlockNextIfNeeded(){
+    // simple rule: when score crosses threshold (e.g., level*500) unlock next
+    const unlocked = Storage.get('unlockedLevels', 1);
+    const goal = levelNum * 500;
+    if(score >= goal && unlocked < levelNum + 1){
+      Storage.set('unlockedLevels', levelNum+1);
+      coins += 50;
+      // notify
+      console.log('Level complete! Next unlocked:', levelNum+1);
+    }
+  }
+
+  // expose startLevel
+  function startLevel(n=1){
+    // set UI pages
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    document.getElementById('game').classList.remove('hidden');
+    levelNum = n;
+    score = 0;
+    coins = Storage.get('coins', 0) || 0;
+    // prepare
+    createBoard();
+    render();
+    bindBoardEvents();
+    console.log('CandyGame ready, level', n);
+  }
+
+  // bind board events (only once)
+  function bindBoardEvents(){
+    boardEl = document.getElementById('board');
+    scoreEl = document.getElementById('score');
+    coinsEl = document.getElementById('coins');
+    levelEl = document.getElementById('level-num');
+
+    // ensure listeners only once
+    boardEl.removeEventListener('click', onTileClick);
+    boardEl.addEventListener('click', onTileClick);
+
+    boardEl.removeEventListener('touchstart', onTouchStart);
+    boardEl.removeEventListener('touchend', onTouchEnd);
+    boardEl.addEventListener('touchstart', onTouchStart, {passive:true});
+    boardEl.addEventListener('touchend', onTouchEnd);
+
+    // restart/shuffle buttons
+    document.getElementById('btn-restart').onclick = ()=> startLevel(levelNum);
+    document.getElementById('btn-shuffle').onclick = ()=> shuffleBoard();
+  }
+
+  // init hooking start button & map navigation
+  function initUI(){
+    document.getElementById('btn-start').addEventListener('click', ()=>{
+      // start default level 1
+      startLevel(1);
+    });
+    document.getElementById('btn-map').addEventListener('click', ()=>{
+      document.getElementById('home').classList.add('hidden');
+      document.getElementById('map').classList.remove('hidden');
+    });
+    // also back buttons handled in safe-ui.js
+  }
+
+  // public API
+  return {
+    init(){
+      initUI();
+      console.log('CandyEngine ready');
+    },
+    startLevel
+  };
 })();
+
+// init on DOM ready
+document.addEventListener('DOMContentLoaded', ()=>{
+  // ensure global reference
+  window.CandyGame = CandyGame;
+  CandyGame.init();
+});
