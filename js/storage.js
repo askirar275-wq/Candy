@@ -1,14 +1,11 @@
+// simple storage wrapper
 const Storage = {
-  get(key, defaultValue){
-    try{
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : defaultValue;
-    }catch(e){return defaultValue}
+  get(key, fallback){
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
   },
   set(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch(e){ console.warn('storage set failed', e); }
   }
 };
-
-// default unlocked levels
-if(!Storage.get('unlockedLevels')) Storage.set('unlockedLevels', [1]);
