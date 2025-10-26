@@ -1,12 +1,11 @@
 const Storage = {
-  get(key, def) {
+  get(key, defaultValue){
     try {
-      return JSON.parse(localStorage.getItem(key)) ?? def;
-    } catch {
-      return def;
-    }
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : defaultValue;
+    } catch(e){ return defaultValue; }
   },
-  set(key, val) {
+  set(key, val){
     localStorage.setItem(key, JSON.stringify(val));
   }
 };
