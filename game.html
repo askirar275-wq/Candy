@@ -1,60 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Game</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🍭 Candy Match</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <header class="site-header">
-    <div class="brand">🍬 Candy Match</div>
-    <nav class="topnav">
-      <a href="index.html">Home</a>
-      <a href="map.html">Map</a>
-      <a href="game.html">Play</a>
-    </nav>
-  </header>
+<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
 
-  <main class="container">
-    <section class="card">
-      <a class="back" href="map.html">← Map</a>
-      <h1 id="levelTitle">Level</h1>
+  <div id="app">
+    <!-- 🏠 Home Page -->
+    <main id="home" class="page active">
+      <div class="hero-card">
+        <div class="hero-top">
+          <img src="images/candy-icon.png" alt="logo" class="hero-logo" />
+          <h1>🍭 Candy Match</h1>
+        </div>
 
-      <div class="stats-row">
-        <div class="stat">Score: <span id="score">0</span></div>
-        <div class="stat">Moves: <span id="moves">30</span></div>
-        <div class="stat">Target: <span id="target">600</span></div>
-        <div class="stat">Timer: <span id="timer">--:--</span></div>
+        <p class="hero-sub">स्वीट्स को मिलाओ और लेवल पार करो!</p>
+
+        <!-- BUTTONS STACKED & SEPARATED -->
+        <div class="hero-actions">
+          <button id="btn-start" class="btn primary full">🎮 खेल शुरू करें</button>
+          <button id="btn-map" class="btn full">🗺️ Level Map</button>
+          <button id="btn-shop" class="btn full">🛒 Shop</button>
+        </div>
+
+        <p class="hero-footer">Made with ❤️ — Arun App Studio</p>
       </div>
+    </main>
 
-      <div id="stars" class="stars">☆ ☆ ☆</div>
+    <!-- rest pages unchanged; kept minimal so CSS works -->
+    <section id="map" class="page hidden">
+      <button class="btn back" data-go="home">← Home</button>
+      <h2>Level Map</h2>
+      <div id="levels" class="levels"></div>
+    </section>
 
-      <div class="game-grid-container">
-        <div id="gameGrid" class="game-grid" role="grid"></div>
+    <section id="game" class="page hidden">
+      <header class="game-header">
+        <button class="btn back" data-go="map">← Map</button>
+        <div class="stats">
+          <div>Score: <span id="score">0</span></div>
+          <div>Coins: <span id="coins">0</span></div>
+          <div>Level: <span id="level-num">1</span></div>
+        </div>
+      </header>
+
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
       </div>
 
       <div class="controls">
-        <button id="restartBtn" class="btn">Restart</button>
-        <button id="endBtn" class="btn">End</button>
+        <button id="btn-restart" class="btn">🔁 Restart</button>
+        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
       </div>
     </section>
-  </main>
+  </div>
 
-  <footer class="site-footer">© Candy Match</footer>
+  <!-- keep your existing scripts -->
+  <script src="js/storage.js" defer></script>
+  <script src="js/safe-ui.js" defer></script>
+  <script src="js/level-map.js" defer></script>
+  <script src="js/game.js" defer></script>
 
-  <script src="js/storage.js"></script>
-  <script src="js/responsive-grid.js"></script>
-  <script src="js/game-core.js"></script>
-  <script src="js/game.js"></script>
-
-  <script>
-    // auto start level from query param
-    window.addEventListener('load', ()=> {
-      const p = new URLSearchParams(location.search);
-      const lvl = parseInt(p.get('level') || '1',10);
-      Game.start(lvl);
-    });
-  </script>
 </body>
 </html>
