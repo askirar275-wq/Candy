@@ -1,58 +1,338 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
-  <link rel="stylesheet" href="css/style.css" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Candy Match — single file test</title>
+<style>
+  :root{--bg:linear-gradient(180deg,#ffdfe9,#fbeef6)}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,Arial}
+  body{min-height:100vh;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;padding:18px}
+  .container{width:100%;max-width:900px}
+  .page{display:none}
+  .page.active{display:block}
+  .hero{background:rgba(255,255,255,0.9);padding:28px;border-radius:16px;box-shadow:0 10px 24px rgba(0,0,0,0.08);text-align:center;margin-bottom:18px}
+  .hero h1{font-size:36px;color:#ff2b84;margin-bottom:8px}
+  .hero p{color:#333;margin-bottom:16px}
+  .btn{display:inline-block;background:#fff;border-radius:28px;padding:10px 18px;border:none;box-shadow:0 6px 12px rgba(0,0,0,0.06);font-size:16px;margin:6px}
+  .btn.primary{background:linear-gradient(180deg,#ff81b0,#ff4f90);color:#fff}
+  /* header stats */
+  .game-header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .stats{display:flex;gap:12px}
+  .stat{background:rgba(255,255,255,0.9);padding:8px 12px;border-radius:12px;font-weight:600}
+  /* board */
+  .board-wrap{background:rgba(255,255,255,0.92);padding:14px;border-radius:16px;box-shadow:0 10px 20px rgba(0,0,0,0.06);display:flex;justify-content:center}
+  .board{display:grid;gap:10px;touch-action:none}
+  .tile{background:#fff;width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;user-select:none;box-shadow:0 8px 14px rgba(0,0,0,0.04)}
+  .controls{display:flex;gap:16px;justify-content:center;margin-top:14px}
+  .levels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .level-item{background:rgba(255,255,255,0.9);padding:10px;border-radius:12px;display:flex;justify-content:space-between;align-items:center}
+  .level-item.lock{opacity:0.45}
+  /* responsive smaller tiles */
+  @media(max-width:420px){
+    .tile{width:46px;height:46px;font-size:22px}
+  }
+</style>
 </head>
-<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
-
-  <div id="app">
-    <!-- Home -->
-    <main id="home" class="page">
-      <div class="hero-card">
+<body>
+  <div class="container">
+    <!-- HOME -->
+    <section id="home" class="page active">
+      <div class="hero">
         <h1>🍭 Candy Match</h1>
         <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
         <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
-        <button id="btn-map" class="btn">🗺️ Level Map</button>
+        <button id="btn-open-map" class="btn">🗺️ Level Map</button>
       </div>
-    </main>
+    </section>
 
-    <!-- Level Map -->
-    <section id="map" class="page hidden">
-      <button class="back btn" data-go="home">← Home</button>
-      <h2>Level Map</h2>
+    <!-- LEVEL MAP -->
+    <section id="map" class="page">
+      <button id="to-home" class="btn">← Home</button>
+      <h2 style="margin:12px 0">Level Map</h2>
       <div id="levels" class="levels"></div>
     </section>
 
-    <!-- Game -->
-    <section id="game" class="page hidden">
-      <header class="game-header">
-        <button class="back btn" data-go="map">← Map</button>
+    <!-- GAME -->
+    <section id="game" class="page">
+      <div class="game-header">
+        <button id="to-map" class="btn">← Map</button>
         <div class="stats">
-          <div>Score: <span id="score">0</span></div>
-          <div>Coins: <span id="coins">0</span></div>
-          <div>Level: <span id="level-num">1</span></div>
+          <div class="stat">Score: <span id="score">0</span></div>
+          <div class="stat">Coins: <span id="coins">0</span></div>
+          <div class="stat">Level: <span id="level-num">1</span></div>
         </div>
-      </header>
+      </div>
 
       <div class="board-wrap">
         <div id="board" class="board" aria-label="game board"></div>
       </div>
 
       <div class="controls">
-        <button id="btn-restart" class="btn">🔁 Restart</button>
-        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
+        <button id="restart" class="btn">🔁 Restart</button>
+        <button id="shuffle" class="btn">🔀 Shuffle</button>
       </div>
     </section>
   </div>
 
-  <!-- scripts -->
-  <script src="js/storage.js" defer></script>
-  <script src="js/safe-ui.js" defer></script>
-  <script src="js/level-map.js" defer></script>
-  <script src="js/game.js" defer></script>
+<script>
+/* ====== small storage helper ====== */
+const Storage = {
+  get(k, fallback){
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch{ return fallback; }
+  },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} }
+};
 
+/* ====== simple UI page switch ====== */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById(id); if(el) el.classList.add('active');
+}
+
+/* ====== Level map render & unlock logic ====== */
+const MAX_LEVEL = 30;
+let unlocked = Storage.get('unlockedLevels',[1]);
+function renderLevels(){
+  const container = document.getElementById('levels');
+  container.innerHTML = '';
+  for(let i=1;i<=MAX_LEVEL;i++){
+    const div = document.createElement('div');
+    div.className = 'level-item ' + (unlocked.includes(i)?'':'lock');
+    div.innerHTML = `<div>Level ${i}</div>
+     <div>${unlocked.includes(i) ? `<button class="play btn" data-level="${i}">Play</button>` : '🔒'}</div>`;
+    container.appendChild(div);
+  }
+}
+document.getElementById('btn-open-map').addEventListener('click', ()=>{ renderLevels(); showPage('map'); });
+document.getElementById('to-home').addEventListener('click', ()=> showPage('home'));
+
+/* when a level play button clicked -> start */
+document.addEventListener('click', (e)=>{
+  const p = e.target.closest('.play');
+  if(!p) return;
+  const level = Number(p.dataset.level||1);
+  document.getElementById('level-num').textContent = level;
+  Candy.startLevel(level);
+  showPage('game');
+});
+
+/* ====== Candy engine (emoji-based so no external images needed) ====== */
+const Candy = (function(){
+  const boardEl = document.getElementById('board');
+  const SCORE = document.getElementById('score');
+  const COINS = document.getElementById('coins');
+  const LEVELNUM = document.getElementById('level-num');
+
+  // config
+  const COLS = 8, ROWS = 8;
+  let TILE = 56; // css tile size (JS used to set grid template)
+  let grid = [];
+  const candies = ["🍬","🍭","🍫","🍩","🍡","🍒"]; // 6 types
+  let score = 0, coins = Storage.get('coins',0);
+  let level = 1;
+  let processing = false;
+
+  function setupStyle(){
+    boardEl.style.gridTemplateColumns = `repeat(${COLS}, ${TILE}px)`;
+    boardEl.style.gridTemplateRows = `repeat(${ROWS}, ${TILE}px)`;
+    boardEl.style.gap = '10px';
+  }
+
+  function rand(n){ return Math.floor(Math.random()*n); }
+
+  function createGrid(){
+    grid = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>0));
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        let v;
+        do { v = rand(candies.length); grid[r][c] = v; } while(hasImmediateMatch(r,c));
+      }
+    }
+  }
+
+  function hasImmediateMatch(r,c){
+    const v = grid[r][c];
+    if(c>=2 && grid[r][c-1]===v && grid[r][c-2]===v) return true;
+    if(r>=2 && grid[r-1][c]===v && grid[r-2][c]===v) return true;
+    return false;
+  }
+
+  function render(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.dataset.r = r; tile.dataset.c = c;
+        tile.innerText = candies[grid[r][c]];
+        boardEl.appendChild(tile);
+      }
+    }
+  }
+
+  function findMatches(){
+    const remove = new Set();
+    // rows
+    for(let r=0;r<ROWS;r++){
+      let runVal = grid[r][0], runStart = 0;
+      for(let c=1;c<=COLS;c++){
+        const val = (c<COLS) ? grid[r][c] : null;
+        if(val===runVal) continue;
+        const len = c-runStart;
+        if(runVal!=null && len>=3){
+          for(let k=runStart;k<c;k++) remove.add(`${r},${k}`);
+        }
+        runVal = val; runStart = c;
+      }
+    }
+    // cols
+    for(let c=0;c<COLS;c++){
+      let runVal = grid[0][c], runStart = 0;
+      for(let r=1;r<=ROWS;r++){
+        const val = (r<ROWS) ? grid[r][c] : null;
+        if(val===runVal) continue;
+        const len = r-runStart;
+        if(runVal!=null && len>=3){
+          for(let k=runStart;k<r;k++) remove.add(`${k},${c}`);
+        }
+        runVal = val; runStart = r;
+      }
+    }
+    return Array.from(remove).map(s=>s.split(',').map(x=>Number(x)));
+  }
+
+  function removeMatches(coords){
+    if(coords.length===0) return 0;
+    for(const [r,c] of coords) grid[r][c] = null;
+    score += coords.length * 10;
+    SCORE.textContent = score;
+    return coords.length;
+  }
+
+  function gravityAndRefill(){
+    for(let c=0;c<COLS;c++){
+      let write = ROWS-1;
+      for(let r=ROWS-1;r>=0;r--){
+        if(grid[r][c] != null){
+          grid[write][c] = grid[r][c];
+          write--;
+        }
+      }
+      for(let r=write;r>=0;r--) grid[r][c] = rand(candies.length);
+    }
+  }
+
+  function refreshDOM(){
+    const tiles = boardEl.querySelectorAll('.tile');
+    tiles.forEach(t=>{
+      const r = +t.dataset.r, c = +t.dataset.c;
+      t.innerText = (grid[r][c] != null) ? candies[grid[r][c]] : '';
+      if(grid[r][c] == null) t.style.opacity = 0;
+      else t.style.opacity = 1;
+    });
+  }
+
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  async function resolveLoop(){
+    processing = true;
+    while(true){
+      const matches = findMatches();
+      if(matches.length===0) break;
+      removeMatches(matches);
+      // animation step: hide matched tiles quickly
+      refreshDOM();
+      await sleep(220);
+      gravityAndRefill();
+      refreshDOM();
+      await sleep(180);
+    }
+    processing = false;
+  }
+
+  function swap(r1,c1,r2,c2){
+    const t = grid[r1][c1]; grid[r1][c1] = grid[r2][c2]; grid[r2][c2] = t;
+  }
+
+  function adjacent(r1,c1,r2,c2){
+    return (Math.abs(r1-r2)+Math.abs(c1-c2))===1;
+  }
+
+  async function trySwap(r1,c1,r2,c2){
+    if(processing) return false;
+    if(!adjacent(r1,c1,r2,c2)) return false;
+    swap(r1,c1,r2,c2); refreshDOM();
+    await sleep(120);
+    const matches = findMatches();
+    if(matches.length>0){
+      await resolveLoop();
+      return true;
+    } else {
+      swap(r1,c1,r2,c2); refreshDOM();
+      return false;
+    }
+  }
+
+  function shuffle(){
+    // flatten
+    const arr = [];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) arr.push(grid[r][c] ?? rand(candies.length));
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    let k=0;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[r][c]=arr[k++];
+    refreshDOM();
+  }
+
+  // input (pointer-based)
+  function bindInput(){
+    let start=null;
+    boardEl.onpointerdown = (e)=>{
+      const tile = e.target.closest('.tile');
+      if(!tile) return;
+      start = {r: +tile.dataset.r, c: +tile.dataset.c};
+    };
+    boardEl.onpointerup = async (e)=>{
+      if(!start) return;
+      const tile = e.target.closest('.tile');
+      if(!tile){ start=null; return; }
+      const end = {r: +tile.dataset.r, c: +tile.dataset.c};
+      await trySwap(start.r,start.c,end.r,end.c);
+      start = null;
+    };
+    boardEl.onpointermove = (e)=>{ /* optional swipe logic can be added */ };
+  }
+
+  // public start
+  async function startLevel(lvl=1){
+    level = lvl; LEVELNUM.textContent = level;
+    score = 0; SCORE.textContent = score;
+    coins = Storage.get('coins',0); COINS.textContent = coins;
+    setupStyle();
+    createGrid();
+    render();
+    await resolveLoop(); // clear any accidental matches
+    bindInput();
+  }
+
+  // attach to controls
+  document.getElementById('restart').addEventListener('click', ()=>{ startLevel(level); });
+  document.getElementById('shuffle').addEventListener('click', ()=>{ shuffle(); });
+
+  return { startLevel };
+})();
+
+/* ====== home & nav buttons ====== */
+document.getElementById('btn-start').addEventListener('click', ()=>{
+  // by default open level map
+  renderLevels();
+  showPage('map');
+});
+document.getElementById('to-map').addEventListener('click', ()=> { renderLevels(); showPage('map'); });
+document.getElementById('to-home').addEventListener('click', ()=> showPage('home'));
+
+/* load initial levels UI for first time */
+renderLevels();
+</script>
 </body>
-</html>
+      </html>
