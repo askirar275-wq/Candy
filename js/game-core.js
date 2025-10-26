@@ -1,28 +1,29 @@
 // js/game-core.js
-// Simple core: board, swap, detect matches(3+), remove, collapse + refill, score & moves.
-// Defensive: doesn't assume DOM or Sound.
+// गेम core: board बनाना, swap, match detection (3+), remove, collapse + refill, score & moves.
+// सुरक्षित: console logs देता है, और DOM पर निर्भर नहीं।
 
-window.Game = (function(){
-  const log = (...a)=> console.log('[Game]', ...a);
-  const rnd = (n)=> Math.floor(Math.random()*n);
+(function(){
+  const log = (...a)=> console.log('[CORE]', ...a);
 
-  // default config
-  const cfg = {
+  const CFG = {
     rows: 6,
     cols: 6,
     candyTypes: 6,
     startMoves: 30,
-    baseScorePerCandy: 10
+    baseScorePerCandy: 10,
+    maxResolveLoops: 12
   };
 
   let state = null;
 
-  function makeBoard(){
+  function rand(n){ return Math.floor(Math.random()*n); }
+
+  function makeRandomBoard(){
     const b = [];
-    for(let r=0;r<cfg.rows;r++){
-      b[r]=[];
-      for(let c=0;c<cfg.cols;c++){
-        b[r][c] = 1 + rnd(cfg.candyTypes);
+    for(let r=0;r<CFG.rows;r++){
+      b[r] = [];
+      for(let c=0;c<CFG.cols;c++){
+        b[r][c] = 1 + rand(CFG.candyTypes);
       }
     }
     return b;
@@ -31,105 +32,74 @@ window.Game = (function(){
   function newState(level=1){
     return {
       level: Number(level)||1,
-      rows: cfg.rows,
-      cols: cfg.cols,
-      board: makeBoard(),
-      score:0,
-      moves: cfg.startMoves,
-      target: (level===1?600: (level===2?900:1200))
+      rows: CFG.rows,
+      cols: CFG.cols,
+      board: makeRandomBoard(),
+      score: 0,
+      moves: CFG.startMoves,
+      target: (level==1?600: level==2?900:1200)
     };
   }
 
-  function start(level){
-    state = newState(level);
-    // ensure no immediate matches: quick fix by shuffling until no immediate 3-in-row (limited tries)
-    for(let t=0;t<20;t++){
-      const m = findMatches(state.board);
-      if(m.length===0) break;
-      // shuffle few tiles
-      for(let i=0;i<m.length;i++){
-        const pt = m[i][0];
-        const r = pt.r, c=pt.c;
-        state.board[r][c] = 1 + rnd(cfg.candyTypes);
-      }
-    }
-    dispatch('game-ready');
-    dispatch('game-started', { level: state.level });
-    log('start level', state.level, 'size', cfg.rows, cfg.cols);
-    return state;
+  function inBounds(r,c){ return r>=0 && c>=0 && r<CFG.rows && c<CFG.cols; }
+
+  // swap two positions on board
+  function swap(board, r1,c1, r2,c2){
+    const tmp = board[r1][c1];
+    board[r1][c1] = board[r2][c2];
+    board[r2][c2] = tmp;
   }
 
-  function getState(){ return state; }
-
-  function inBounds(r,c){ return r>=0 && c>=0 && r<cfg.rows && c<cfg.cols; }
-
-  // swap two tiles (immediately modifies board)
-  function swap(r1,c1,r2,c2){
-    if(!state) return false;
-    if(!inBounds(r1,c1) || !inBounds(r2,c2)) return false;
-    const tmp = state.board[r1][c1];
-    state.board[r1][c1] = state.board[r2][c2];
-    state.board[r2][c2] = tmp;
-    return true;
-  }
-
-  // find matches: returns array of arrays of coordinates grouped per tile matched
+  // find contiguous groups (horizontal & vertical) length>=3
   function findMatches(board){
-    const rows = cfg.rows, cols = cfg.cols;
-    const seen = Array.from({length:rows}, ()=> Array(cols).fill(false));
     const groups = [];
-
     // horizontal
-    for(let r=0;r<rows;r++){
-      let runVal = null, runStart = 0;
-      for(let c=0;c<=cols;c++){
-        const val = (c<cols) ? board[r][c] : null;
-        if(val === runVal){
+    for(let r=0;r<CFG.rows;r++){
+      let val = board[r][0], start = 0;
+      for(let c=1;c<=CFG.cols;c++){
+        const cur = (c<CFG.cols? board[r][c] : null);
+        if(cur === val){
           // continue
         } else {
-          const runLen = c - runStart;
-          if(runVal !== null && runLen >= 3){
+          const len = c - start;
+          if(val !== null && len >= 3){
             const group = [];
-            for(let cc=runStart; cc<c; cc++) group.push({r, c:cc});
+            for(let cc=start; cc<c; cc++) group.push({r, c:cc});
             groups.push(group);
           }
-          runVal = val;
-          runStart = c;
+          val = cur;
+          start = c;
         }
       }
     }
-
     // vertical
-    for(let c=0;c<cols;c++){
-      let runVal = null, runStart = 0;
-      for(let r=0;r<=rows;r++){
-        const val = (r<rows) ? board[r][c] : null;
-        if(val === runVal){
+    for(let c=0;c<CFG.cols;c++){
+      let val = board[0][c], start = 0;
+      for(let r=1;r<=CFG.rows;r++){
+        const cur = (r<CFG.rows? board[r][c] : null);
+        if(cur === val){
         } else {
-          const runLen = r - runStart;
-          if(runVal !== null && runLen >= 3){
+          const len = r - start;
+          if(val !== null && len >= 3){
             const group = [];
-            for(let rr=runStart; rr<r; rr++) group.push({r:rr, c});
+            for(let rr=start; rr<r; rr++) group.push({r:rr, c});
             groups.push(group);
           }
-          runVal = val;
-          runStart = r;
+          val = cur;
+          start = r;
         }
       }
     }
-
     return groups;
   }
 
-  // remove groups -> set to 0 (empty) ; returns total removed count
-  function removeGroups(groups){
-    if(!groups || groups.length===0) return 0;
+  // remove groups: set to 0 (empty)
+  function removeGroups(board, groups){
     let removed = 0;
-    groups.forEach(group=>{
-      group.forEach(pt=>{
-        const r=pt.r, c=pt.c;
-        if(state.board[r][c] !== 0){
-          state.board[r][c] = 0;
+    groups.forEach(g=>{
+      g.forEach(pt=>{
+        if(board[pt.r][pt.c] !== 0){
+          board[pt.r][pt.c] = 0;
           removed++;
         }
       });
@@ -137,86 +107,98 @@ window.Game = (function(){
     return removed;
   }
 
-  // collapse gravity: for each column, drop non-zero down and fill new on top
-  function collapseAndRefill(){
-    const rows = cfg.rows, cols = cfg.cols;
-    for(let c=0;c<cols;c++){
-      const colVals = [];
-      for(let r=rows-1;r>=0;r--){
-        if(state.board[r][c] !== 0) colVals.push(state.board[r][c]);
+  // collapse gravity per column and refill with random at top
+  function collapseAndRefill(board){
+    for(let c=0;c<CFG.cols;c++){
+      let write = CFG.rows - 1;
+      for(let r=CFG.rows-1; r>=0; r--){
+        if(board[r][c] !== 0){
+          board[write][c] = board[r][c];
+          if(write !== r) board[r][c] = 0;
+          write--;
+        }
       }
-      // now colVals holds bottom-up existing tiles
-      let rPointer = rows-1;
-      for(let k=0;k<colVals.length;k++){
-        state.board[rPointer][c] = colVals[k];
-        rPointer--;
-      }
-      // fill remaining on top with random
-      while(rPointer>=0){
-        state.board[rPointer][c] = 1 + rnd(cfg.candyTypes);
-        rPointer--;
+      // fill remaining
+      while(write >= 0){
+        board[write][c] = 1 + rand(CFG.candyTypes);
+        write--;
       }
     }
   }
 
-  // check matches and resolve loop — returns total removed & score gained
-  function checkResolveLoop(){
+  // resolve loop: findMatches -> remove -> collapse/refill -> repeat until no match
+  function resolve(board){
     let totalRemoved = 0;
-    let totalScore = 0;
-    let loopCount = 0;
+    let totalPoints = 0;
+    let loop = 0;
     while(true){
-      loopCount++;
-      const groups = findMatches(state.board);
-      if(!groups || groups.length===0) break;
-      const removed = removeGroups(groups);
+      loop++;
+      const groups = findMatches(board);
+      if(!groups || groups.length === 0) break;
+      const removed = removeGroups(board, groups);
       totalRemoved += removed;
-      // score: base per candy * removed * combo multiplier (simple)
-      const multiplier = Math.max(1, loopCount);
-      const pts = removed * cfg.baseScorePerCandy * multiplier;
-      totalScore += pts;
-      // collapse and refill
-      collapseAndRefill();
-      // small safety limit
-      if(loopCount > 10) break;
+      const multiplier = Math.max(1, loop);
+      totalPoints += removed * CFG.baseScorePerCandy * multiplier;
+      collapseAndRefill(board);
+      if(loop >= CFG.maxResolveLoops) break;
     }
-    // apply score
-    state.score += totalScore;
-    return { removed: totalRemoved, points: totalScore };
+    return { removed: totalRemoved, points: totalPoints };
   }
 
-  // an utility for UI to call: attempt swap and resolve; if swap leads to no match, it should be swapped back by caller or here.
-  function attemptSwapAndResolve(r1,c1,r2,c2){
-    if(!state) return { ok:false };
-    if(!inBounds(r1,c1) || !inBounds(r2,c2)) return { ok:false };
-    // swap
-    swap(r1,c1,r2,c2);
-    // test if any match
-    const groups = findMatches(state.board);
-    if(groups.length === 0){
-      // swap back
-      swap(r1,c1,r2,c2);
-      return { ok:false };
+  // public API
+  window.GameCore = {
+    CFG,
+    start(level){
+      state = newState(level);
+      // quick safety: avoid starting board with immediate matches by limited reshuffle
+      for(let t=0;t<10;t++){
+        const groups = findMatches(state.board);
+        if(groups.length === 0) break;
+        // randomize some matched tiles
+        groups.forEach(g=>{
+          g.forEach(pt=>{
+            state.board[pt.r][pt.c] = 1 + rand(CFG.candyTypes);
+          });
+        });
+      }
+      console.log('[CORE] started', state.level);
+      // dispatch event
+      window.dispatchEvent(new CustomEvent('core-ready', {detail: {state}}));
+      return state;
+    },
+
+    getState(){ return state; },
+
+    // attempt swap then resolve; returns object {ok, removed, points}. If no match, swap is reverted.
+    attemptSwap(r1,c1,r2,c2){
+      if(!state) return { ok:false, reason:'no-state' };
+      if(!inBounds(r1,c1) || !inBounds(r2,c2)) return { ok:false, reason:'oob' };
+      // don't allow same cell
+      if(r1===r2 && c1===c2) return { ok:false, reason:'same' };
+
+      swap(state.board, r1,c1, r2,c2);
+      const groups = findMatches(state.board);
+      if(!groups || groups.length === 0){
+        // revert
+        swap(state.board, r1,c1, r2,c2);
+        return { ok:false, reason:'no-match' };
+      }
+
+      // valid: decrement moves
+      state.moves = Math.max(0, state.moves - 1);
+      // resolve until stable
+      const res = resolve(state.board);
+      state.score += res.points;
+      return { ok:true, removed: res.removed, points: res.points };
+    },
+
+    // helper to force new random board
+    shuffleBoard(){
+      if(!state) return;
+      state.board = makeRandomBoard();
+      console.log('[CORE] shuffled board');
+      return state.board;
     }
-    // valid: decrement moves
-    state.moves = Math.max(0, state.moves - 1);
-    // resolve
-    const res = checkResolveLoop();
-    // return result
-    return { ok:true, removed: res.removed, points: res.points };
-  }
-
-  function makeBoardClean(){ state.board = makeBoard(); return state.board; }
-
-  function dispatch(event, detail){
-    try { window.dispatchEvent(new CustomEvent(event, {detail})); } catch(e){ log('dispatch fail', e); }
-  }
-
-  return {
-    start,
-    getState,
-    swap,
-    attemptSwapAndResolve,
-    makeBoard: makeBoardClean,
-    cfg
   };
+
 })();
