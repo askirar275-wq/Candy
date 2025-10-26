@@ -6,7 +6,7 @@
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body style="background: url('images/bg-gradient.png') center/cover no-repeat fixed;">
+<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
 
   <div id="app">
     <!-- Home -->
@@ -14,8 +14,8 @@
       <div class="hero-card">
         <h1>🍭 Candy Match</h1>
         <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-        <button id="btn-start" class="btn primary" aria-label="Start game">🎮 खेल शुरू करें</button>
-        <button id="btn-map" class="btn" aria-label="Open level map">🗺️ Level Map</button>
+        <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
+        <button id="btn-map" class="btn">🗺️ Level Map</button>
       </div>
     </main>
 
@@ -48,91 +48,11 @@
     </section>
   </div>
 
-  <!-- Load JS files in correct order -->
+  <!-- scripts -->
   <script src="js/storage.js" defer></script>
   <script src="js/safe-ui.js" defer></script>
   <script src="js/level-map.js" defer></script>
   <script src="js/game.js" defer></script>
 
-  <!-- small bootstrapper: wait for CandyGame to be ready, then bind buttons -->
-  <script>
-    // wait for DOMContentLoaded then wait for CandyGame to exist
-    document.addEventListener('DOMContentLoaded', () => {
-      // helper: wait until a condition is true
-      function waitFor(condFn, timeout = 3000) {
-        return new Promise((resolve, reject) => {
-          const interval = 30;
-          let waited = 0;
-          const id = setInterval(() => {
-            if (condFn()) {
-              clearInterval(id);
-              resolve(true);
-            } else {
-              waited += interval;
-              if (waited > timeout) {
-                clearInterval(id);
-                reject(new Error('timeout'));
-              }
-            }
-          }, interval);
-        });
-      }
-
-      // try to bind after CandyGame is available
-      waitFor(() => window.CandyGame && window.LevelMapUI).then(() => {
-        // bind start button -> directly start level 1 (or last unlocked)
-        const btnStart = document.getElementById('btn-start');
-        const btnMap = document.getElementById('btn-map');
-        const restart = document.getElementById('btn-restart');
-        const shuffle = document.getElementById('btn-shuffle');
-
-        btnStart && btnStart.addEventListener('click', () => {
-          // show level map first (you can change to directly start)
-          if (window.LevelMapUI) {
-            // show map page so user can choose; open level 1 by default
-            UI.showPage('map');
-          } else {
-            // fallback: start level 1
-            window.CandyGame.startLevel(1);
-          }
-        });
-
-        btnMap && btnMap.addEventListener('click', () => { UI.showPage('map'); });
-
-        restart && restart.addEventListener('click', () => {
-          // restart current level if game running
-          if (window.CandyGame && window.CandyGame.startLevel) {
-            // read current level from UI
-            const level = Number(document.getElementById('level-num').textContent) || 1;
-            window.CandyGame.startLevel(level);
-            UI.showPage('game');
-          }
-        });
-
-        shuffle && shuffle.addEventListener('click', () => {
-          // call shuffle: our game exposes it via grid manipulation (window.CandyGame)
-          // if your game.js exposes shuffle, call it here. If not, restart as fallback.
-          if (window.CandyGame && window.CandyGame.shuffleGrid) {
-            window.CandyGame.shuffleGrid();
-          } else if (window.CandyGame && window.CandyGame.startLevel) {
-            // quick fallback: restart same level to re-generate board
-            const level = Number(document.getElementById('level-num').textContent) || 1;
-            window.CandyGame.startLevel(level);
-          }
-        });
-
-        // render levels (level-map.js already renders on load, but re-render to be safe)
-        if (window.LevelMapUI && window.LevelMapUI.render) window.LevelMapUI.render();
-
-      }).catch(err => {
-        console.warn('CandyGame or LevelMapUI not found:', err);
-        // still bind start -> try direct call (may throw but user will see console)
-        const btnStart = document.getElementById('btn-start');
-        if (btnStart) btnStart.addEventListener('click', () => {
-          try { window.CandyGame && window.CandyGame.startLevel(1); } catch(e){ console.error(e); }
-        });
-      });
-    });
-  </script>
 </body>
-  </html>
+</html>
