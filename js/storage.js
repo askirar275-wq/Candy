@@ -1,11 +1,12 @@
-// simple storage wrapper
 const Storage = {
-  get(key, fallback){
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-    catch(e){ return fallback; }
+  get(key, def) {
+    try {
+      return JSON.parse(localStorage.getItem(key)) ?? def;
+    } catch {
+      return def;
+    }
   },
-  set(key, value){
-    try { localStorage.setItem(key, JSON.stringify(value)); }
-    catch(e){ console.warn('storage set failed', e); }
+  set(key, val) {
+    localStorage.setItem(key, JSON.stringify(val));
   }
 };
