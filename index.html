@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
+<body style="background: url('images/bg-gradient.png') center/cover no-repeat fixed;">
 
   <div id="app">
-    <!-- 🏠 Home Page -->
+    <!-- Home -->
     <main id="home" class="page">
       <div class="hero-card">
         <h1>🍭 Candy Match</h1>
@@ -19,14 +19,14 @@
       </div>
     </main>
 
-    <!-- 🗺️ Level Map Page -->
+    <!-- Level Map -->
     <section id="map" class="page hidden">
       <button class="back btn" data-go="home">← Home</button>
       <h2>Level Map</h2>
       <div id="levels" class="levels"></div>
     </section>
 
-    <!-- 🎯 Game Page -->
+    <!-- Game -->
     <section id="game" class="page hidden">
       <header class="game-header">
         <button class="back btn" data-go="map">← Map</button>
@@ -37,12 +37,10 @@
         </div>
       </header>
 
-      <!-- 🎮 Game Board -->
       <div class="board-wrap">
-        <div id="board" class="board"></div>
+        <div id="board" class="board" aria-label="game board"></div>
       </div>
 
-      <!-- 🔘 Game Controls -->
       <div class="controls">
         <button id="btn-restart" class="btn">🔁 Restart</button>
         <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
@@ -50,12 +48,10 @@
     </section>
   </div>
 
-  <!-- ✅ JavaScript Files -->
-  <script defer src="js/storage.js"></script>
-  <script defer src="js/safe-ui.js"></script>
-  <script defer src="js/game.js"></script>
-  <script defer src="js/level-map.js"></script>
-  <script defer src="js/shop.js"></script>
-
+  <!-- JS (load order matters) -->
+  <script src="js/storage.js" defer></script>
+  <script src="js/safe-ui.js" defer></script>
+  <script src="js/level-map.js" defer></script>
+  <script src="js/game.js" defer></script>
 </body>
 </html>
