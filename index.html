@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🍭 Candy Match</title>
+  <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
+<body>
 
-  <div id="app">
-    <!-- HOME -->
-    <main id="home" class="page active">
+  <!-- full-screen background image -->
+  <div class="app-bg" style="background-image:url('images/bg-gradient.png')"></div>
+
+  <div id="app" class="app">
+
+    <!-- HOME PAGE -->
+    <main id="home" class="page page--active">
       <div class="hero-card">
         <div class="hero-top">
           <img src="images/candy-icon.png" alt="logo" class="hero-logo" />
           <h1>🍭 Candy Match</h1>
         </div>
-        <p class="hero-sub">🍂🍂!</p>
+        <p class="hero-sub">स्वीट्स को मिलाओ और लेवल पार करो!</p>
+
         <div class="hero-actions">
           <button id="btn-start" class="btn primary full">🎮 खेल शुरू करें</button>
           <button id="btn-map" class="btn full">🗺️ Level Map</button>
@@ -26,39 +31,110 @@
       </div>
     </main>
 
-    <!-- LEVEL MAP -->
+    <!-- LEVEL MAP PAGE -->
     <section id="map" class="page hidden">
-      <button class="btn back" data-go="home">← Home</button>
-      <h2>Level Map</h2>
-      <div id="levels" class="levels"></div>
+      <div class="page-inner">
+        <button class="btn back" data-go="home">← Home</button>
+        <h2 class="page-title">Level Map</h2>
+        <div id="levels" class="levels"></div>
+      </div>
     </section>
 
-    <!-- GAME -->
+    <!-- GAME PAGE -->
     <section id="game" class="page hidden">
-      <header class="game-header">
-        <button class="btn back" data-go="map">← Map</button>
-        <div class="stats">
-          <div>Score: <span id="score">0</span></div>
-          <div>Coins: <span id="coins">0</span></div>
-          <div>Level: <span id="level-num">1</span></div>
+      <div class="page-inner">
+        <header class="game-header">
+          <button class="btn back" data-go="map">← Map</button>
+          <div class="stats">
+            <div>Score: <span id="score">0</span></div>
+            <div>Coins: <span id="coins">0</span></div>
+            <div>Level: <span id="level-num">1</span></div>
+          </div>
+        </header>
+
+        <div class="board-wrap">
+          <div id="board" class="board"></div>
         </div>
-      </header>
 
-      <div class="board-wrap">
-        <div id="board" class="board"></div>
-      </div>
-
-      <div class="controls">
-        <button id="btn-restart" class="btn">🔁 Restart</button>
-        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
+        <div class="controls">
+          <button id="btn-restart" class="btn">🔁 Restart</button>
+          <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
+        </div>
       </div>
     </section>
+
+    <!-- SHOP PAGE -->
+    <section id="shop" class="page hidden">
+      <div class="page-inner">
+        <button class="btn back" data-go="home">← Home</button>
+        <h2 class="page-title">Shop</h2>
+        <p>यहाँ पावर-अप और कस्टम पैक होंगे। (Demo)</p>
+        <button class="btn" data-go="home">Close</button>
+      </div>
+    </section>
+
   </div>
 
-  <!-- SCRIPTS -->
-  <script src="js/storage.js" defer></script>
-  <script src="js/safe-ui.js" defer></script>
-  <script src="js/level-map.js" defer></script>
-  <script src="js/game.js" defer></script>
+  <!-- छोटा पेज-नेविगेशन स्क्रिप्ट (index में रखने से नेविगेशन पक्का काम करेगा) -->
+  <script>
+    // पेज-शो/हाइड helper
+    (function(){
+      function showPage(id){
+        document.querySelectorAll('.page').forEach(p => {
+          p.classList.add('hidden');
+          p.classList.remove('page--active');
+        });
+        const el = document.getElementById(id);
+        if(el){
+          el.classList.remove('hidden');
+          el.classList.add('page--active');
+          // scroll top each page when shown
+          el.scrollTop = 0;
+        }
+      }
+
+      // start / map / shop buttons from home
+      document.addEventListener('DOMContentLoaded', function(){
+        const start = document.getElementById('btn-start');
+        const map = document.getElementById('btn-map');
+        const shop = document.getElementById('btn-shop');
+
+        if(start) start.addEventListener('click', function(){
+          // if you have CandyGame.startLevel available, call it
+          if(window.CandyGame && typeof window.CandyGame.startLevel === 'function'){
+            window.CandyGame.startLevel(1);
+          } else {
+            // otherwise just show game page (game.js should init later)
+            showPage('game');
+          }
+        });
+
+        if(map) map.addEventListener('click', function(){
+          showPage('map');
+        });
+
+        if(shop) shop.addEventListener('click', function(){
+          showPage('shop');
+        });
+
+        // back buttons (data-go attr)
+        document.querySelectorAll('.back, [data-go]').forEach(btn=>{
+          btn.addEventListener('click', function(e){
+            const tgt = btn.getAttribute('data-go');
+            if(tgt) showPage(tgt);
+          });
+        });
+
+        // ensure only home visible initially
+        showPage('home');
+      });
+    })();
+  </script>
+
+  <!-- existing game-related scripts (keep order as you had) -->
+  <script defer src="js/storage.js"></script>
+  <script defer src="js/safe-ui.js"></script>
+  <script defer src="js/level-map.js"></script>
+  <script defer src="js/game.js"></script>
 </body>
-</html>
+  </html>
