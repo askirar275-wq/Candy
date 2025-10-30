@@ -1,303 +1,446 @@
 // js/game.js
-// Swipe-enabled Candy engine (8x6 grid). Matches, gravity, refill.
-// Requires: #board, #score, #coins, #level-num, #btn-restart, #btn-shuffle
-// Exposes: window.CandyGame.startLevel(levelNumber)
-
-(function () {
-  console.log('CandyEngine ready');
-
-  const ROWS = 8;
+// CandyGame engine (simple, mobile friendly)
+// grid: cols x rows (6 x 8)
+const CandyGame = (function(){
+  // config
   const COLS = 6;
-  const CANDY_COUNT = 6;
+  const ROWS = 8;
+  const TOTAL = COLS * ROWS;
+  const CANDY_COUNT = 6; // use candy-1..candy-6 images
+  const IMAGE_PREFIX = 'images/candy-'; // final: images/candy-1.png
+  const IMAGE_SUFFIX = '.png';
+  let boardEl = null;
+  let scoreEl = null;
+  let coinsEl = null;
+  let levelNumEl = null;
 
-  const state = {
-    boardArr: [],
-    score: 0,
-    coins: 0,
-    level: 1,
-    isProcessing: false
-  };
+  let grid = []; // array length TOTAL of numbers 1..CANDY_COUNT
+  let cells = []; // DOM cell elements
+  let isProcessing = false;
+  let currentLevel = 1;
 
-  // DOM
-  const boardEl = document.getElementById('board');
-  const scoreEl = document.getElementById('score');
-  const coinsEl = document.getElementById('coins');
-  const levelEl = document.getElementById('level-num');
-  const btnRestart = document.getElementById('btn-restart');
-  const btnShuffle = document.getElementById('btn-shuffle');
-  const btnStart = document.getElementById('btn-start');
+  // touch handling
+  let startX = 0, startY = 0, startIndex = null, touchTimeout = null;
 
-  if (!boardEl) console.warn('CandyEngine: #board not found');
+  // helpers
+  function randCandy(){ return Math.floor(Math.random() * CANDY_COUNT) + 1; }
 
-  window.CandyGame = window.CandyGame || {};
+  function indexFromRC(r,c){ return r * COLS + c; }
+  function rcFromIndex(i){ return [Math.floor(i / COLS), i % COLS]; }
 
-  const idx = (r, c) => r * COLS + c;
-  const rc = (i) => ({ r: Math.floor(i / COLS), c: i % COLS });
-  const randCandy = () => Math.floor(Math.random() * CANDY_COUNT) + 1;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-  function initBoardRandom() {
-    state.boardArr = new Array(ROWS * COLS).fill(0).map(_ => randCandy());
-    // remove any initial matches
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const matches = findAllMatches();
-      if (matches.length === 0) break;
-      matches.forEach(g => g.forEach(i => state.boardArr[i] = randCandy()));
+  function createGrid() {
+    grid = new Array(TOTAL).fill(0).map(()=> randCandy());
+    // ensure no initial automatic matches — shuffle until no immediate 3-in-a-row
+    while(existsMatchOnGrid()){
+      // simple shuffle randomize a few spots
+      for(let i=0;i<TOTAL;i++){
+        if(Math.random() < 0.2) grid[i] = randCandy();
+      }
     }
   }
 
-  function renderBoard() {
-    if (!boardEl) return;
+  function existsMatchOnGrid(){
+    // detect any 3+ inline in current grid
+    const matches = findMatchesOnGrid(grid);
+    return matches.length > 0;
+  }
+
+  function buildBoardDOM(){
     boardEl.innerHTML = '';
-    boardEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
-    boardEl.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
-
-    for (let i = 0; i < ROWS * COLS; i++) {
-      const tile = document.createElement('div');
-      tile.className = 'tile';
-      tile.dataset.index = i;
-      const candyId = state.boardArr[i] || 0;
-      const img = document.createElement('img');
-      img.alt = 'candy';
-      img.draggable = false;
-      if (candyId) img.src = `images/candy${candyId}.png`;
-      img.onerror = () => { img.style.display = 'none'; };
-      tile.appendChild(img);
-      boardEl.appendChild(tile);
+    cells = [];
+    // container uses CSS grid within .board; create wrapper with grid
+    const container = document.createElement('div');
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    container.style.gap = '12px';
+    container.style.padding = '12px';
+    container.style.boxSizing = 'border-box';
+    // calculate cell size relative to board width
+    for(let r=0; r<ROWS; r++){
+      for(let c=0; c<COLS; c++){
+        const i = indexFromRC(r,c);
+        const cell = document.createElement('div');
+        cell.className = 'candy-cell';
+        Object.assign(cell.style, {
+          background:'#fff', borderRadius:'14px', display:'flex',
+          alignItems:'center', justifyContent:'center', boxShadow:'0 8px 20px rgba(0,0,0,0.08)'
+        });
+        // inner img
+        const img = document.createElement('img');
+        img.draggable = false;
+        img.style.width = '68%';
+        img.style.height = '68%';
+        img.style.objectFit = 'contain';
+        img.setAttribute('data-index', i);
+        cell.appendChild(img);
+        // store
+        cells[i] = { el: cell, img: img };
+        // add pointer handlers for desktop clicks
+        cell.addEventListener('mousedown', (ev)=> onPointerStart(ev, i));
+        cell.addEventListener('touchstart', (ev)=> onPointerStart(ev, i), {passive:true});
+        container.appendChild(cell);
+      }
     }
-    attachPointerHandlers();
+    boardEl.appendChild(container);
+    updateAllImages();
   }
 
-  function findAllMatches() {
-    const found = [];
+  function updateAllImages(){
+    for(let i=0;i<TOTAL;i++){
+      const v = grid[i];
+      const c = cells[i];
+      if(!c) continue;
+      c.img.src = IMAGE_PREFIX + v + IMAGE_SUFFIX;
+      c.img.alt = 'candy';
+    }
+  }
+
+  function setScore(s){
+    scoreEl.textContent = s;
+  }
+  function getScore(){ return parseInt(scoreEl.textContent || '0',10); }
+  function addScore(delta){
+    const newS = getScore() + delta;
+    setScore(newS);
+  }
+
+  function setCoins(n){
+    coinsEl.textContent = n;
+    const st = Storage.get('candy_state') || {};
+    st.coins = n;
+    Storage.set('candy_state', st);
+    // sync shop coins too
+    const shopCoins = document.getElementById('shop-coins');
+    if(shopCoins) shopCoins.textContent = n;
+  }
+  function getCoins(){ return parseInt(coinsEl.textContent || '0', 10); }
+
+  // pointer / swipe logic
+  function onPointerStart(ev, index){
+    if(isProcessing) return;
+    ev.preventDefault();
+    const p = ev.touches ? ev.touches[0] : ev;
+    startX = p.clientX; startY = p.clientY; startIndex = index;
+    // add move and end listeners on document
+    function finish(e){
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('mouseup', finish);
+      document.removeEventListener('touchend', finish);
+      const p2 = (e.changedTouches ? e.changedTouches[0] : e);
+      handleSwipeEnd(p2.clientX, p2.clientY, startIndex);
+    }
+    function onMove(e){
+      // nothing here for now (optional visual)
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:true});
+    document.addEventListener('mouseup', finish);
+    document.addEventListener('touchend', finish);
+  }
+
+  function handleSwipeEnd(endX, endY, fromIndex){
+    if(isProcessing) return;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    const threshold = 18; // minimal px to count
+    if(absX < threshold && absY < threshold) {
+      // click / tap (no swipe) - do nothing
+      return;
+    }
+    let dir = null;
+    if(absX > absY){
+      dir = dx > 0 ? 'right' : 'left';
+    } else {
+      dir = dy > 0 ? 'down' : 'up';
+    }
+    const [r,c] = rcFromIndex(fromIndex);
+    let toR = r, toC = c;
+    if(dir === 'left') toC = c - 1;
+    if(dir === 'right') toC = c + 1;
+    if(dir === 'up') toR = r - 1;
+    if(dir === 'down') toR = r + 1;
+    // bounds
+    if(toR < 0 || toR >= ROWS || toC < 0 || toC >= COLS) return;
+    const toIndex = indexFromRC(toR, toC);
+    swapAndProcess(fromIndex, toIndex);
+  }
+
+  // swap values and check for matches
+  function swapAndProcess(i1, i2){
+    if(isProcessing) return;
+    isProcessing = true;
+    swapGrid(i1, i2);
+    animateSwap(i1, i2);
+    // after small delay, check matches
+    setTimeout(()=> {
+      const matches = findMatchesOnGrid(grid);
+      if(matches.length > 0){
+        resolveMatches(matches);
+      } else {
+        // swap back — illegal move
+        swapGrid(i1, i2);
+        animateSwap(i1, i2);
+        isProcessing = false;
+      }
+    }, 220);
+  }
+
+  function swapGrid(i1,i2){
+    const tmp = grid[i1]; grid[i1] = grid[i2]; grid[i2] = tmp;
+    // update DOM imgs immediately for responsiveness
+    if(cells[i1] && cells[i2]){
+      const s1 = cells[i1].img.src;
+      const s2 = cells[i2].img.src;
+      // swap src attributes
+      const t = cells[i1].img.src;
+      cells[i1].img.src = cells[i2].img.src;
+      cells[i2].img.src = t;
+    } else updateAllImages();
+  }
+
+  function animateSwap(i1, i2){
+    // small pop animation
+    [i1,i2].forEach(i=>{
+      const el = cells[i]?.el;
+      if(!el) return;
+      el.style.transition = 'transform 180ms ease';
+      el.style.transform = 'scale(0.98)';
+      setTimeout(()=>{ el.style.transform=''; }, 240);
+    });
+  }
+
+  // findMatchesOnGrid returns array of match objects: {cells: [i,...]}
+  function findMatchesOnGrid(g){
+    const matches = [];
+    const mark = new Array(g.length).fill(false);
+
     // horizontal
-    for (let r = 0; r < ROWS; r++) {
+    for(let r=0;r<ROWS;r++){
       let runStart = 0;
-      for (let c = 1; c <= COLS; c++) {
-        const prev = state.boardArr[idx(r, c - 1)];
-        const cur = (c < COLS) ? state.boardArr[idx(r, c)] : null;
-        if (c < COLS && cur === prev && prev !== 0) {
-          // continuing
-        } else {
-          const len = c - runStart;
-          if (len >= 3) {
-            const g = [];
-            for (let k = runStart; k < runStart + len; k++) g.push(idx(r, k));
-            found.push(g);
+      for(let c=1;c<=COLS;c++){
+        const curIdx = indexFromRC(r,c);
+        const prevIdx = indexFromRC(r,c-1);
+        const same = (c < COLS) && (g[curIdx] === g[prevIdx]);
+        if(!same){
+          const runLen = c - runStart;
+          if(runLen >= 3){
+            const cellsIdx = [];
+            for(let x=runStart; x< c; x++) cellsIdx.push(indexFromRC(r,x));
+            matches.push({cells: cellsIdx.slice()});
           }
           runStart = c;
         }
       }
     }
+
     // vertical
-    for (let c = 0; c < COLS; c++) {
+    for(let c=0;c<COLS;c++){
       let runStart = 0;
-      for (let r = 1; r <= ROWS; r++) {
-        const prev = state.boardArr[idx(r - 1, c)];
-        const cur = (r < ROWS) ? state.boardArr[idx(r, c)] : null;
-        if (r < ROWS && cur === prev && prev !== 0) {
-          // continuing
-        } else {
-          const len = r - runStart;
-          if (len >= 3) {
-            const g = [];
-            for (let k = runStart; k < runStart + len; k++) g.push(idx(k, c));
-            found.push(g);
+      for(let r=1;r<=ROWS;r++){
+        const curIdx = indexFromRC(r,c);
+        const prevIdx = indexFromRC(r-1,c);
+        const same = (r < ROWS) && (g[curIdx] === g[prevIdx]);
+        if(!same){
+          const runLen = r - runStart;
+          if(runLen >= 3){
+            const cellsIdx = [];
+            for(let x=runStart; x< r; x++) cellsIdx.push(indexFromRC(x,c));
+            matches.push({cells: cellsIdx.slice()});
           }
           runStart = r;
         }
       }
     }
-    return found;
+
+    // merge overlapping matches (so same cell not removed twice)
+    // produce unique list of indices per match group
+    const uniqueMatches = [];
+    const seen = new Set();
+    for(const m of matches){
+      const group = [...new Set(m.cells)];
+      // sort
+      group.sort((a,b)=>a-b);
+      uniqueMatches.push({cells: group});
+    }
+    return uniqueMatches;
   }
 
-  function removeMatches(groups) {
-    const removed = new Set();
-    groups.forEach(g => g.forEach(i => removed.add(i)));
-    removed.forEach(i => state.boardArr[i] = 0);
-    return removed.size;
-  }
+  // remove matched cells, add score, gravity refill
+  function resolveMatches(matchList){
+    if(!matchList || matchList.length===0){
+      isProcessing = false;
+      return;
+    }
+    // collect all indices to remove
+    const toRemoveSet = new Set();
+    matchList.forEach(m=> m.cells.forEach(i=>toRemoveSet.add(i)));
+    const toRemove = [...toRemoveSet].sort((a,b)=>a-b);
+    // score: each candy 10
+    addScore(toRemove.length * 10);
 
-  function collapseAndRefill() {
-    for (let c = 0; c < COLS; c++) {
-      const col = [];
-      for (let r = 0; r < ROWS; r++) {
-        const v = state.boardArr[idx(r, c)];
-        if (v !== 0) col.push(v);
+    // animate removal: fade
+    toRemove.forEach(i=>{
+      const img = cells[i].img;
+      img.style.transition = 'opacity 220ms ease, transform 220ms';
+      img.style.opacity = '0';
+      img.style.transform = 'scale(0.4)';
+    });
+
+    setTimeout(()=> {
+      // set removed cells to 0 (empty)
+      toRemove.forEach(i=> grid[i] = 0);
+      updateAllImages(); // images for 0 will be image '0' — but we want blank
+      // clear img for zeroes
+      toRemove.forEach(i=>{
+        const img = cells[i].img;
+        img.style.opacity = '';
+        img.style.transform = '';
+        img.src = ''; // blank so we can animate drop
+      });
+
+      // gravity (for each column)
+      for(let c=0;c<COLS;c++){
+        const column = [];
+        for(let r=0;r<ROWS;r++){
+          column.push(grid[indexFromRC(r,c)]);
+        }
+        // drop non-zero downwards
+        const filtered = column.filter(x=>x!==0);
+        const missing = ROWS - filtered.length;
+        const newCol = new Array(missing).fill(0).concat(filtered);
+        // write back
+        for(let r=0;r<ROWS;r++){
+          grid[indexFromRC(r,c)] = newCol[r];
+        }
       }
-      const missing = ROWS - col.length;
-      const newCol = new Array(missing).fill(0).map(_ => randCandy()).concat(col);
-      for (let r = 0; r < ROWS; r++) state.boardArr[idx(r, c)] = newCol[r];
-    }
-  }
 
-  function swapIndices(a, b) {
-    const t = state.boardArr[a];
-    state.boardArr[a] = state.boardArr[b];
-    state.boardArr[b] = t;
-  }
+      // fill top zeros with random candies
+      for(let i=0;i<TOTAL;i++){
+        if(grid[i] === 0) grid[i] = randCandy();
+      }
 
-  async function attemptSwap(a, b) {
-    if (state.isProcessing) return false;
-    state.isProcessing = true;
-    swapIndices(a, b);
-    renderBoard();
-    await sleep(120);
-    let groups = findAllMatches();
-    if (groups.length === 0) {
-      // no match -> undo
-      swapIndices(a, b);
-      renderBoard();
-      state.isProcessing = false;
-      return false;
-    }
-    while (groups.length > 0) {
-      const removedCount = removeMatches(groups);
-      state.score += removedCount * 10;
-      updateUI();
-      renderBoard();
-      await sleep(140);
-      collapseAndRefill();
-      renderBoard();
-      await sleep(160);
-      groups = findAllMatches();
-    }
-    state.isProcessing = false;
-    return true;
-  }
+      // update DOM with a little drop animation
+      updateAllImages();
+      // small bounce
+      for(let i=0;i<TOTAL;i++){
+        const el = cells[i].el;
+        if(!el) continue;
+        el.style.transition = 'transform 260ms';
+        el.style.transform = 'translateY(-6px)';
+        setTimeout(()=> el.style.transform = '', 260);
+      }
 
-  function updateUI() {
-    if (scoreEl) scoreEl.textContent = state.score;
-    if (coinsEl) coinsEl.textContent = state.coins;
-    if (levelEl) levelEl.textContent = state.level;
-  }
-
-  // Pointer/touch handlers (robust)
-  function attachPointerHandlers() {
-    if (!boardEl) return;
-    boardEl.querySelectorAll('.tile').forEach(t => {
-      t.onpointerdown = null; t.onpointerup = null; t.onpointercancel = null; t.onpointermove = null;
-    });
-
-    let startIdx = null;
-    let startPoint = null;
-    let activeId = null;
-    const SWIPE_THRESHOLD = 18; // pixels
-
-    boardEl.querySelectorAll('.tile').forEach(tile => {
-      tile.onpointerdown = function (e) {
-        if (state.isProcessing) return;
-        activeId = e.pointerId;
-        tile.setPointerCapture && tile.setPointerCapture(activeId);
-        startIdx = parseInt(this.dataset.index);
-        startPoint = { x: e.clientX, y: e.clientY };
-        this.classList.add('selected');
-      };
-
-      tile.onpointerup = function (e) {
-        if (!startIdx) return;
-        const endIdx = parseInt(this.dataset.index);
-        const endPoint = { x: e.clientX, y: e.clientY };
-        // Clear selection visuals
-        boardEl.querySelectorAll('.tile.selected').forEach(x => x.classList.remove('selected'));
-
-        // If user tapped a neighboring tile -> swap
-        if (isNeighbor(startIdx, endIdx)) {
-          attemptSwap(startIdx, endIdx).catch(err => console.error(err));
-          startIdx = null; startPoint = null;
-          return;
-        }
-
-        // Otherwise check swipe direction from startPoint
-        const dx = endPoint.x - startPoint.x;
-        const dy = endPoint.y - startPoint.y;
-        if (Math.abs(dx) + Math.abs(dy) < SWIPE_THRESHOLD) {
-          // too small -> ignore
-          startIdx = null; startPoint = null;
-          return;
-        }
-        let target = null;
-        const s = rc(startIdx);
-        if (Math.abs(dx) > Math.abs(dy)) {
-          // horizontal
-          const dir = dx > 0 ? 1 : -1;
-          const tc = s.c + dir;
-          if (tc >= 0 && tc < COLS) target = idx(s.r, tc);
+      // after animation, check for new matches (chain reactions)
+      setTimeout(()=> {
+        const newMatches = findMatchesOnGrid(grid);
+        if(newMatches.length > 0){
+          resolveMatches(newMatches);
         } else {
-          // vertical
-          const dir = dy > 0 ? 1 : -1;
-          const tr = s.r + dir;
-          if (tr >= 0 && tr < ROWS) target = idx(tr, s.c);
+          isProcessing = false;
         }
-        if (target !== null) attemptSwap(startIdx, target).catch(err => console.error(err));
-        startIdx = null; startPoint = null;
-      };
+      }, 300);
 
-      tile.onpointercancel = function () {
-        startIdx = null; startPoint = null;
-        boardEl.querySelectorAll('.tile.selected').forEach(x => x.classList.remove('selected'));
-      };
+    }, 260);
+  }
+
+  // restart
+  function restart(){
+    if(isProcessing) return;
+    setScore(0);
+    createGrid();
+    updateAllImages();
+  }
+
+  // shuffle (randomize all)
+  function shuffleBoard(){
+    if(isProcessing) return;
+    isProcessing = true;
+    for(let i=0;i<TOTAL;i++){
+      grid[i] = randCandy();
+    }
+    // prevent immediate matches
+    while(existsMatchOnGrid()){
+      for(let i=0;i<TOTAL;i++) if(Math.random()<0.25) grid[i] = randCandy();
+    }
+    updateAllImages();
+    setTimeout(()=> isProcessing=false, 300);
+  }
+
+  // bomb demo (from shop)
+  function triggerBomb(){
+    if(isProcessing) return;
+    // clear a random cell and neighbors
+    const idx = Math.floor(Math.random() * TOTAL);
+    const toClear = new Set([idx]);
+    const [r,c] = rcFromIndex(idx);
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    dirs.forEach(([dr,dc])=>{
+      const rr = r+dr, cc = c+dc;
+      if(rr>=0 && rr<ROWS && cc>=0 && cc<COLS) toClear.add(indexFromRC(rr,cc));
     });
-
-    function isNeighbor(a, b) {
-      if (typeof a !== 'number' || typeof b !== 'number') return false;
-      const A = rc(a), B = rc(b);
-      const dr = Math.abs(A.r - B.r), dc = Math.abs(A.c - B.c);
-      return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
-    }
+    // remove them (simulate match)
+    const matches = [{cells: [...toClear]}];
+    resolveMatches(matches);
   }
 
-  function shuffleBoard() {
-    for (let i = state.boardArr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [state.boardArr[i], state.boardArr[j]] = [state.boardArr[j], state.boardArr[i]];
-    }
-    // avoid initial matches
-    for (let a = 0; a < 8; a++) {
-      if (findAllMatches().length === 0) break;
-      for (let i = 0; i < state.boardArr.length; i++) state.boardArr[i] = randCandy();
-    }
-    renderBoard();
+  // initialize UI listeners
+  function bindUI(){
+    boardEl = document.getElementById('board');
+    scoreEl = document.getElementById('score');
+    coinsEl = document.getElementById('coins');
+    levelNumEl = document.getElementById('level-num');
+    // start button
+    document.getElementById('btn-start')?.addEventListener('click', ()=>{
+      startLevel(1);
+      document.getElementById('home').classList.add('hidden');
+      document.getElementById('map').classList.add('hidden');
+      document.getElementById('game').classList.remove('hidden');
+    });
+    // restart & shuffle
+    document.getElementById('btn-restart')?.addEventListener('click', ()=> restart());
+    document.getElementById('btn-shuffle')?.addEventListener('click', ()=> shuffleBoard());
+    // shop button handled by shop.js
+    // back buttons handled in level-map.js
   }
 
-  function restartLevel() {
-    state.score = 0;
-    initBoardRandom();
-    renderBoard();
-    updateUI();
+  function startLevel(level){
+    // set level, reset score etc.
+    currentLevel = level || 1;
+    if(levelNumEl) levelNumEl.textContent = currentLevel;
+    setScore(0);
+    const st = Storage.get('candy_state') || { coins: 0 };
+    if(coinsEl) coinsEl.textContent = st.coins || 0;
+    // build grid and DOM
+    createGrid();
+    if(!boardEl) boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+    buildBoardDOM();
   }
 
-  async function startLevel(level = 1) {
-    console.log('CandyGame.startLevel', level);
-    state.level = level;
-    state.score = 0;
-    initBoardRandom();
-    renderBoard();
-    updateUI();
-    // show game page if present
-    const gamePage = document.getElementById('game');
-    if (gamePage) {
-      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-      gamePage.classList.remove('hidden');
-    }
+  // Utility to find matches used above
+  function findMatchesOnGridLocal() {
+    return findMatchesOnGrid(grid);
   }
 
-  // attach buttons
-  if (btnRestart) btnRestart.addEventListener('click', () => { if (!state.isProcessing) restartLevel(); });
-  if (btnShuffle) btnShuffle.addEventListener('click', () => { if (!state.isProcessing) shuffleBoard(); });
-  if (btnStart) btnStart.addEventListener('click', () => { window.CandyGame.startLevel(1); });
-
-  window.CandyGame = window.CandyGame || {};
-  window.CandyGame.startLevel = startLevel;
-  window.CandyGame.getState = () => ({ ...state });
-
-  // boot
-  function boot() {
-    initBoardRandom();
-    renderBoard();
-    updateUI();
+  // Expose public API
+  function init(){
+    bindUI();
+    SafeUI.log('CandyEngine ready');
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
 
+  // expose to window after DOM ready
+  document.addEventListener('DOMContentLoaded', ()=> {
+    init();
+    // optional auto-start first level? No — start via button or level map
+  });
+
+  return {
+    startLevel,
+    shuffleBoard,
+    restart,
+    triggerBomb,
+    findMatchesOnGridLocal,
+  };
 })();
