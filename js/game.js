@@ -1,348 +1,378 @@
-/* js/game.js */
-/* Simple but working match-3 engine:
-   - 8x8 board
-   - 6 candy types (images: images/candy1.png .. candy6.png)
-   - click/tap select then click neighbor to swap OR touch-swipe to swap
-   - matches removed, gravity, refill, score updated
-   - CandyGame.startLevel(n) exposed
-*/
+// js/game.js
+// Simple Candy Match engine: 8x8 grid, drag-to-swap, match-3 detect, collapse+refill.
+// Requires in HTML: #board, #score, #coins, #level-num, #btn-restart, #btn-shuffle
+// Images: images/candy1.png ... images/candy6.png
 
-const CandyGame = (function(){
-  const cols = 8, rows = 8;
-  const types = 6; // candy1..candy6
-  let board = new Array(rows*cols).fill(0);
-  let selectedIndex = null;
-  let score = 0;
-  let coins = 0;
-  let levelNum = 1;
-  let boardEl, scoreEl, coinsEl, levelEl;
-  let isProcessing = false;
+(function () {
+  console.log('CandyEngine ready');
 
-  function randCandy(){ return Math.floor(Math.random()*types) + 1; }
+  const SIZE = 8; // grid size (8x8)
+  const CANDY_COUNT = 6; // number of candy types (images candy1..candy6)
+  const tileSizePx = null; // not used here, CSS controls size
 
-  function idx(r,c){ return r*cols + c; }
-  function rc(i){ return [Math.floor(i/cols), i%cols]; }
+  // state
+  const state = {
+    boardArr: [], // linear array length SIZE*SIZE storing candyId (1..CANDY_COUNT)
+    score: 0,
+    coins: 0,
+    level: 1,
+    isProcessing: false
+  };
 
-  // create initial board without immediate matches
-  function createBoard(){
-    for(let r=0;r<rows;r++){
-      for(let c=0;c<cols;c++){
-        let i = idx(r,c);
-        do {
-          board[i] = randCandy();
-        } while (createsMatchAt(i));
-      }
-    }
+  // DOM
+  const boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const coinsEl = document.getElementById('coins');
+  const levelEl = document.getElementById('level-num');
+  const btnRestart = document.getElementById('btn-restart');
+  const btnShuffle = document.getElementById('btn-shuffle');
+
+  if (!boardEl) {
+    console.warn('CandyEngine: #board not found in DOM yet');
   }
 
-  // check if placing current board[i] causes immediate match (used while populating)
-  function createsMatchAt(i){
-    const [r,c] = rc(i);
-    const val = board[i];
-    // horizontal left 2
-    if(c>=2 && board[idx(r,c-1)]===val && board[idx(r,c-2)]===val) return true;
-    // vertical up 2
-    if(r>=2 && board[idx(r-1,c)]===val && board[idx(r-2,c)]===val) return true;
-    return false;
+  // public API holder
+  window.CandyGame = window.CandyGame || {};
+
+  // helper: index conversions
+  function idx(row, col) {
+    return row * SIZE + col;
+  }
+  function rc(index) {
+    return { r: Math.floor(index / SIZE), c: index % SIZE };
   }
 
-  // render
-  function render(){
-    if(!boardEl) return;
-    boardEl.innerHTML = '';
-    for(let i=0;i<rows*cols;i++){
-      const div = document.createElement('div');
-      div.className = 'tile';
-      div.dataset.index = i;
-      const n = board[i];
+  // create random candy id 1..CANDY_COUNT
+  function randCandy() {
+    return Math.floor(Math.random() * CANDY_COUNT) + 1;
+  }
+
+  // render board DOM
+  function renderBoard() {
+    if (!boardEl) return;
+    boardEl.innerHTML = ''; // clear
+    // create tiles as buttons/divs
+    for (let i = 0; i < SIZE * SIZE; i++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.dataset.index = i;
+      const candyId = state.boardArr[i];
       const img = document.createElement('img');
       img.alt = 'candy';
-      img.src = `images/candy${n}.png`;
-      div.appendChild(img);
-      // selected UI
-      if(selectedIndex === i) div.classList.add('selected');
-      boardEl.appendChild(div);
+      // use images/candy{n}.png
+      img.src = `images/candy${candyId}.png`;
+      // onerror fallback to show nothing if missing
+      img.onerror = function () { this.style.display = 'none'; };
+      tile.appendChild(img);
+      boardEl.appendChild(tile);
     }
-    // update stats UI
-    scoreEl.textContent = score;
-    coinsEl.textContent = coins;
-    levelEl.textContent = levelNum;
+    attachDragHandlers();
   }
 
-  // neighbours?
-  function isNeighbor(a,b){
-    const [ra,ca] = rc(a);
-    const [rb,cb] = rc(b);
-    const dr = Math.abs(ra-rb);
-    const dc = Math.abs(ca-cb);
-    return (dr+dc)===1;
+  // initialize board with random candies but ensure no initial matches
+  function initBoardRandom() {
+    state.boardArr = new Array(SIZE * SIZE).fill(0).map(_ => randCandy());
+    // remove immediate matches by reshuffling problematic tiles
+    // simple approach: while matches exist, replace those tiles
+    let attempts = 0;
+    while (true) {
+      const matches = findAllMatches();
+      if (matches.length === 0) break;
+      matches.forEach(group => {
+        group.forEach(idx => state.boardArr[idx] = randCandy());
+      });
+      if (++attempts > 10) break;
+    }
   }
 
-  // swap in array
-  function swap(i,j){
-    const t = board[i]; board[i]=board[j]; board[j]=t;
-  }
-
-  // find matches (return array of indices to remove)
-  function findMatches(){
-    const remove = new Set();
+  // find all matches (returns array of arrays of indices)
+  function findAllMatches() {
+    const found = [];
     // horizontal
-    for(let r=0;r<rows;r++){
-      let runVal = null, runStart=0;
-      for(let c=0;c<=cols;c++){
-        const i = idx(r,c);
-        const val = (c<cols)? board[i] : null;
-        if(val === runVal){
+    for (let r = 0; r < SIZE; r++) {
+      let runStart = 0;
+      for (let c = 1; c <= SIZE; c++) {
+        const prev = state.boardArr[idx(r, c - 1)];
+        const cur = c < SIZE ? state.boardArr[idx(r, c)] : null;
+        if (c < SIZE && cur === prev) {
           // continue
         } else {
-          const runLen = c - runStart;
-          if(runVal !== null && runLen >= 3){
-            for(let k=runStart;k<c;k++) remove.add(idx(r,k));
+          const len = c - runStart;
+          if (len >= 3) {
+            const group = [];
+            for (let k = runStart; k < runStart + len; k++) group.push(idx(r, k));
+            found.push(group);
           }
-          runVal = val;
           runStart = c;
         }
       }
     }
     // vertical
-    for(let c=0;c<cols;c++){
-      let runVal = null, runStart=0;
-      for(let r=0;r<=rows;r++){
-        const i = (r<rows)? idx(r,c) : null;
-        const val = (r<rows)? board[i] : null;
-        if(val === runVal){
+    for (let c = 0; c < SIZE; c++) {
+      let runStart = 0;
+      for (let r = 1; r <= SIZE; r++) {
+        const prev = state.boardArr[idx(r - 1, c)];
+        const cur = r < SIZE ? state.boardArr[idx(r, c)] : null;
+        if (r < SIZE && cur === prev) {
+          // continue
         } else {
-          const runLen = r - runStart;
-          if(runVal !== null && runLen >= 3){
-            for(let k=runStart;k<r;k++) remove.add(idx(k,c));
+          const len = r - runStart;
+          if (len >= 3) {
+            const group = [];
+            for (let k = runStart; k < runStart + len; k++) group.push(idx(k, c));
+            found.push(group);
           }
-          runVal = val;
           runStart = r;
         }
       }
     }
-    return Array.from(remove);
+    // optionally merge overlapping groups if needed (not mandatory)
+    return found;
   }
 
-  // remove indices -> set to 0, add score
-  function removeMatches(indices){
-    indices.forEach(i=>{
-      board[i] = 0;
-      score += 10;
+  // remove matches (set to 0), return total removed count
+  function removeMatches(groups) {
+    const removedSet = new Set();
+    groups.forEach(g => g.forEach(i => removedSet.add(i)));
+    removedSet.forEach(i => state.boardArr[i] = 0);
+    return removedSet.size;
+  }
+
+  // collapse columns (gravity) and refill from top
+  function collapseAndRefill() {
+    for (let c = 0; c < SIZE; c++) {
+      const col = [];
+      for (let r = 0; r < SIZE; r++) {
+        const val = state.boardArr[idx(r, c)];
+        if (val !== 0) col.push(val);
+      }
+      // fill from bottom
+      const missing = SIZE - col.length;
+      const newCol = new Array(missing).fill(0).map(_ => randCandy()).concat(col);
+      for (let r = 0; r < SIZE; r++) state.boardArr[idx(r, c)] = newCol[r];
+    }
+  }
+
+  // swap two indices in boardArr
+  function swapIndices(a, b) {
+    const tmp = state.boardArr[a];
+    state.boardArr[a] = state.boardArr[b];
+    state.boardArr[b] = tmp;
+  }
+
+  // attempt to swap and process matches, undo if no match
+  async function attemptSwap(a, b) {
+    if (state.isProcessing) return;
+    state.isProcessing = true;
+    swapIndices(a, b);
+    renderBoard(); // immediate visual
+    await sleep(120);
+    let groups = findAllMatches();
+    if (groups.length === 0) {
+      // no matches, undo
+      swapIndices(a, b);
+      renderBoard();
+      state.isProcessing = false;
+      return;
+    }
+    // we have matches -> process until no more
+    while (groups.length > 0) {
+      const removed = removeMatches(groups);
+      state.score += removed * 10;
+      updateUI();
+      renderBoard();
+      await sleep(180);
+      collapseAndRefill();
+      renderBoard();
+      await sleep(180);
+      groups = findAllMatches();
+    }
+    state.isProcessing = false;
+  }
+
+  function updateUI() {
+    if (scoreEl) scoreEl.textContent = state.score;
+    if (coinsEl) coinsEl.textContent = state.coins;
+    if (levelEl) levelEl.textContent = state.level;
+  }
+
+  function sleep(ms) {
+    return new Promise(res => setTimeout(res, ms));
+  }
+
+  // Drag & touch handling
+  function attachDragHandlers() {
+    if (!boardEl) return;
+    let dragging = false;
+    let startIndex = null;
+    let startPos = null;
+
+    // Touch and mouse support
+    boardEl.querySelectorAll('.tile').forEach(tile => {
+      // prevent multiple bindings
+      tile.onpointerdown = handlePointerDown;
+      tile.onpointerup = handlePointerUp;
+      tile.onpointercancel = handlePointerCancel;
+      tile.ondragstart = e => e.preventDefault();
     });
-  }
 
-  // gravity + refill
-  function collapseAndRefill(){
-    for(let c=0;c<cols;c++){
-      let write = rows-1;
-      for(let r=rows-1;r>=0;r--){
-        const i = idx(r,c);
-        if(board[i] !== 0){
-          if(write !== r){
-            board[idx(write,c)] = board[i];
-            board[i] = 0;
+    function handlePointerDown(e) {
+      if (state.isProcessing) return;
+      dragging = true;
+      startIndex = parseInt(this.dataset.index);
+      startPos = getPoint(e);
+      // mark selected
+      clearSelected();
+      this.classList.add('selected');
+      e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
+    }
+
+    function handlePointerUp(e) {
+      if (!dragging) return;
+      dragging = false;
+      const endIndex = parseInt(this.dataset.index);
+      const endPos = getPoint(e);
+      const swapped = trySwapByDrag(startIndex, endIndex, startPos, endPos);
+      clearSelected();
+      if (swapped) {
+        // swap and process
+        attemptSwap(startIndex, endIndex).catch(err => {
+          console.error('swap error', err);
+          state.isProcessing = false;
+        });
+      }
+      startIndex = null;
+      startPos = null;
+    }
+
+    function handlePointerCancel(e) {
+      dragging = false;
+      clearSelected();
+      startIndex = null;
+      startPos = null;
+    }
+
+    function getPoint(e) {
+      if (e.touches && e.touches[0]) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else {
+        return { x: e.clientX, y: e.clientY };
+      }
+    }
+
+    function clearSelected() {
+      boardEl.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
+    }
+
+    // decide if swap is valid neighbour (by index OR by drag direction and neighbour distance)
+    function trySwapByDrag(startIdx, endIdx, startPos, endPos) {
+      if (startIdx == null || endIdx == null) return false;
+      if (startIdx === endIdx) return false;
+      const s = rc(startIdx);
+      const e = rc(endIdx);
+      const dr = Math.abs(s.r - e.r);
+      const dc = Math.abs(s.c - e.c);
+      // neighbor only
+      if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+        return true;
+      }
+      // fallback: if user dragged more than 20px horizontally/vertically, find neighbour in that direction
+      if (startPos && endPos) {
+        const dx = endPos.x - startPos.x;
+        const dy = endPos.y - startPos.y;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) {
+          // horizontal
+          const dir = dx > 0 ? 1 : -1;
+          const targetC = s.c + dir;
+          if (targetC >= 0 && targetC < SIZE) {
+            const targetIdx = idx(s.r, targetC);
+            // update endIdx to neighbour
+            endIdx = targetIdx;
+            return true;
           }
-          write--;
+        } else if (Math.abs(dy) > 20) {
+          const dir = dy > 0 ? 1 : -1;
+          const targetR = s.r + dir;
+          if (targetR >= 0 && targetR < SIZE) {
+            const targetIdx = idx(targetR, s.c);
+            endIdx = targetIdx;
+            return true;
+          }
         }
       }
-      // fill remaining at top
-      for(let r=write; r>=0; r--){
-        board[idx(r,c)] = randCandy();
-      }
+      return false;
     }
   }
 
-  // attempt swap and resolve matches; if no match revert
-  async function trySwap(i,j){
-    if(isProcessing) return;
-    if(!isNeighbor(i,j)) return;
-    isProcessing = true;
-    swap(i,j);
-    render();
-    await sleep(150);
-    let matches = findMatches();
-    if(matches.length === 0){
-      // revert
-      swap(i,j);
-      render();
-      await sleep(120);
-      isProcessing = false;
-      return;
+  // Shuffle board randomly
+  function shuffleBoard() {
+    // Fisher-Yates on boardArr
+    for (let i = state.boardArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = state.boardArr[i];
+      state.boardArr[i] = state.boardArr[j];
+      state.boardArr[j] = t;
     }
-    // resolve chain
-    while(matches.length){
-      removeMatches(matches);
-      render();
-      await sleep(150);
-      collapseAndRefill();
-      render();
-      await sleep(180);
-      matches = findMatches();
+    // ensure no immediate matches (simple attempt)
+    let attempts = 0;
+    while (findAllMatches().length > 0 && attempts++ < 8) {
+      for (let i = 0; i < state.boardArr.length; i++) state.boardArr[i] = randCandy();
     }
-    // after all resolved
-    isProcessing = false;
-    unlockNextIfNeeded();
+    renderBoard();
   }
 
-  // small util
-  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+  // Restart level
+  function restartLevel() {
+    state.score = 0;
+    state.coins = state.coins; // keep coins
+    initBoardRandom();
+    renderBoard();
+    updateUI();
+  }
 
-  // event handlers - click select & swap
-  function onTileClick(e){
-    if(isProcessing) return;
-    const t = e.target.closest('.tile');
-    if(!t) return;
-    const i = Number(t.dataset.index);
-    if(selectedIndex === null){
-      selectedIndex = i;
-      render();
-    } else {
-      if(i === selectedIndex){
-        selectedIndex = null;
-        render();
-      } else if(isNeighbor(i, selectedIndex)){
-        const a = selectedIndex; selectedIndex = null;
-        trySwap(a, i);
-      } else {
-        // change selection
-        selectedIndex = i;
-        render();
-      }
+  // Start a level (public)
+  async function startLevel(levelNumber = 1) {
+    console.log('CandyGame.startLevel', levelNumber);
+    state.level = levelNumber;
+    state.score = 0;
+    // you can change difficulty by levelNumber: here we keep same grid but could vary candies
+    initBoardRandom();
+    renderBoard();
+    updateUI();
+    // show game page - if page manager exists (index.html inline does)
+    const gamePage = document.getElementById('game');
+    if (gamePage) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      gamePage.classList.remove('hidden');
+      gamePage.classList.add('page--active');
     }
   }
 
-  // touch swipe support
-  let touchStart = null;
-  function onTouchStart(e){
-    if(isProcessing) return;
-    const t = e.target.closest('.tile');
-    if(!t) return;
-    touchStart = {x: e.touches ? e.touches[0].clientX : e.clientX, y: e.touches ? e.touches[0].clientY : e.clientY, idx: Number(t.dataset.index)};
+  // attach restart / shuffle buttons
+  if (btnRestart) btnRestart.addEventListener('click', () => {
+    if (state.isProcessing) return;
+    restartLevel();
+  });
+  if (btnShuffle) btnShuffle.addEventListener('click', () => {
+    if (state.isProcessing) return;
+    shuffleBoard();
+  });
+
+  // Expose API
+  window.CandyGame.startLevel = startLevel;
+  window.CandyGame.getState = () => ({...state});
+
+  // quick init if board element already present; otherwise wait DOMContentLoaded
+  function bootIfReady() {
+    if (!boardEl) return;
+    initBoardRandom();
+    renderBoard();
+    updateUI();
   }
-  function onTouchEnd(e){
-    if(!touchStart || isProcessing) { touchStart = null; return; }
-    const endX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-    const endY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-    const dx = endX - touchStart.x;
-    const dy = endY - touchStart.y;
-    const absX = Math.abs(dx), absY = Math.abs(dy);
-    let targetIdx = null;
-    const [r,c] = rc(touchStart.idx);
-    if(Math.max(absX,absY) < 20){
-      // treat as tap
-      const fake = {target: document.querySelector(`.tile[data-index="${touchStart.idx}"]`)};
-      onTileClick(fake);
-      touchStart = null;
-      return;
-    }
-    if(absX > absY){
-      // horizontal swipe
-      if(dx > 0) { if(c < cols-1) targetIdx = idx(r, c+1); }
-      else { if(c > 0) targetIdx = idx(r, c-1); }
-    } else {
-      // vertical swipe
-      if(dy > 0) { if(r < rows-1) targetIdx = idx(r+1, c); }
-      else { if(r > 0) targetIdx = idx(r-1, c); }
-    }
-    if(targetIdx !== null){
-      trySwap(touchStart.idx, targetIdx);
-    }
-    touchStart = null;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootIfReady);
+  } else {
+    bootIfReady();
   }
 
-  // shuffle board (randomize)
-  function shuffleBoard(){
-    if(isProcessing) return;
-    // basic shuffle
-    for(let i=0;i<board.length;i++){
-      const j = Math.floor(Math.random()*board.length);
-      const t = board[i]; board[i] = board[j]; board[j] = t;
-    }
-    // ensure no immediate matches
-    for(let i=0;i<board.length;i++){
-      if(createsMatchAt(i)){
-        board[i] = randCandy();
-      }
-    }
-    render();
-  }
-
-  // level unlock logic (store)
-  function unlockNextIfNeeded(){
-    // simple rule: when score crosses threshold (e.g., level*500) unlock next
-    const unlocked = Storage.get('unlockedLevels', 1);
-    const goal = levelNum * 500;
-    if(score >= goal && unlocked < levelNum + 1){
-      Storage.set('unlockedLevels', levelNum+1);
-      coins += 50;
-      // notify
-      console.log('Level complete! Next unlocked:', levelNum+1);
-    }
-  }
-
-  // expose startLevel
-  function startLevel(n=1){
-    // set UI pages
-    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-    document.getElementById('game').classList.remove('hidden');
-    levelNum = n;
-    score = 0;
-    coins = Storage.get('coins', 0) || 0;
-    // prepare
-    createBoard();
-    render();
-    bindBoardEvents();
-    console.log('CandyGame ready, level', n);
-  }
-
-  // bind board events (only once)
-  function bindBoardEvents(){
-    boardEl = document.getElementById('board');
-    scoreEl = document.getElementById('score');
-    coinsEl = document.getElementById('coins');
-    levelEl = document.getElementById('level-num');
-
-    // ensure listeners only once
-    boardEl.removeEventListener('click', onTileClick);
-    boardEl.addEventListener('click', onTileClick);
-
-    boardEl.removeEventListener('touchstart', onTouchStart);
-    boardEl.removeEventListener('touchend', onTouchEnd);
-    boardEl.addEventListener('touchstart', onTouchStart, {passive:true});
-    boardEl.addEventListener('touchend', onTouchEnd);
-
-    // restart/shuffle buttons
-    document.getElementById('btn-restart').onclick = ()=> startLevel(levelNum);
-    document.getElementById('btn-shuffle').onclick = ()=> shuffleBoard();
-  }
-
-  // init hooking start button & map navigation
-  function initUI(){
-    document.getElementById('btn-start').addEventListener('click', ()=>{
-      // start default level 1
-      startLevel(1);
-    });
-    document.getElementById('btn-map').addEventListener('click', ()=>{
-      document.getElementById('home').classList.add('hidden');
-      document.getElementById('map').classList.remove('hidden');
-    });
-    // also back buttons handled in safe-ui.js
-  }
-
-  // public API
-  return {
-    init(){
-      initUI();
-      console.log('CandyEngine ready');
-    },
-    startLevel
-  };
 })();
-
-// init on DOM ready
-document.addEventListener('DOMContentLoaded', ()=>{
-  // ensure global reference
-  window.CandyGame = CandyGame;
-  CandyGame.init();
-});
