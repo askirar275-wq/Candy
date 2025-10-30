@@ -1,25 +1,26 @@
 // js/game.js
-// Simple Candy Match engine: 8x8 grid, drag-to-swap, match-3 detect, collapse+refill.
-// Requires in HTML: #board, #score, #coins, #level-num, #btn-restart, #btn-shuffle
+// Candy Match engine: configurable rows x cols, drag/touch swap, match-3 detect, gravity refill.
+// Usage: ensure index.html में मौजूद हों: #board, #score, #coins, #level-num, #btn-restart, #btn-shuffle
 // Images: images/candy1.png ... images/candy6.png
 
 (function () {
   console.log('CandyEngine ready');
 
-  const SIZE = 8; // grid size (8x8)
-  const CANDY_COUNT = 6; // number of candy types (images candy1..candy6)
-  const tileSizePx = null; // not used here, CSS controls size
+  // CONFIG: rows x cols
+  const ROWS = 8;   // height
+  const COLS = 6;   // width
+  const CANDY_COUNT = 6; // candy images count (candy1..candy6)
 
   // state
   const state = {
-    boardArr: [], // linear array length SIZE*SIZE storing candyId (1..CANDY_COUNT)
+    boardArr: [], // length ROWS * COLS
     score: 0,
     coins: 0,
     level: 1,
     isProcessing: false
   };
 
-  // DOM
+  // DOM refs (must exist in index.html)
   const boardEl = document.getElementById('board');
   const scoreEl = document.getElementById('score');
   const coinsEl = document.getElementById('coins');
@@ -27,75 +28,64 @@
   const btnRestart = document.getElementById('btn-restart');
   const btnShuffle = document.getElementById('btn-shuffle');
 
-  if (!boardEl) {
-    console.warn('CandyEngine: #board not found in DOM yet');
-  }
+  if (!boardEl) console.warn('CandyEngine: #board not found');
 
-  // public API holder
+  // API holder
   window.CandyGame = window.CandyGame || {};
 
-  // helper: index conversions
-  function idx(row, col) {
-    return row * SIZE + col;
-  }
-  function rc(index) {
-    return { r: Math.floor(index / SIZE), c: index % SIZE };
+  // helpers
+  function idx(r, c) { return r * COLS + c; }
+  function rc(index) { return { r: Math.floor(index / COLS), c: index % COLS }; }
+  function randCandy() { return Math.floor(Math.random() * CANDY_COUNT) + 1; }
+  function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+  // initialize board with random candies and try to avoid immediate matches
+  function initBoardRandom() {
+    state.boardArr = new Array(ROWS * COLS).fill(0).map(_ => randCandy());
+    // simple fix: if any initial matches exist, replace those tiles
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const matches = findAllMatches();
+      if (matches.length === 0) break;
+      matches.forEach(g => g.forEach(i => state.boardArr[i] = randCandy()));
+    }
   }
 
-  // create random candy id 1..CANDY_COUNT
-  function randCandy() {
-    return Math.floor(Math.random() * CANDY_COUNT) + 1;
-  }
-
-  // render board DOM
+  // render board
   function renderBoard() {
     if (!boardEl) return;
-    boardEl.innerHTML = ''; // clear
-    // create tiles as buttons/divs
-    for (let i = 0; i < SIZE * SIZE; i++) {
+    boardEl.innerHTML = '';
+    // set grid CSS properties (so CSS can use)
+    boardEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    boardEl.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+
+    for (let i = 0; i < ROWS * COLS; i++) {
       const tile = document.createElement('div');
       tile.className = 'tile';
       tile.dataset.index = i;
-      const candyId = state.boardArr[i];
+      const candyId = state.boardArr[i] || 0;
       const img = document.createElement('img');
       img.alt = 'candy';
-      // use images/candy{n}.png
-      img.src = `images/candy${candyId}.png`;
-      // onerror fallback to show nothing if missing
+      img.draggable = false;
+      img.src = candyId ? `images/candy${candyId}.png` : '';
       img.onerror = function () { this.style.display = 'none'; };
       tile.appendChild(img);
       boardEl.appendChild(tile);
     }
-    attachDragHandlers();
+    attachPointerHandlers();
   }
 
-  // initialize board with random candies but ensure no initial matches
-  function initBoardRandom() {
-    state.boardArr = new Array(SIZE * SIZE).fill(0).map(_ => randCandy());
-    // remove immediate matches by reshuffling problematic tiles
-    // simple approach: while matches exist, replace those tiles
-    let attempts = 0;
-    while (true) {
-      const matches = findAllMatches();
-      if (matches.length === 0) break;
-      matches.forEach(group => {
-        group.forEach(idx => state.boardArr[idx] = randCandy());
-      });
-      if (++attempts > 10) break;
-    }
-  }
-
-  // find all matches (returns array of arrays of indices)
+  // find matches horizontally and vertically
   function findAllMatches() {
     const found = [];
+
     // horizontal
-    for (let r = 0; r < SIZE; r++) {
+    for (let r = 0; r < ROWS; r++) {
       let runStart = 0;
-      for (let c = 1; c <= SIZE; c++) {
+      for (let c = 1; c <= COLS; c++) {
         const prev = state.boardArr[idx(r, c - 1)];
-        const cur = c < SIZE ? state.boardArr[idx(r, c)] : null;
-        if (c < SIZE && cur === prev) {
-          // continue
+        const cur = (c < COLS) ? state.boardArr[idx(r, c)] : null;
+        if (c < COLS && cur === prev && prev !== 0) {
+          // continue run
         } else {
           const len = c - runStart;
           if (len >= 3) {
@@ -107,13 +97,14 @@
         }
       }
     }
+
     // vertical
-    for (let c = 0; c < SIZE; c++) {
+    for (let c = 0; c < COLS; c++) {
       let runStart = 0;
-      for (let r = 1; r <= SIZE; r++) {
+      for (let r = 1; r <= ROWS; r++) {
         const prev = state.boardArr[idx(r - 1, c)];
-        const cur = r < SIZE ? state.boardArr[idx(r, c)] : null;
-        if (r < SIZE && cur === prev) {
+        const cur = (r < ROWS) ? state.boardArr[idx(r, c)] : null;
+        if (r < ROWS && cur === prev && prev !== 0) {
           // continue
         } else {
           const len = r - runStart;
@@ -126,196 +117,168 @@
         }
       }
     }
-    // optionally merge overlapping groups if needed (not mandatory)
     return found;
   }
 
-  // remove matches (set to 0), return total removed count
+  // remove matches (set to 0) and return removed count
   function removeMatches(groups) {
-    const removedSet = new Set();
-    groups.forEach(g => g.forEach(i => removedSet.add(i)));
-    removedSet.forEach(i => state.boardArr[i] = 0);
-    return removedSet.size;
+    const removed = new Set();
+    groups.forEach(g => g.forEach(i => removed.add(i)));
+    removed.forEach(i => state.boardArr[i] = 0);
+    return removed.size;
   }
 
-  // collapse columns (gravity) and refill from top
+  // collapse columns (gravity downwards) and refill top with random candies
   function collapseAndRefill() {
-    for (let c = 0; c < SIZE; c++) {
-      const col = [];
-      for (let r = 0; r < SIZE; r++) {
-        const val = state.boardArr[idx(r, c)];
-        if (val !== 0) col.push(val);
+    for (let c = 0; c < COLS; c++) {
+      const colVals = [];
+      for (let r = 0; r < ROWS; r++) {
+        const v = state.boardArr[idx(r, c)];
+        if (v !== 0) colVals.push(v);
       }
-      // fill from bottom
-      const missing = SIZE - col.length;
-      const newCol = new Array(missing).fill(0).map(_ => randCandy()).concat(col);
-      for (let r = 0; r < SIZE; r++) state.boardArr[idx(r, c)] = newCol[r];
+      const missing = ROWS - colVals.length;
+      const newCol = new Array(missing).fill(0).map(_ => randCandy()).concat(colVals);
+      for (let r = 0; r < ROWS; r++) state.boardArr[idx(r, c)] = newCol[r];
     }
   }
 
-  // swap two indices in boardArr
+  // swap indices
   function swapIndices(a, b) {
-    const tmp = state.boardArr[a];
+    const t = state.boardArr[a];
     state.boardArr[a] = state.boardArr[b];
-    state.boardArr[b] = tmp;
+    state.boardArr[b] = t;
   }
 
-  // attempt to swap and process matches, undo if no match
+  // try a swap and process matches; if no matches, undo
   async function attemptSwap(a, b) {
     if (state.isProcessing) return;
     state.isProcessing = true;
     swapIndices(a, b);
-    renderBoard(); // immediate visual
+    renderBoard();
     await sleep(120);
     let groups = findAllMatches();
     if (groups.length === 0) {
-      // no matches, undo
-      swapIndices(a, b);
+      swapIndices(a, b); // undo
       renderBoard();
       state.isProcessing = false;
-      return;
+      return false;
     }
-    // we have matches -> process until no more
+    // process until no more matches
     while (groups.length > 0) {
-      const removed = removeMatches(groups);
-      state.score += removed * 10;
+      const removedCount = removeMatches(groups);
+      state.score += removedCount * 10;
       updateUI();
       renderBoard();
-      await sleep(180);
+      await sleep(160);
       collapseAndRefill();
       renderBoard();
-      await sleep(180);
+      await sleep(160);
       groups = findAllMatches();
     }
     state.isProcessing = false;
+    return true;
   }
 
+  // update UI numbers
   function updateUI() {
     if (scoreEl) scoreEl.textContent = state.score;
     if (coinsEl) coinsEl.textContent = state.coins;
     if (levelEl) levelEl.textContent = state.level;
   }
 
-  function sleep(ms) {
-    return new Promise(res => setTimeout(res, ms));
-  }
-
-  // Drag & touch handling
-  function attachDragHandlers() {
+  // pointer (mouse/touch) handling for swipes
+  function attachPointerHandlers() {
     if (!boardEl) return;
-    let dragging = false;
-    let startIndex = null;
-    let startPos = null;
-
-    // Touch and mouse support
-    boardEl.querySelectorAll('.tile').forEach(tile => {
-      // prevent multiple bindings
-      tile.onpointerdown = handlePointerDown;
-      tile.onpointerup = handlePointerUp;
-      tile.onpointercancel = handlePointerCancel;
-      tile.ondragstart = e => e.preventDefault();
+    // remove previous handlers safety
+    boardEl.querySelectorAll('.tile').forEach(t => {
+      t.onpointerdown = null;
+      t.onpointerup = null;
+      t.onpointermove = null;
+      t.onpointercancel = null;
     });
 
-    function handlePointerDown(e) {
-      if (state.isProcessing) return;
-      dragging = true;
-      startIndex = parseInt(this.dataset.index);
-      startPos = getPoint(e);
-      // mark selected
-      clearSelected();
-      this.classList.add('selected');
-      e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
-    }
+    let startIdx = null;
+    let startPoint = null;
+    let activePointerId = null;
 
-    function handlePointerUp(e) {
-      if (!dragging) return;
-      dragging = false;
-      const endIndex = parseInt(this.dataset.index);
-      const endPos = getPoint(e);
-      const swapped = trySwapByDrag(startIndex, endIndex, startPos, endPos);
-      clearSelected();
-      if (swapped) {
-        // swap and process
-        attemptSwap(startIndex, endIndex).catch(err => {
-          console.error('swap error', err);
-          state.isProcessing = false;
-        });
-      }
-      startIndex = null;
-      startPos = null;
-    }
+    boardEl.querySelectorAll('.tile').forEach(tile => {
+      tile.onpointerdown = function (e) {
+        if (state.isProcessing) return;
+        // capture pointer
+        activePointerId = e.pointerId;
+        this.setPointerCapture && this.setPointerCapture(activePointerId);
+        startIdx = parseInt(this.dataset.index);
+        startPoint = { x: e.clientX, y: e.clientY };
+        tile.classList.add('selected');
+      };
+      tile.onpointerup = function (e) {
+        if (state.isProcessing) {
+          clearSelection();
+          return;
+        }
+        const endIdx = parseInt(this.dataset.index);
+        const endPoint = { x: e.clientX, y: e.clientY };
+        clearSelection();
+        // first try neighbor by direct tile (tap on neighbor)
+        if (isNeighbor(startIdx, endIdx)) {
+          attemptSwap(startIdx, endIdx).catch(console.error);
+          startIdx = null;
+          startPoint = null;
+          return;
+        }
+        // otherwise detect swipe direction from startPoint -> endPoint
+        if (startPoint && Math.abs(endPoint.x - startPoint.x) + Math.abs(endPoint.y - startPoint.y) > 20) {
+          const dx = endPoint.x - startPoint.x;
+          const dy = endPoint.y - startPoint.y;
+          let targetIdx = null;
+          const s = rc(startIdx);
+          if (Math.abs(dx) > Math.abs(dy)) {
+            // horizontal swipe
+            const dir = dx > 0 ? 1 : -1;
+            const tc = s.c + dir;
+            if (tc >= 0 && tc < COLS) targetIdx = idx(s.r, tc);
+          } else {
+            // vertical swipe
+            const dir = dy > 0 ? 1 : -1;
+            const tr = s.r + dir;
+            if (tr >= 0 && tr < ROWS) targetIdx = idx(tr, s.c);
+          }
+          if (targetIdx !== null) {
+            attemptSwap(startIdx, targetIdx).catch(console.error);
+          }
+        }
+        startIdx = null;
+        startPoint = null;
+      };
+      tile.onpointercancel = function () {
+        clearSelection();
+        startIdx = null; startPoint = null;
+      };
+    });
 
-    function handlePointerCancel(e) {
-      dragging = false;
-      clearSelected();
-      startIndex = null;
-      startPos = null;
-    }
-
-    function getPoint(e) {
-      if (e.touches && e.touches[0]) {
-        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      } else {
-        return { x: e.clientX, y: e.clientY };
-      }
-    }
-
-    function clearSelected() {
+    function clearSelection() {
       boardEl.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
     }
 
-    // decide if swap is valid neighbour (by index OR by drag direction and neighbour distance)
-    function trySwapByDrag(startIdx, endIdx, startPos, endPos) {
-      if (startIdx == null || endIdx == null) return false;
-      if (startIdx === endIdx) return false;
-      const s = rc(startIdx);
-      const e = rc(endIdx);
-      const dr = Math.abs(s.r - e.r);
-      const dc = Math.abs(s.c - e.c);
-      // neighbor only
-      if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
-        return true;
-      }
-      // fallback: if user dragged more than 20px horizontally/vertically, find neighbour in that direction
-      if (startPos && endPos) {
-        const dx = endPos.x - startPos.x;
-        const dy = endPos.y - startPos.y;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) {
-          // horizontal
-          const dir = dx > 0 ? 1 : -1;
-          const targetC = s.c + dir;
-          if (targetC >= 0 && targetC < SIZE) {
-            const targetIdx = idx(s.r, targetC);
-            // update endIdx to neighbour
-            endIdx = targetIdx;
-            return true;
-          }
-        } else if (Math.abs(dy) > 20) {
-          const dir = dy > 0 ? 1 : -1;
-          const targetR = s.r + dir;
-          if (targetR >= 0 && targetR < SIZE) {
-            const targetIdx = idx(targetR, s.c);
-            endIdx = targetIdx;
-            return true;
-          }
-        }
-      }
-      return false;
+    function isNeighbor(a, b) {
+      if (typeof a !== 'number' || typeof b !== 'number') return false;
+      const sa = rc(a), sb = rc(b);
+      const dr = Math.abs(sa.r - sb.r), dc = Math.abs(sa.c - sb.c);
+      return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
     }
   }
 
-  // Shuffle board randomly
+  // Shuffle board (simple random)
   function shuffleBoard() {
-    // Fisher-Yates on boardArr
     for (let i = state.boardArr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      const t = state.boardArr[i];
+      const tmp = state.boardArr[i];
       state.boardArr[i] = state.boardArr[j];
-      state.boardArr[j] = t;
+      state.boardArr[j] = tmp;
     }
-    // ensure no immediate matches (simple attempt)
-    let attempts = 0;
-    while (findAllMatches().length > 0 && attempts++ < 8) {
+    // try to avoid immediate matches
+    for (let attempt = 0; attempt < 8; attempt++) {
+      if (findAllMatches().length === 0) break;
       for (let i = 0; i < state.boardArr.length; i++) state.boardArr[i] = randCandy();
     }
     renderBoard();
@@ -324,22 +287,20 @@
   // Restart level
   function restartLevel() {
     state.score = 0;
-    state.coins = state.coins; // keep coins
     initBoardRandom();
     renderBoard();
     updateUI();
   }
 
-  // Start a level (public)
+  // public: start level
   async function startLevel(levelNumber = 1) {
     console.log('CandyGame.startLevel', levelNumber);
     state.level = levelNumber;
     state.score = 0;
-    // you can change difficulty by levelNumber: here we keep same grid but could vary candies
     initBoardRandom();
     renderBoard();
     updateUI();
-    // show game page - if page manager exists (index.html inline does)
+    // show game page if present
     const gamePage = document.getElementById('game');
     if (gamePage) {
       document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -348,31 +309,24 @@
     }
   }
 
-  // attach restart / shuffle buttons
-  if (btnRestart) btnRestart.addEventListener('click', () => {
-    if (state.isProcessing) return;
-    restartLevel();
-  });
-  if (btnShuffle) btnShuffle.addEventListener('click', () => {
-    if (state.isProcessing) return;
-    shuffleBoard();
-  });
+  // Attach control buttons
+  if (btnRestart) btnRestart.addEventListener('click', () => { if (!state.isProcessing) restartLevel(); });
+  if (btnShuffle) btnShuffle.addEventListener('click', () => { if (!state.isProcessing) shuffleBoard(); });
 
-  // Expose API
+  // expose API
   window.CandyGame.startLevel = startLevel;
-  window.CandyGame.getState = () => ({...state});
+  window.CandyGame.getState = () => ({ ...state });
 
-  // quick init if board element already present; otherwise wait DOMContentLoaded
-  function bootIfReady() {
-    if (!boardEl) return;
+  // boot when DOM ready
+  function boot() {
     initBoardRandom();
     renderBoard();
     updateUI();
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootIfReady);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    bootIfReady();
+    boot();
   }
 
 })();
