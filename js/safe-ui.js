@@ -1,20 +1,24 @@
-// Eruda mobile console (optional)
-// if you included eruda script separately, you can init here.
-if (window.eruda && !window.erudaInitialized) {
-  eruda.init();
-  window.erudaInitialized = true;
-  console.log('Eruda console चालू हो गया');
-}
+// js/safe-ui.js
+// small ui helpers, and optional eruda init (debug logger)
 
-// small DOM navigation helper
-document.addEventListener('click', function(e){
-  const go = e.target.closest('[data-go]');
-  if(go){
-    const tgt = go.getAttribute('data-go');
-    if(tgt){
-      document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-      const el = document.getElementById(tgt);
-      if(el) el.classList.remove('hidden');
-    }
+const SafeUI = {
+  log(...args){ console.log(...args); },
+  warn(...args){ console.warn(...args); },
+  error(...args){ console.error(...args); },
+  // small visual toast (optional)
+  toast(msg, ms = 1500){
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'12px',
+      background:'rgba(0,0,0,0.7)',color:'#fff',padding:'8px 12px',borderRadius:'10px',zIndex:99999
+    });
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), ms);
   }
-});
+};
+
+// optional: eruda (uncomment if you host eruda or want CDN - development only)
+// (function(){ const enableEruda = false; if(enableEruda && typeof eruda === 'undefined'){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; s.onload=()=>eruda.init(); document.head.appendChild(s); } })();
+
+document.addEventListener('DOMContentLoaded', ()=> SafeUI.log('Safe UI loaded'));
