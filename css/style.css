@@ -1,75 +1,40 @@
-/* basic reset */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family: "Poppins",sans-serif;background:#f8f0f5;}
-
-/* full background layer (covers entire window) */
-.app-bg{
-  position:fixed;inset:0;background-size:cover;background-position:center;z-index:-2;
-  filter: none;
+/* General Styling */
+body {
+    background-color: #f0e6f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: sans-serif;
 }
 
-/* app container centers pages */
-.app{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:22px 12px;}
-
-/* each page */
-.page{
-  width:100%;max-width:480px;background:transparent;border-radius:14px;overflow:auto;
-  -webkit-overflow-scrolling:touch;padding-bottom:24px;
-}
-.page.hidden{display:none}
-.page--active{display:block}
-
-/* inner content card for pages */
-.page-inner{background:rgba(255,255,255,0.92);border-radius:18px;padding:16px;margin-top:10px;box-shadow:0 12px 28px rgba(0,0,0,0.08)}
-
-/* HOME hero */
-.hero-card{background:rgba(255,255,255,0.96);border-radius:20px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,0.14);text-align:center}
-.hero-top{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
-.hero-logo{width:56px;height:56px;object-fit:contain}
-.hero-card h1{font-size:28px;color:#ff2b87;margin:0}
-.hero-sub{color:#333;opacity:0.95;margin:8px 0 14px}
-.hero-actions{display:flex;flex-direction:column;gap:12px;margin:6px 0 14px}
-.hero-footer{font-size:13px;color:#666;margin-top:8px}
-
-/* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:12px;padding:10px 14px;font-size:15px;background:#fff;color:#222;box-shadow:0 8px 16px rgba(0,0,0,0.06)}
-.btn.full{width:100%}
-.btn.primary{background:linear-gradient(180deg,#ff88b3 0%,#ff4a87 100%);color:#fff;font-weight:600;box-shadow:0 10px 22px rgba(255,74,122,0.18)}
-.btn.back{margin-bottom:8px;}
-
-/* game header & stats */
-.game-header{display:flex;align-items:center;justify-content:space-between;padding:4px 0 12px}
-.stats{display:flex;gap:18px;align-items:center;font-weight:600;color:#222}
-
-/* board */
-.board-wrap{display:flex;justify-content:center;margin:6px 0;padding:12px;background:rgba(255,255,255,0.85);border-radius:14px}
-.board{
-  display:grid;
-  grid-template-columns: repeat(8, 56px);
-  gap:8px;
-  padding:12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.8));
-  border-radius:12px;
-  max-width:100%;
+.container {
+    text-align: center;
 }
 
-/* tile */
-.tile{width:56px;height:56px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 14px rgba(0,0,0,0.06);transition:transform .12s}
-.tile.selected{transform:scale(1.06);box-shadow:0 12px 20px rgba(0,0,0,0.12)}
-.tile img{width:44px;height:44px;object-fit:contain;pointer-events:none}
+.score-board {
+    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
-/* controls */
-.controls{display:flex;gap:18px;justify-content:center;margin-top:10px}
+/* Grid and Candy Styling */
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    width: 400px; /* 8 columns * 50px */
+    height: 400px; /* 8 rows * 50px */
+    border: 3px solid #6c5ce7;
+    background-color: #dcd0ff;
+}
 
-/* levels list */
-.levels{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.levels .level-row .btn{width:100%;text-align:left;padding:12px 14px;border-radius:12px}
-
-/* responsive smaller phones */
-@media (max-width:380px){
-  .board{grid-template-columns: repeat(8, 44px); gap:6px;padding:8px}
-  .tile{width:44px;height:44px;border-radius:10px}
-  .tile img{width:34px;height:34px}
-  .hero-card h1{font-size:22px}
-  }
+.candy {
+    width: 50px;
+    height: 50px;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    /* Candies के लिए सुंदर दिखने वाले रंगों का उपयोग करें */
+}
