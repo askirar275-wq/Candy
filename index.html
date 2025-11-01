@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
@@ -6,17 +6,16 @@
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body style="background: url('images/bg-gradient.png') center/cover no-repeat fixed;">
+<body>
 
-  <div id="app">
-
+  <div id="app" style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
     <!-- HOME -->
     <main id="home" class="page">
       <div class="hero-card">
-        <img src="images/logo.png" alt="logo" class="logo" />
+        <img src="images/logo.png" alt="logo" class="logo" onerror="this.style.display='none'"/>
         <h1>🍭 Candy Match</h1>
         <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-        <div class="home-actions">
+        <div class="btn-row">
           <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
           <button id="btn-map" class="btn">🗺️ Level Map</button>
           <button id="btn-open-shop" class="btn">🛒 Shop</button>
@@ -36,14 +35,14 @@
       <header class="game-header">
         <button class="back btn" data-go="map">← Map</button>
         <div class="stats">
-          <div>Score: <span id="score">0</span></div>
-          <div>Coins: <span id="coins">0</span></div>
-          <div>Level: <span id="level-num">1</span></div>
+          Score: <span id="score">0</span>
+          &nbsp;&nbsp; Coins: <span id="coins">0</span>
+          &nbsp;&nbsp; Level: <span id="level-num">1</span>
         </div>
       </header>
 
       <div class="board-wrap">
-        <div id="board" class="board"></div>
+        <div id="board" class="board" aria-label="game board"></div>
       </div>
 
       <div class="controls">
@@ -64,12 +63,11 @@
 
   </div>
 
-  <!-- Scripts -->
-  <!-- safe-ui + storage lightweight -->
+  <!-- scripts - order matters -->
   <script defer src="js/storage.js"></script>
   <script defer src="js/safe-ui.js"></script>
   <script defer src="js/level-map.js"></script>
   <script defer src="js/game.js"></script>
 
 </body>
-    </html>
+                                   </html>
