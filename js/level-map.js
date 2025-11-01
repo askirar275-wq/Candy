@@ -1,60 +1,30 @@
 // js/level-map.js
-// basic map showing buttons and unlocking logic via Storage
+// Generate level map and handle unlocks
+document.addEventListener('DOMContentLoaded', ()=>{
+  console.log('✅ Loaded: js/level-map.js');
 
-const LevelMap = (function(){
-  const containerId = 'levels';
-  const maxLevels = 50; // you can increase
+  const container = document.getElementById('levels');
+  if(!container) return;
+  const TOTAL = 20;
+
   function render(){
-    const cont = document.getElementById(containerId);
-    if(!cont) return;
-    cont.innerHTML = '';
-    const state = Storage.get('candy_state') || { unlockedLevels:[1] };
-    for(let i=1;i<=Math.min(maxLevels, 30); i++){
-      const btn = document.createElement('button');
-      const unlocked = (state.unlockedLevels || []).includes(i);
-      btn.textContent = unlocked ? `Level ${i}` : `Level ${i} 🔒`;
-      btn.className = 'btn';
-      btn.style.margin = '8px';
-      if(unlocked){
-        btn.addEventListener('click', ()=> {
-          // call CandyGame.startLevel if exists
-          if(window.CandyGame && typeof window.CandyGame.startLevel === 'function'){
-            window.CandyGame.startLevel(i);
-            // show game page
-            document.getElementById('home').classList.add('hidden');
-            document.getElementById('map').classList.add('hidden');
-            document.getElementById('game').classList.remove('hidden');
-          } else {
-            SafeUI.toast('Game engine not ready');
-            console.warn('CandyGame.startLevel not available yet');
-          }
-        });
-      } else {
-        btn.disabled = true;
-      }
-      cont.appendChild(btn);
+    container.innerHTML = '';
+    for(let i=1;i<=TOTAL;i++){
+      const div = document.createElement('div');
+      div.className = 'level';
+      if(!Storage.isUnlocked(i)) div.classList.add('locked');
+      div.innerHTML = `
+        <strong>Level ${i}</strong>
+        <div style="font-size:12px;">Goal: ${i*500}</div>`;
+      div.addEventListener('click', ()=>{
+        if(!Storage.isUnlocked(i)){ alert('🔒 Level locked! पहले वाला level पूरा करो'); return; }
+        UI.showPage('game');
+        CandyGame.startLevel(i);
+      });
+      container.appendChild(div);
     }
   }
-  document.addEventListener('DOMContentLoaded', ()=>{
-    // wire nav map button
-    document.getElementById('btn-map')?.addEventListener('click', ()=>{
-      document.getElementById('home').classList.add('hidden');
-      document.getElementById('map').classList.remove('hidden');
-      document.getElementById('game').classList.add('hidden');
-      render();
-    });
-    // back nav
-    document.querySelectorAll('[data-go]').forEach(el=>{
-      el.addEventListener('click', ()=> {
-        const target = el.getAttribute('data-go');
-        document.getElementById('home').classList.add('hidden');
-        document.getElementById('map').classList.add('hidden');
-        document.getElementById('game').classList.add('hidden');
-        document.getElementById(target)?.classList.remove('hidden');
-      });
-    });
-    SafeUI.log('level-map initialized');
-  });
 
-  return { render };
-})();
+  render();
+  window.addEventListener('game:levelUnlocked', render);
+});
