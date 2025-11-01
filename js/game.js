@@ -1,75 +1,204 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const grid = document.querySelector('.grid');
-    const width = 8; // ग्रिड की चौड़ाई (8x8)
-    const squares = [];
-    let score = 0;
-    
-    // कैंडीज के लिए विभिन्न रंग (आप यहाँ छवियों (images) का भी उपयोग कर सकते हैं)
-    const candyColors = [
-        'red',
-        'yellow',
-        'orange',
-        'purple',
-        'green',
-        'blue'
-    ];
+// js/game.js
+// Core Candy Game logic (6x8 grid, swipe, match, refill)
+const CandyGame = (function(){
+  console.log('✅ Loaded: js/game.js');
 
-    // **बोर्ड (Grid) बनाने का फंक्शन**
-    function createBoard() {
-        for (let i = 0; i < width * width; i++) {
-            const square = document.createElement('div');
-            
-            // ड्रैग और ड्रॉप के लिए ज़रूरी
-            square.setAttribute('draggable', true); 
-            square.setAttribute('id', i);
-            
-            // रैंडम कैंडी रंग देना
-            let randomColor = Math.floor(Math.random() * candyColors.length);
-            square.style.backgroundColor = candyColors[randomColor];
-            square.classList.add('candy');
-            
-            grid.appendChild(square);
-            squares.push(square);
+  const ROWS = 8, COLS = 6, TYPES = 6;
+  const CANDIES = [
+    'images/candy1.png','images/candy2.png','images/candy3.png',
+    'images/candy4.png','images/candy5.png','images/candy6.png'
+  ];
+
+  const boardEl = document.getElementById('board');
+  let board = [], score = 0, level = 1;
+  let busy = false;
+
+  // Generate random candy index
+  const rand = () => Math.floor(Math.random()*TYPES);
+
+  // Create board
+  function initBoard(){
+    board = Array.from({length:ROWS},()=>Array.from({length:COLS},rand));
+    removeInitialMatches();
+    render();
+  }
+
+  function removeInitialMatches(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        if(matchAt(r,c)){
+          board[r][c] = rand();
+          c--;
         }
+      }
     }
+  }
 
-    createBoard();
-    
-    // --- यहाँ ड्रैग और ड्रॉप लॉजिक (Drag and Drop Logic) आएगा ---
-    
-    /*
-    एक सरल ड्रैग और ड्रॉप फ़्लो (Simple Drag and Drop Flow):
-    
-    let colorBeingDragged;
-    let colorBeingReplaced;
-    let squareIdBeingDragged;
-    let squareIdBeingReplaced;
+  function matchAt(r,c){
+    const v = board[r][c];
+    return (
+      (c>=2 && v===board[r][c-1] && v===board[r][c-2]) ||
+      (r>=2 && v===board[r-1][c] && v===board[r-2][c])
+    );
+  }
 
-    squares.forEach(square => square.addEventListener('dragstart', dragStart));
-    squares.forEach(square => square.addEventListener('dragend', dragEnd));
-    squares.forEach(square => square.addEventListener('dragover', dragOver));
-    squares.forEach(square => square.addEventListener('dragenter', dragEnter));
-    squares.forEach(square => square.addEventListener('dragleave', dragLeave));
-    squares.forEach(square => square.addEventListener('drop', dragDrop));
-
-    function dragStart() {
-        colorBeingDragged = this.style.backgroundColor;
-        squareIdBeingDragged = parseInt(this.id);
+  // Render board
+  function render(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.createElement('div');
+        cell.className = 'candy-cell';
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        const img = document.createElement('img');
+        img.src = CANDIES[board[r][c]];
+        cell.appendChild(img);
+        boardEl.appendChild(cell);
+      }
     }
-    
-    function dragDrop() {
-        colorBeingReplaced = this.style.backgroundColor;
-        squareIdBeingReplaced = parseInt(this.id);
-        
-        // स्वैप (Swap) करने के लिए:
-        squares[squareIdBeingDragged].style.backgroundColor = colorBeingReplaced;
-        squares[squareIdBeingReplaced].style.backgroundColor = colorBeingDragged;
-        
-        // फिर 'checkMatch' और 'dragEnd' कॉल करें
-    }
-    
-    // ... अन्य लॉजिक (check for 3/4 matches, move candies down, etc.) यहाँ आएगा।
-    */
+    addSwipeEvents();
+  }
 
-    // **ध्यान दें:** पूरा मैच-3 (Match-3) लॉजिक (जैसे तीन का मिलान, गिरना, स्कोरिंग) काफी जटिल है और उसे सही ढंग से लागू करने के लिए और अधिक कोड की आवश्यकता होगी। यह कोड आपको गेम का विज़ुअल सेटअप (visual setup) देगा।
-});
+  function addSwipeEvents(){
+    const cells = boardEl.querySelectorAll('.candy-cell');
+    cells.forEach(cell=>{
+      cell.addEventListener('pointerdown', onDown);
+    });
+  }
+
+  let start = null;
+  function onDown(e){
+    if(busy) return;
+    const cell = e.currentTarget;
+    start = {x:e.clientX, y:e.clientY, r:+cell.dataset.r, c:+cell.dataset.c};
+    document.addEventListener('pointerup', onUp);
+  }
+
+  function onUp(e){
+    document.removeEventListener('pointerup', onUp);
+    if(!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    if(Math.max(absX,absY)<20){ start=null; return; }
+    let tr = start.r, tc = start.c;
+    if(absX>absY){ tc += dx>0?1:-1; } else { tr += dy>0?1:-1; }
+    swapAndCheck(start.r,start.c,tr,tc);
+    start=null;
+  }
+
+  async function swapAndCheck(r1,c1,r2,c2){
+    if(r2<0||c2<0||r2>=ROWS||c2>=COLS) return;
+    busy=true;
+    [board[r1][c1],board[r2][c2]] = [board[r2][c2],board[r1][c1]];
+    render();
+    await sleep(150);
+    const matches = findMatches();
+    if(matches.length===0){
+      // revert
+      [board[r1][c1],board[r2][c2]] = [board[r2][c2],board[r1][c1]];
+      render();
+      busy=false;
+      return;
+    }
+    await handleMatches();
+    busy=false;
+  }
+
+  function findMatches(){
+    const matched=[];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const v=board[r][c];
+        if(!v) continue;
+        // horizontal
+        if(c<=COLS-3 && v===board[r][c+1] && v===board[r][c+2]){
+          matched.push({r,c}); matched.push({r,c+1}); matched.push({r,c+2});
+        }
+        // vertical
+        if(r<=ROWS-3 && v===board[r+1][c] && v===board[r+2][c]){
+          matched.push({r,c}); matched.push({r+1,c}); matched.push({r+2,c});
+        }
+      }
+    }
+    const unique = [];
+    const seen={};
+    matched.forEach(p=>{ const k=p.r+'_'+p.c; if(!seen[k]){seen[k]=1; unique.push(p);} });
+    return unique;
+  }
+
+  async function handleMatches(){
+    while(true){
+      const matches=findMatches();
+      if(matches.length===0) break;
+      matches.forEach(p=>board[p.r][p.c]=null);
+      score+=matches.length*100;
+      Storage.addCoins(Math.floor(matches.length/2));
+      updateUI();
+      render();
+      await sleep(250);
+      applyGravity();
+      render();
+      await sleep(200);
+    }
+    const goal = level*500;
+    if(score>=goal){
+      Storage.unlock(level+1);
+      window.dispatchEvent(new CustomEvent('game:levelUnlocked',{detail:{level:level+1}}));
+      alert('🎉 Level '+level+' complete! Next level unlocked.');
+    }
+  }
+
+  function applyGravity(){
+    for(let c=0;c<COLS;c++){
+      let empty=[];
+      for(let r=ROWS-1;r>=0;r--){
+        if(board[r][c]===null) empty.push(r);
+        else if(empty.length>0){
+          const newR=empty.shift();
+          board[newR][c]=board[r][c];
+          board[r][c]=null;
+          empty.push(r);
+        }
+      }
+      for(let k=empty.length-1;k>=0;k--){
+        board[empty[k]][c]=rand();
+      }
+    }
+  }
+
+  const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+  function updateUI(){
+    window.dispatchEvent(new CustomEvent('game:state',{detail:{score,coins:Storage.getCoins(),level}}));
+  }
+
+  // Public
+  function startLevel(l){
+    level=l; score=0;
+    initBoard();
+    updateUI();
+  }
+
+  document.getElementById('btn-restart')?.addEventListener('click',()=> startLevel(level));
+  document.getElementById('btn-shuffle')?.addEventListener('click',()=>{
+    board.forEach((r,ri)=>r.forEach((_,ci)=>board[ri][ci]=rand()));
+    render();
+  });
+
+  window.addEventListener('shop:buy',(e)=>{
+    if(e.detail.id==='shuffle'){
+      board.forEach((r,ri)=>r.forEach((_,ci)=>board[ri][ci]=rand()));
+      render();
+    }
+    if(e.detail.id==='bomb'){
+      const r=Math.floor(Math.random()*ROWS);
+      const c=Math.floor(Math.random()*COLS);
+      board[r][c]=rand();
+      render();
+    }
+  });
+
+  return {startLevel};
+})();
