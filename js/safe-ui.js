@@ -1,24 +1,80 @@
 // js/safe-ui.js
-// small ui helpers, and optional eruda init (debug logger)
+// Handles navigation, shop modal and UI sync
+document.addEventListener('DOMContentLoaded', ()=>{
+  console.log('✅ Loaded: js/safe-ui.js');
 
-const SafeUI = {
-  log(...args){ console.log(...args); },
-  warn(...args){ console.warn(...args); },
-  error(...args){ console.error(...args); },
-  // small visual toast (optional)
-  toast(msg, ms = 1500){
-    const t = document.createElement('div');
-    t.textContent = msg;
-    Object.assign(t.style, {
-      position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'12px',
-      background:'rgba(0,0,0,0.7)',color:'#fff',padding:'8px 12px',borderRadius:'10px',zIndex:99999
-    });
-    document.body.appendChild(t);
-    setTimeout(()=>t.remove(), ms);
+  const pages = {
+    home: document.getElementById('home'),
+    map: document.getElementById('map'),
+    game: document.getElementById('game')
+  };
+
+  function showPage(name){
+    Object.values(pages).forEach(p=>p?.classList.add('hidden'));
+    pages[name]?.classList.remove('hidden');
   }
-};
 
-// optional: eruda (uncomment if you host eruda or want CDN - development only)
-// (function(){ const enableEruda = false; if(enableEruda && typeof eruda === 'undefined'){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/eruda'; s.onload=()=>eruda.init(); document.head.appendChild(s); } })();
+  // navigation buttons
+  document.getElementById('btn-start')?.addEventListener('click', ()=> showPage('map'));
+  document.getElementById('btn-map')?.addEventListener('click', ()=> showPage('map'));
 
-document.addEventListener('DOMContentLoaded', ()=> SafeUI.log('Safe UI loaded'));
+  document.querySelectorAll('[data-go]').forEach(btn=>{
+    btn.addEventListener('click', ()=> showPage(btn.dataset.go));
+  });
+
+  // 🛒 Shop modal
+  const modal = document.getElementById('shop-modal');
+  const shopCoins = document.getElementById('shop-coins');
+  const shopItemsEl = document.getElementById('shop-items');
+  const shopClose = document.getElementById('shop-close');
+
+  const shopItems = [
+    {id:'shuffle', name:'🔀 Shuffle Board', price:200},
+    {id:'bomb', name:'💣 Remove Random Candy', price:150}
+  ];
+
+  function renderShop(){
+    if(!shopItemsEl) return;
+    shopItemsEl.innerHTML = '';
+    shopItems.forEach(item=>{
+      const div = document.createElement('div');
+      div.className = 'shop-item';
+      div.innerHTML = `
+        <div>${item.name}</div>
+        <div>${item.price}💰 
+        <button class="btn buy" data-id="${item.id}" data-price="${item.price}">Buy</button></div>`;
+      shopItemsEl.appendChild(div);
+    });
+
+    shopItemsEl.querySelectorAll('.buy').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const price = +btn.dataset.price;
+        if(Storage.getCoins() < price){ alert('Not enough coins!'); return; }
+        Storage.spendCoins(price);
+        shopCoins.textContent = Storage.getCoins();
+        window.dispatchEvent(new CustomEvent('shop:buy',{detail:{id,price}}));
+      });
+    });
+  }
+
+  renderShop();
+
+  // open / close shop
+  document.getElementById('btn-open-shop')?.addEventListener('click', ()=>{
+    modal.classList.remove('hidden');
+    shopCoins.textContent = Storage.getCoins();
+  });
+  shopClose?.addEventListener('click', ()=> modal.classList.add('hidden'));
+
+  // listen to game state
+  window.addEventListener('game:state', (e)=>{
+    const d = e.detail || {};
+    document.getElementById('score').textContent = d.score ?? 0;
+    document.getElementById('coins').textContent = d.coins ?? Storage.getCoins();
+    document.getElementById('level-num').textContent = d.level ?? 1;
+  });
+
+  // expose
+  window.UI = {showPage, renderShop};
+});
