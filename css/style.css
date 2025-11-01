@@ -1,150 +1,70 @@
-/* css/style.css - Updated for mobile friendly Candy grid (6 x 8) */
-
-/* --- root variables --- */
 :root{
-  --accent: #ff4d9e;
-  --accent-2: #ff7ab1;
-  --panel-bg: rgba(255,255,255,0.95);
-  --glass: rgba(255,255,255,0.88);
-  --shadow: 0 18px 40px rgba(0,0,0,0.08);
-  /* cell size responsive: min 48px, preferred 12vw, max 84px */
-  --cell-size: clamp(48px, 12vw, 84px);
-  --cell-gap: 10px;
-  --board-cols: 6;   /* width */
-  --board-rows: 8;   /* height */
+  --bg: rgba(255,255,255,0.9);
+  --pink: #ff6b99;
+  --card-radius: 18px;
+  --btn-radius: 26px;
+  --candy-size: 48px; /* बदलने से candy बड़ा/छोटा होगा */
 }
 
-/* --- base layout --- */
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-body{
-  background: url('../images/bg-gradient.png') center/cover no-repeat fixed;
-  background-size: cover;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  color: #222;
-}
+/* Basic reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{height:100%}
+body{font-family:Inter, "Segoe UI", Roboto, Arial; color:#222; -webkit-font-smoothing:antialiased}
 
-/* container */
-#app{min-height:100vh;padding:18px 12px}
+/* Pages */
+.page{min-height:100vh;padding:28px}
+.hidden{display:none}
 
-/* hide utility */
-.hidden{display:none !important}
-
-/* --- hero / home --- */
+/* Home hero */
 .hero-card{
-  max-width:920px;margin:44px auto;padding:26px;border-radius:18px;background:var(--glass);box-shadow:var(--shadow);text-align:center;
+  max-width:520px;margin:40px auto;padding:30px;background:var(--bg);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.12);text-align:center;
 }
-.hero-card h1{margin:6px 0;font-size:36px;color:var(--accent);font-weight:700}
-.hero-card p{margin:8px 0 18px;color:#333;font-size:16px}
-
-/* buttons */
-.btn{
-  display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:14px;
-  background:#fff;border:0;cursor:pointer;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,0.06);
-}
-.btn.primary{
-  color:#fff;background:linear-gradient(180deg,var(--accent),var(--accent-2));box-shadow:0 12px 28px rgba(255,80,140,0.16);
-}
-.back{border-radius:12px;padding:10px 14px;background:var(--panel-bg);}
-
-/* small button tweaks for mobile */
+.hero-card .logo{width:64px;height:64px;margin-bottom:8px}
+.hero-card h1{font-size:36px;color:#ff3e86;margin-bottom:6px}
+.hero-card p{color:#444;margin-bottom:18px}
+.home-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{background:white;border:none;padding:12px 20px;border-radius:24px;box-shadow:0 6px 18px rgba(0,0,0,.08);cursor:pointer;font-size:16px}
+.btn.primary{background:linear-gradient(90deg,#ff6b99,#ff3e86);color:white;padding:14px 26px;font-weight:600}
 .btn:active{transform:translateY(1px)}
 
-/* --- level map --- */
-#map .levels{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
-.level{
-  min-width:120px;padding:10px 14px;background:#fff;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.06);font-weight:600;text-align:center;
-}
-.level.locked{opacity:0.45;filter:grayscale(0.05)}
+/* Header & stats for game */
+.game-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:8px 12px}
+.game-header .stats{display:flex;gap:20px;align-items:center;font-weight:600}
+.back.btn{border-radius:18px;padding:12px 16px}
 
-/* --- game header --- */
-.game-header{display:flex;align-items:center;gap:12px;padding:8px 0}
-.game-header .stats{display:flex;gap:24px;align-items:center;margin-left:auto;font-weight:700}
-
-/* --- board container --- */
-.board-wrap{
-  --rows: var(--board-rows);
-  max-width:920px;margin:18px auto;padding:14px;border-radius:20px;background:linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.88));box-shadow:var(--shadow);
-  /* fix height so the board doesn't scroll page vertically: use rows*cell-size + padding */
-  height: calc((var(--cell-size) * var(--rows)) + 36px); /* 36px is approx padding for container */
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-}
-
-/* main board grid */
+/* Board wrapper */
+.board-wrap{display:flex;justify-content:center;padding:14px}
 .board{
+  background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
+  padding:20px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.12);
+  width: min(92vw, 420px);
   display:grid;
-  grid-template-columns: repeat(var(--board-cols), var(--cell-size));
-  grid-auto-rows: var(--cell-size);
-  gap: var(--cell-gap);
-  width: calc(var(--cell-size) * var(--board-cols) + (var(--cell-gap) * (var(--board-cols) - 1)));
-  touch-action: none; /* allow JS pointer/touch control */
-  -webkit-user-select:none;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
+  grid-gap:12px;
+  /* grid-template set dynamically in JS */
+  justify-items:center;align-items:center;
 }
 
-/* individual cell */
-.candy-cell{
-  width:var(--cell-size);
-  height:var(--cell-size);
-  border-radius:14px;
-  background: #fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow: 0 10px 20px rgba(10,10,10,0.06), inset 0 -6px 10px rgba(0,0,0,0.02);
-  overflow:visible;
-  position:relative;
-  transform-origin:center;
-}
-
-/* candy image */
-.candy-cell img{
-  width:72%;
-  height:72%;
-  object-fit:contain;
-  pointer-events:none;
-  -webkit-user-drag: none;
+/* single cell */
+.cell{
+  width: calc(var(--candy-size) + 18px);
+  height: calc(var(--candy-size) + 18px);
+  background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 18px rgba(0,0,0,.06);overflow:hidden;
+  transition:transform .18s ease;
   user-select:none;
 }
+.cell img{width:var(--candy-size);height:var(--candy-size);pointer-events:none;display:block}
 
-/* dragging / moving visual */
-.candy-cell.dragging{opacity:0.85;transform:scale(1.06);z-index:50;box-shadow:0 22px 40px rgba(0,0,0,0.15)}
-.candy-cell.matched{opacity:0.28;transform:scale(0.85);transition:all .28s ease}
+/* Controls bottom */
+.controls{display:flex;justify-content:center;gap:20px;padding:18px}
 
-/* small overlay when board disabled */
-.board.disabled{filter:grayscale(.02) opacity:.95;pointer-events:none}
+/* shop */
+.shop-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999}
+.shop-modal.open{display:flex}
+.shop-panel{background:white;padding:18px;border-radius:12px;max-width:360px;width:90%}
 
-/* --- controls row --- */
-.controls{display:flex;gap:18px;justify-content:center;margin-top:18px}
-
-/* --- shop modal (reusable) --- */
-.shop-modal{ position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.45); z-index:9999; }
-.shop-panel{ background:white; padding:18px; border-radius:12px; max-width:420px; width:92%; box-shadow: 0 18px 40px rgba(0,0,0,0.2); }
-.shop-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f1f1; }
-
-/* --- small screen adjustments --- */
-@media (max-width:700px){
-  :root{ --cell-size: clamp(44px, 13vw, 72px); --cell-gap:8px; }
-  .hero-card{margin:34px auto;padding:18px}
-  .game-header .stats{gap:10px;font-size:14px}
-  .controls{gap:12px}
-  .board-wrap{height: calc((var(--cell-size) * var(--rows)) + 26px);}
-}
-
-/* --- utility & text tweaks --- */
-h2{margin:12px 0 6px;color:#222}
-.levels .level{cursor:pointer}
-.levels .level:active{transform:translateY(1px)}
-
-/* --- locked icon styling if JS adds --- */
-.lock-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:#fff;box-shadow:0 6px 12px rgba(0,0,0,0.06);}
-
-/* --- accessibility: focus --- */
-.btn:focus, .level:focus { outline: 3px solid rgba(255,80,140,0.18); outline-offset:2px; }
-
-/* --- small helper for very large screens --- */
-@media (min-width:1200px){
-  :root{ --cell-size: 84px; --cell-gap:12px; }
-}
+/* small screens adjustments */
+@media(min-width:480px){
+  .hero-card h1{font-size:44px}
+  :root{--candy-size:56px}
+                                                              }
