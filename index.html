@@ -1,111 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
-  <style>
-    /* कुछ जरूरी बेसिक स्टाइल (आप अपनी css/style.css में merge कर सकते हैं) */
-    :root { --accent:#ff4d9e; --panel:#ffffff; --glass: rgba(255,255,255,0.85); }
-    html,body{height:100%;margin:0;font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{background:url('images/bg-gradient.png') center/cover no-repeat fixed; background-size:cover;}
-    #app{min-height:100vh; display:block;}
-    .page{padding:22px;}
-    .hidden{display:none !important;}
-    .hero-card{max-width:760px;margin:60px auto;padding:28px;border-radius:18px;background:var(--glass);box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;}
-    .hero-card h1{margin:0;font-size:36px;color:#ff2f8a;}
-    .hero-card p{margin:10px 0 20px;color:#333;}
-    .btn{display:inline-block;padding:12px 20px;border-radius:12px;border:0;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,0.08);cursor:pointer;margin:6px;}
-    .btn.primary{background:linear-gradient(180deg,#ff6fae,#ff3a87);color:#fff;font-weight:600;box-shadow:0 10px 22px rgba(255, 63, 130, 0.18);}
-    /* Map & Game */
-    #map .levels{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-    .game-header{display:flex;align-items:center;gap:18px;padding:8px 0;}
-    .game-header .stats{display:flex;gap:18px;align-items:center;margin-left:auto;margin-right:6px;font-weight:600}
-    .board-wrap{max-width:720px;margin:16px auto;padding:12px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));box-shadow:0 18px 40px rgba(0,0,0,0.08);}
-    .board{width:100%;height:auto;display:flex;justify-content:center}
-    .candy-cell img{display:block}
-    /* controls */
-    .controls{display:flex;justify-content:center;gap:18px;margin-top:18px;}
-    /* shop modal */
-    .shop-modal{ position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.4); z-index:9999; }
-    .shop-panel{ background:white; padding:16px; border-radius:12px; max-width:360px; width:90%; }
-    .shop-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee; }
-    /* responsive */
-    @media (max-width:520px){
-      .hero-card h1{font-size:28px}
-      .board-wrap{margin:12px}
-    }
-  </style>
 </head>
 <body>
 
-  <div id="app">
+<!-- Background image (full page) -->
+<div class="bg" style="background-image:url('images/bg-gradient.png')"></div>
 
-    <!-- Home Page -->
-    <main id="home" class="page">
-      <div class="hero-card">
-        <img src="images/icon-lollipop.png" alt="logo" style="height:48px;display:inline-block;margin-bottom:8px;">
-        <h1>🍭 Candy Match</h1>
-        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+<div id="app">
 
-        <!-- Start and Map buttons -->
-        <div>
-          <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
-          <button id="btn-map" class="btn">🗺️ Level Map</button>
-          <button id="btn-open-shop" class="btn">🛒 Shop</button>
-        </div>
-      </div>
-    </main>
-
-    <!-- Level Map Page -->
-    <section id="map" class="page hidden">
-      <button class="back btn" data-go="home">← Home</button>
-      <h2>Level Map</h2>
-      <div id="levels" class="levels"></div>
-    </section>
-
-    <!-- Game Page -->
-    <section id="game" class="page hidden">
-      <header class="game-header">
-        <button class="back btn" data-go="home">← Map</button>
-        <div class="stats">
-          <div>Score: <span id="score">0</span></div>
-          <div>Coins: <span id="coins">0</span></div>
-          <div>Level: <span id="level-num">1</span></div>
-        </div>
-      </header>
-
-      <!-- Board -->
-      <div class="board-wrap">
-        <div id="board" class="board"></div>
-      </div>
-
-      <!-- Controls -->
-      <div class="controls">
-        <button id="btn-restart" class="btn">🔁 Restart</button>
-        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
-      </div>
-    </section>
-
-    <!-- Shop modal (initially hidden) -->
-    <div id="shop-modal" class="shop-modal" style="display:none;">
-      <div class="shop-panel">
-        <button id="shop-close" class="btn">Close</button>
-        <h3>Shop</h3>
-        <div>Coins: <span id="shop-coins">0</span></div>
-        <div id="shop-items"></div>
+  <!-- HOME -->
+  <main id="home" class="page">
+    <div class="hero-card">
+      <img src="images/logo.png" alt="logo" class="logo" />
+      <h1>🍭 Candy Match</h1>
+      <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
+      <div class="home-buttons">
+        <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
+        <button id="btn-map" class="btn">🗺️ Level Map</button>
+        <button id="btn-open-shop" class="btn">🛒 Shop</button>
       </div>
     </div>
+  </main>
 
+  <!-- LEVEL MAP -->
+  <section id="map" class="page hidden">
+    <button class="back btn" data-go="home">← Home</button>
+    <h2>Level Map</h2>
+    <div id="levels" class="levels"></div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="page hidden">
+    <header class="game-header">
+      <button class="back btn" data-go="map">← Map</button>
+      <div class="stats">
+        Score: <span id="score">0</span>
+        Coins: <span id="coins">0</span>
+        Level: <span id="level-num">1</span>
+      </div>
+    </header>
+
+    <div class="board-wrap">
+      <div id="board" class="board" aria-label="game-board"></div>
+    </div>
+
+    <div class="controls">
+      <button id="btn-restart" class="btn">🔁 Restart</button>
+      <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- Shop modal -->
+<div id="shop-modal" class="shop-modal hidden" aria-hidden="true">
+  <div class="shop-panel">
+    <button id="shop-close" class="btn">Close</button>
+    <h3>Shop</h3>
+    <div>Coins: <span id="shop-coins">0</span></div>
+    <div id="shop-items"></div>
   </div>
+</div>
 
-  <!-- scripts (order matters) -->
-  <script defer src="js/storage.js"></script>
-  <script defer src="js/safe-ui.js"></script>
-  <script defer src="js/shop.js"></script>
-  <script defer src="js/level-map.js"></script>
-  <script defer src="js/game.js"></script>
+<!-- scripts (order important) -->
+<script defer src="js/storage.js"></script>
+<script defer src="js/safe-ui.js"></script>
+<script defer src="js/game.js"></script>
+<script defer src="js/level-map.js"></script>
+
+<!-- Optional: Eruda mobile debug (uncomment to use) -->
+<!--
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+-->
 
 </body>
-            </html>
+</html>
