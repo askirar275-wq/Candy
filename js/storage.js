@@ -1,35 +1,42 @@
 // js/storage.js
-// small wrapper around localStorage used by other modules
+// Local storage system for coins and unlocked levels
+const Storage = (function(){
+  const KEY = 'candy_match_v1';
+  const defaultState = { coins: 0, unlockedLevels: [1] };
 
-const Storage = {
-  get(key, fallback = null) {
+  function load(){
     try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (e) {
-      console.error('Storage.get error', e);
-      return fallback;
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : defaultState;
+    } catch(e){
+      console.warn('Storage load error:', e);
+      return defaultState;
     }
-  },
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      console.error('Storage.set error', e);
-    }
-  },
-  remove(key) {
-    localStorage.removeItem(key);
   }
-};
 
-// initialize defaults
-(function initStorageDefaults(){
-  if (Storage.get('candy_state') === null) {
-    Storage.set('candy_state', {
-      coins: 0,
-      unlockedLevels: [1], // level 1 unlocked
-      bestScores: {}
-    });
+  function save(state){
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch(e){
+      console.warn('Storage save error:', e);
+    }
   }
+
+  const state = load();
+
+  return {
+    getCoins(){ return state.coins || 0; },
+    addCoins(n){ state.coins = (state.coins || 0) + n; save(state); },
+    spendCoins(n){ state.coins = Math.max(0, (state.coins || 0) - n); save(state); },
+    isUnlocked(l){ return (state.unlockedLevels || []).includes(l); },
+    unlock(l){
+      state.unlockedLevels = state.unlockedLevels || [];
+      if(!state.unlockedLevels.includes(l)){
+        state.unlockedLevels.push(l);
+        save(state);
+      }
+    },
+    getState(){ return JSON.parse(JSON.stringify(state)); }
+  };
 })();
+console.log('✅ Loaded: js/storage.js');
