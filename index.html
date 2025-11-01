@@ -5,79 +5,143 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Candy Match</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* minimum styling so UI shows correctly while you use your css/style.css */
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans",Arial}
+    .page{display:block}
+    .hidden{display:none}
+    .hero-card{max-width:520px;margin:30px auto;background:rgba(255,255,255,0.85);padding:28px;border-radius:18px;text-align:center}
+    .btn{display:inline-block;padding:12px 20px;border-radius:14px;background:#fff;border:0;box-shadow:0 6px 14px rgba(0,0,0,0.06);margin:10px;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#ff5fa8,#ff3080);color:#fff;font-weight:600}
+    header.game-header{display:flex;align-items:center;gap:16px;padding:12px}
+    .stats{margin-left:auto;display:flex;gap:18px;font-weight:600}
+    .board-wrap{padding:12px;display:flex;justify-content:center}
+    #board{width:92vmin;max-width:520px;background:rgba(255,255,255,0.9);border-radius:20px;padding:14px;display:grid;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,0.08)}
+    /* grid will be set by JS (8x6 => 8 rows, 6 cols) */
+    .candy-cell{width:calc((100% - (5*12px))/6);height:calc((100% - (7*12px))/8);display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 6px 14px rgba(0,0,0,0.06)}
+    .candy-cell img{max-width:70%;max-height:70%}
+    .controls{display:flex;justify-content:center;gap:24px;padding:18px}
+    /* shop modal */
+    .shop-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999}
+    .shop-panel{background:#fff;padding:18px;border-radius:12px;max-width:420px;width:92%}
+    .shop-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+    /* small responsive */
+    @media (max-width:420px){
+      #board{width:94vw;padding:10px}
+      .candy-cell{gap:8px}
+    }
+  </style>
 </head>
-<body>
+<body style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
 
-<!-- Background image (full page) -->
-<div class="bg" style="background-image:url('images/bg-gradient.png')"></div>
-
-<div id="app">
-
-  <!-- HOME -->
-  <main id="home" class="page">
-    <div class="hero-card">
-      <img src="images/logo.png" alt="logo" class="logo" />
-      <h1>🍭 Candy Match</h1>
-      <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-      <div class="home-buttons">
+  <div id="app">
+    <!-- Home -->
+    <main id="home" class="page">
+      <div class="hero-card">
+        <img src="images/logo.png" alt="logo" style="height:48px"/>
+        <h1>🍭 Candy Match</h1>
+        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
         <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
         <button id="btn-map" class="btn">🗺️ Level Map</button>
+        <button id="btn-open-shop-home" class="btn">🛒 Shop</button>
+      </div>
+    </main>
+
+    <!-- Level Map -->
+    <section id="map" class="page hidden">
+      <button class="back btn" data-go="home">← Home</button>
+      <h2 style="padding-left:12px">Level Map</h2>
+      <div id="levels" class="levels" style="padding:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:720px;margin:12px auto"></div>
+    </section>
+
+    <!-- Game -->
+    <section id="game" class="page hidden">
+      <header class="game-header">
+        <button class="back btn" data-go="map">← Map</button>
+        <div class="stats">
+          <div>Score: <span id="score">0</span></div>
+          <div>Coins: <span id="coins">0</span></div>
+          <div>Level: <span id="level-num">1</span></div>
+        </div>
+      </header>
+
+      <div class="board-wrap">
+        <div id="board" class="board" aria-label="game board"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-restart" class="btn">🔁 Restart</button>
+        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
         <button id="btn-open-shop" class="btn">🛒 Shop</button>
       </div>
-    </div>
-  </main>
-
-  <!-- LEVEL MAP -->
-  <section id="map" class="page hidden">
-    <button class="back btn" data-go="home">← Home</button>
-    <h2>Level Map</h2>
-    <div id="levels" class="levels"></div>
-  </section>
-
-  <!-- GAME -->
-  <section id="game" class="page hidden">
-    <header class="game-header">
-      <button class="back btn" data-go="map">← Map</button>
-      <div class="stats">
-        Score: <span id="score">0</span>
-        Coins: <span id="coins">0</span>
-        Level: <span id="level-num">1</span>
-      </div>
-    </header>
-
-    <div class="board-wrap">
-      <div id="board" class="board" aria-label="game-board"></div>
-    </div>
-
-    <div class="controls">
-      <button id="btn-restart" class="btn">🔁 Restart</button>
-      <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
-    </div>
-  </section>
-
-</div>
-
-<!-- Shop modal -->
-<div id="shop-modal" class="shop-modal hidden" aria-hidden="true">
-  <div class="shop-panel">
-    <button id="shop-close" class="btn">Close</button>
-    <h3>Shop</h3>
-    <div>Coins: <span id="shop-coins">0</span></div>
-    <div id="shop-items"></div>
+    </section>
   </div>
-</div>
 
-<!-- scripts (order important) -->
-<script defer src="js/storage.js"></script>
-<script defer src="js/safe-ui.js"></script>
-<script defer src="js/game.js"></script>
-<script defer src="js/level-map.js"></script>
+  <!-- Shop modal (hidden by default) -->
+  <div id="shop-modal" class="shop-modal hidden" style="display:none;">
+    <div class="shop-panel">
+      <button id="shop-close" class="btn">Close</button>
+      <h3>Shop</h3>
+      <div>Coins: <span id="shop-coins">0</span></div>
+      <div id="shop-items"></div>
+    </div>
+  </div>
 
-<!-- Optional: Eruda mobile debug (uncomment to use) -->
-<!--
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
--->
+  <!-- SCRIPTS: make sure these files exist in js/ -->
+  <script defer src="js/storage.js"></script>
+  <script defer src="js/safe-ui.js"></script>
+  <script defer src="js/game.js"></script>
+  <script defer src="js/level-map.js"></script>
 
+  <!-- small inline init: ensure home visible and level1 unlocked -->
+  <script>
+    // ensure Home visible on load
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // if storage not present, storage.js initializes default (unlockedLevels: [1])
+      try {
+        // update shop coin displays
+        const coins = Storage.getCoins ? Storage.getCoins() : 0;
+        document.getElementById('coins').textContent = coins;
+        document.getElementById('shop-coins').textContent = coins;
+      } catch(e){}
+      // show home
+      document.getElementById('home').classList.remove('hidden');
+      document.getElementById('map')?.classList.add('hidden');
+      document.getElementById('game')?.classList.add('hidden');
+      
+      // start button -> go to level map (user selects level)
+      document.getElementById('btn-start')?.addEventListener('click', ()=>{
+        // directly open map so player can choose or we can auto start level 1
+        document.getElementById('home').classList.add('hidden');
+        document.getElementById('map').classList.remove('hidden');
+        // render levels (level-map.js will render)
+      });
+
+      // Open shop from home/button
+      document.getElementById('btn-open-shop-home')?.addEventListener('click', ()=>{
+        const modal = document.getElementById('shop-modal');
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.getElementById('shop-coins').textContent = (Storage.getCoins?Storage.getCoins():0);
+      });
+      document.getElementById('btn-open-shop')?.addEventListener('click', ()=>{
+        const modal = document.getElementById('shop-modal');
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.getElementById('shop-coins').textContent = (Storage.getCoins?Storage.getCoins():0);
+      });
+      document.getElementById('shop-close')?.addEventListener('click', ()=>{
+        const modal = document.getElementById('shop-modal');
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      });
+
+      // quick safety: if level-map.js hasn't unlocked level 1 in storage for any reason, force unlock
+      try { Storage.unlock(1); } catch(e){}
+
+      // small debug to console
+      console.log('Index initialized (home visible).');
+    });
+  </script>
 </body>
 </html>
