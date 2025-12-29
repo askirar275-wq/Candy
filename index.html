@@ -13,281 +13,188 @@ body{
   color:#fff;
 }
 .hidden{display:none}
-.container{padding:14px;padding-bottom:90px}
-.card{
-  background:#121a2f;
-  border-radius:16px;
-  padding:14px;
-  margin-bottom:14px;
-}
-input,textarea,button{
+.container{max-width:420px;margin:auto;padding:20px}
+input,button{
   width:100%;
-  padding:12px;
+  padding:14px;
   border-radius:12px;
   border:none;
-  outline:none;
-  background:#1a2340;
-  color:#fff;
-  margin-top:6px;
+  margin-top:10px;
+  font-size:16px;
 }
 button{
   background:#2563eb;
+  color:white;
   font-weight:600;
+  cursor:pointer;
 }
-button:active{transform:scale(.95)}
-.story-row{
-  display:flex;
-  gap:12px;
-  overflow-x:auto;
+.card{
+  background:#111827;
+  padding:15px;
+  border-radius:16px;
+  margin-top:15px;
 }
-.story{
-  width:64px;height:64px;
-  border-radius:50%;
+.story-circle{
+  width:60px;height:60px;border-radius:50%;
   border:3px solid orange;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-}
-.feed-item{
-  background:#1a2340;
-  border-radius:14px;
-  padding:10px;
-  margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;
+  margin-right:10px;
 }
 .bottom-bar{
-  position:fixed;
-  bottom:0;left:0;right:0;
-  background:#0f172a;
-  display:flex;
-  justify-content:space-around;
+  position:fixed;bottom:0;left:0;right:0;
+  background:#020617;
+  display:flex;justify-content:space-around;
   padding:10px 0;
 }
-.bottom-bar span{font-size:22px}
-img{max-width:100%;border-radius:12px;margin-top:6px}
-video{width:100%;border-radius:12px;margin-top:6px}
+.bottom-bar button{
+  background:none;color:white;font-size:18px;
+}
 </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
-window.login = async ()=>{
-  const emailVal = email.value.trim();
-  const passVal = password.value.trim();
-
-  if(!emailVal || !passVal){
-    alert("Email aur password dono bharna zaruri hai");
-    return;
-  }
-
-  try{
-    await signInWithEmailAndPassword(auth, emailVal, passVal);
-    alert("Login successful");
-  }catch(err){
-    if(err.code === "auth/user-not-found"){
-      try{
-        await createUserWithEmailAndPassword(auth, emailVal, passVal);
-        alert("Account ban gaya, ab login ho gya");
-      }catch(e){
-        alert(e.message);
-      }
-    }else{
-      alert(err.message);
-    }
-  }
-};
-<!-- APP -->
-<div id="app" class="hidden">
-
-<div class="container">
-
-<!-- STORIES -->
-<div class="card">
-  <h3>Stories</h3>
-  <input type="file" id="galleryFile" accept="image/*">
-  <button onclick="addStory()">Add Story</button>
-  <div class="story-row" id="stories"></div>
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="container">
+  <h2>ChatApp Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login / Signup</button>
 </div>
 
-<!-- POST -->
-<div class="card">
-  <textarea id="postText" placeholder="What's on your mind?"></textarea>
-  <input type="file" id="postFile" accept="image/*">
-  <button onclick="addPost()">Post</button>
-</div>
+<!-- HOME PAGE -->
+<div id="homePage" class="container hidden">
 
-<!-- FEED -->
-<div class="card">
-  <h3>Feed</h3>
-  <div id="feed"></div>
-</div>
+  <div class="card">
+    <h3>Stories</h3>
+    <input type="file" id="storyFile">
+    <button onclick="uploadStory()">Add Story</button>
+    <div id="stories" style="display:flex;margin-top:10px"></div>
+  </div>
 
-<!-- REELS -->
-<div class="card">
-  <h3>Reels</h3>
-  <input type="file" id="reelFile" accept="video/*">
-  <button onclick="addReel()">Upload Reel</button>
-  <div id="reels"></div>
-</div>
+  <div class="card">
+    <input id="postText" placeholder="What's on your mind?">
+    <input type="file" id="postFile">
+    <button onclick="addPost()">Post</button>
+  </div>
 
-<!-- PROFILE -->
-<div class="card">
-  <h3>Profile</h3>
-  <input type="file" id="dpFile" accept="image/*">
-  <input id="username" placeholder="Username">
-  <textarea id="bio" placeholder="Bio"></textarea>
-  <button onclick="saveProfile()">Save Profile</button>
-  <div id="profileView"></div>
-</div>
-
-<button onclick="logout()">Logout</button>
+  <div class="card">
+    <h3>Feed</h3>
+    <div id="feed"></div>
+  </div>
 
 </div>
 
-<div class="bottom-bar">
-  <span>🏩</span>
-  <span>🔍</span>
-  <span>🎦</span>
-  <span>🔔</span>
-  <span>👤</span>
+<div class="bottom-bar hidden" id="bottomBar">
+  <button onclick="logout()">👤 Logout</button>
 </div>
 
-</div>
-
-<!-- FIREBASE + APP LOGIC -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-
-/* 🔴 FILL THESE */
-const CLOUD_NAME = "YOUR_CLOUD_NAME";
-const UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
   projectId: "chatapp-d38d3",
+  storageBucket: "chatapp-d38d3.appspot.com",
+  messagingSenderId: "321814992234",
   appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-/* AUTH */
+// AUTO LOGIN
+onAuthStateChanged(auth, user=>{
+  if(user){
+    loginPage.classList.add("hidden");
+    homePage.classList.remove("hidden");
+    bottomBar.classList.remove("hidden");
+    loadFeed();
+    loadStories();
+  }else{
+    loginPage.classList.remove("hidden");
+    homePage.classList.add("hidden");
+    bottomBar.classList.add("hidden");
+  }
+});
+
+// LOGIN / SIGNUP
 window.login = async ()=>{
   try{
     await signInWithEmailAndPassword(auth,email.value,password.value);
-  }catch{
-    await createUserWithEmailAndPassword(auth,email.value,password.value);
+  }catch(e){
+    if(e.code==="auth/user-not-found"){
+      await createUserWithEmailAndPassword(auth,email.value,password.value);
+    }else{
+      alert(e.message);
+    }
   }
 };
-window.logout = ()=>signOut(auth);
 
-onAuthStateChanged(auth,u=>{
-  if(u){
-    login.classList.add("hidden");
-    appDiv.classList.remove("hidden");
-  }else{
-    login.classList.remove("hidden");
-    appDiv.classList.add("hidden");
+// LOGOUT
+window.logout = ()=>{
+  signOut(auth);
+};
+
+// POST
+window.addPost = async ()=>{
+  let img="";
+  if(postFile.files[0]){
+    const r=ref(storage,"posts/"+Date.now());
+    await uploadBytes(r,postFile.files[0]);
+    img=await getDownloadURL(r);
   }
-});
-const appDiv=document.getElementById("app");
+  await addDoc(collection(db,"posts"),{
+    text:postText.value,
+    img,
+    time:Date.now()
+  });
+  postText.value="";
+  postFile.value="";
+};
 
-/* CLOUDINARY UPLOAD */
-async function uploadMedia(file,type="image"){
-  if(!file) return "";
-  if(file.size > 2*1024*1024){ alert("Max 2MB"); return ""; }
-  const fd=new FormData();
-  fd.append("file",file);
-  fd.append("upload_preset",UPLOAD_PRESET);
-  const res=await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${type}/upload`,
-    {method:"POST",body:fd}
-  );
-  const data=await res.json();
-  return data.secure_url;
+// FEED
+function loadFeed(){
+  const q=query(collection(db,"posts"),orderBy("time","desc"));
+  onSnapshot(q,snap=>{
+    feed.innerHTML="";
+    snap.forEach(d=>{
+      const p=d.data();
+      feed.innerHTML+=`
+        <div class="card">
+          <p>${p.text||""}</p>
+          ${p.img?`<img src="${p.img}" style="width:100%;border-radius:12px">`:""}
+        </div>`;
+    });
+  });
 }
 
-/* STORY */
-window.addStory = async ()=>{
-  const img=await uploadMedia(galleryFile.files[0],"image");
-  await addDoc(collection(db,"stories"),{
-    user:auth.currentUser.email,
-    media:img,
-    time:serverTimestamp()
-  });
-  galleryFile.value="";
+// STORY
+window.uploadStory = async ()=>{
+  const f=storyFile.files[0];
+  if(!f) return;
+  const r=ref(storage,"stories/"+Date.now());
+  await uploadBytes(r,f);
+  const url=await getDownloadURL(r);
+  await addDoc(collection(db,"stories"),{url,time:Date.now()});
 };
-onSnapshot(collection(db,"stories"),s=>{
-  stories.innerHTML="";
-  s.forEach(d=>{
-    stories.innerHTML+=`<div class="story">${d.data().user[0]}</div>`;
-  });
-});
 
-/* POST */
-window.addPost = async ()=>{
-  const img=await uploadMedia(postFile.files[0],"image");
-  await addDoc(collection(db,"posts"),{
-    user:auth.currentUser.email,
-    text:postText.value,
-    media:img,
-    time:serverTimestamp()
+function loadStories(){
+  onSnapshot(collection(db,"stories"),snap=>{
+    stories.innerHTML="";
+    snap.forEach(d=>{
+      stories.innerHTML+=`
+        <div class="story-circle">
+          <img src="${d.data().url}" style="width:100%;height:100%;border-radius:50%">
+        </div>`;
+    });
   });
-  postText.value=""; postFile.value="";
-};
-onSnapshot(query(collection(db,"posts"),orderBy("time","desc")),s=>{
-  feed.innerHTML="";
-  s.forEach(d=>{
-    const p=d.data();
-    feed.innerHTML+=`
-      <div class="feed-item">
-        <b>${p.user}</b><br>${p.text||""}
-        ${p.media?`<img src="${p.media}">`:""}
-      </div>`;
-  });
-});
-
-/* REELS */
-window.addReel = async ()=>{
-  const vid=await uploadMedia(reelFile.files[0],"video");
-  await addDoc(collection(db,"reels"),{
-    user:auth.currentUser.email,
-    url:vid,
-    time:serverTimestamp()
-  });
-  reelFile.value="";
-};
-onSnapshot(query(collection(db,"reels"),orderBy("time","desc")),s=>{
-  reels.innerHTML="";
-  s.forEach(d=>{
-    reels.innerHTML+=`<video src="${d.data().url}" controls muted loop></video>`;
-  });
-});
-
-/* PROFILE */
-window.saveProfile = async ()=>{
-  const dp=await uploadMedia(dpFile.files[0],"image");
-  await addDoc(collection(db,"profiles"),{
-    user:auth.currentUser.email,
-    username:username.value,
-    bio:bio.value,
-    dp
-  });
-};
-onSnapshot(query(collection(db,"profiles"),where("user","==",auth.currentUser?.email)),s=>{
-  profileView.innerHTML="";
-  s.forEach(p=>{
-    profileView.innerHTML=`
-      ${p.data().dp?`<img src="${p.data().dp}" width="80">`:""}
-      <h4>${p.data().username}</h4>
-      <p>${p.data().bio}</p>`;
-  });
-});
+}
 </script>
 </body>
 </html>
