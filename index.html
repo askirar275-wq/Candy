@@ -2,204 +2,153 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ChatApp Ultimate</title>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<title>ChatApp</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-:root{
- --bg:#0b0f1a;--card:#12182b;--text:#fff;--muted:#9aa4bf;
- --accent:#4f8cff;--border:rgba(255,255,255,.15)
+body{
+  margin:0;
+  font-family:system-ui, Arial;
+  background:#0b0f1a;
+  color:#fff;
 }
-.light{--bg:#f4f6fb;--card:#fff;--text:#111;--muted:#666;--border:rgba(0,0,0,.1)}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-.app{max-width:430px;margin:auto;height:100vh;display:flex;flex-direction:column}
-header{padding:12px;background:var(--card);display:flex;justify-content:space-between}
-button{border:1px solid var(--border);background:none;color:var(--text);padding:8px 12px;border-radius:14px}
-button:active{transform:scale(.9)}
-.page{flex:1;overflow:auto;padding:12px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
-input{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text);margin:6px 0}
-
-/* CHAT */
-.msg{max-width:75%;padding:8px 12px;border-radius:14px;margin:6px 0}
-.me{margin-left:auto;background:var(--accent);color:#fff}
-.other{background:var(--card);border:1px solid var(--border)}
-.chatScreen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column}
-.messages{flex:1;overflow:auto;padding:10px}
-
-/* STORY */
-.storyRing{width:60px;height:60px;border-radius:50%;border:2px solid var(--accent);
-display:flex;align-items:center;justify-content:center;margin-right:10px}
-
-/* REEL */
-.reel{height:70vh;border-radius:18px;margin:12px 0;
-background:linear-gradient(135deg,#4f8cff,#7bffb1);
-display:flex;align-items:flex-end;padding:14px;color:#fff}
+.container{
+  max-width:420px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:#12182b;
+  padding:16px;
+  border-radius:14px;
+  margin-top:20px;
+  border:1px solid rgba(255,255,255,.15);
+}
+input,button{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.2);
+  background:none;
+  color:#fff;
+}
+button{
+  cursor:pointer;
+}
+button:active{transform:scale(.95)}
+.msg{
+  padding:10px 14px;
+  border-radius:14px;
+  margin:6px 0;
+  max-width:75%;
+}
+.me{background:#4f8cff;margin-left:auto}
+.other{background:#1b2238}
+#chat{display:none}
 </style>
 </head>
 
 <body>
-<div class="app">
 
-<header>
- <b>ChatApp</b>
- <button onclick="toggle()">🌗</button>
-</header>
+<div class="container">
 
-<div class="page" id="home">
- <h3>Users (Private Chat)</h3>
- <div id="users"></div>
+  <!-- LOGIN -->
+  <div class="card" id="loginBox">
+    <h3>ChatApp Login</h3>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="login()">Login</button>
+  </div>
 
- <h3>Stories</h3>
- <input type="file" id="storyFile">
- <button onclick="uploadStory()">Add Story</button>
- <div id="stories"></div>
-
- <h3>Reels</h3>
- <input type="file" id="reelFile">
- <button onclick="uploadReel()">Add Reel</button>
- <div id="reels"></div>
-
- <button onclick="logout()">Logout</button>
-</div>
+  <!-- CHAT -->
+  <div class="card" id="chat">
+    <h3>Global Chat</h3>
+    <div id="messages"></div>
+    <input id="msgInput" placeholder="Type message">
+    <button onclick="sendMsg()">Send</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 
 </div>
 
-<!-- CHAT SCREEN -->
-<div class="chatScreen" id="chat">
- <header>
-  <button onclick="closeChat()">←</button>
-  <b id="chatName"></b>
- </header>
- <div class="messages" id="msgs"></div>
- <div style="display:flex;gap:6px;padding:10px">
-  <input id="msg">
-  <button onclick="send()">Send</button>
- </div>
-</div>
+<!-- 🔥 FIREBASE COMPAT SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-/* 🔥 FIREBASE CONFIG */
-firebase.initializeApp({
- apiKey:"YOUR_API_KEY",
- authDomain:"YOUR_PROJECT.firebaseapp.com",
- projectId:"YOUR_PROJECT_ID",
- storageBucket:"YOUR_PROJECT.appspot.com"
-});
-const auth=firebase.auth();
-const db=firebase.firestore();
-const storage=firebase.storage();
+/* ✅ YOUR FIREBASE CONFIG (CORRECTLY PLACED) */
+const firebaseConfig = {
+  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain: "chatapp-d38d3.firebaseapp.com",
+  projectId: "chatapp-d38d3",
+  storageBucket: "chatapp-d38d3.appspot.com",
+  messagingSenderId: "321814992234",
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+};
+
+/* Initialize Firebase */
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
 /* AUTH */
-auth.onAuthStateChanged(u=>{
- if(u){loadUsers();loadStories();loadReels();}
- else{
-  auth.signInAnonymously();
- }
+function signup(){
+  auth.createUserWithEmailAndPassword(email.value, password.value)
+    .then(()=>alert("Signup successful"))
+    .catch(e=>alert(e.message));
+}
+
+function login(){
+  auth.signInWithEmailAndPassword(email.value, password.value)
+    .catch(e=>alert(e.message));
+}
+
+function logout(){
+  auth.signOut();
+}
+
+/* AUTH STATE */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBox.style.display="none";
+    chat.style.display="block";
+    loadMessages();
+  }else{
+    loginBox.style.display="block";
+    chat.style.display="none";
+  }
 });
 
-/* THEME */
-function toggle(){document.body.classList.toggle('light')}
-
-/* USERS + PRIVATE CHAT */
-let currentChat="";
-function loadUsers(){
- db.collection("users").get().then(s=>{
-  users.innerHTML="";
-  s.forEach(d=>{
-   if(d.id!==auth.currentUser.uid){
-    users.innerHTML+=`<div class="card" onclick="openChat('${d.id}','${d.data().email||"User"}')">${d.data().email||"User"}</div>`;
-   }
-  })
- })
- db.collection("users").doc(auth.currentUser.uid).set({
-  email:auth.currentUser.email||"Anonymous"
- })
+/* CHAT */
+function sendMsg(){
+  if(!msgInput.value) return;
+  db.collection("messages").add({
+    text: msgInput.value,
+    uid: auth.currentUser.uid,
+    time: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  msgInput.value="";
 }
 
-function openChat(uid,name){
- currentChat=[auth.currentUser.uid,uid].sort().join("_");
- chatName.innerText=name;
- chat.style.display="flex";
- db.collection("chats").doc(currentChat)
- .collection("messages").orderBy("time")
- .onSnapshot(s=>{
-  msgs.innerHTML="";
-  s.forEach(d=>{
-   let m=d.data();
-   let div=document.createElement("div");
-   div.className="msg "+(m.uid===auth.currentUser.uid?"me":"other");
-   div.innerText=m.text;
-   msgs.appendChild(div);
-  })
-  msgs.scrollTop=9999;
- })
+function loadMessages(){
+  db.collection("messages").orderBy("time")
+    .onSnapshot(snap=>{
+      messages.innerHTML="";
+      snap.forEach(d=>{
+        const m=d.data();
+        const div=document.createElement("div");
+        div.className="msg "+(m.uid===auth.currentUser.uid?"me":"other");
+        div.innerText=m.text;
+        messages.appendChild(div);
+      });
+      messages.scrollTop=9999;
+    });
 }
-function closeChat(){chat.style.display="none"}
-function send(){
- if(!msg.value)return;
- db.collection("chats").doc(currentChat)
- .collection("messages").add({
-  text:msg.value,
-  uid:auth.currentUser.uid,
-  time:firebase.firestore.FieldValue.serverTimestamp()
- })
- msg.value="";
-}
-
-/* STORIES */
-function uploadStory(){
- let f=storyFile.files[0];
- if(!f)return;
- let ref=storage.ref("stories/"+Date.now());
- ref.put(f).then(()=>{
-  ref.getDownloadURL().then(url=>{
-   db.collection("stories").add({
-    uid:auth.currentUser.uid,
-    url,
-    time:Date.now()
-   })
-  })
- })
-}
-function loadStories(){
- db.collection("stories").orderBy("time","desc")
- .onSnapshot(s=>{
-  stories.innerHTML="";
-  s.forEach(d=>{
-   stories.innerHTML+=`<img src="${d.data().url}" width="80" style="border-radius:50%;margin:6px">`
-  })
- })
-}
-
-/* REELS */
-function uploadReel(){
- let f=reelFile.files[0];
- if(!f)return;
- let ref=storage.ref("reels/"+Date.now());
- ref.put(f).then(()=>{
-  ref.getDownloadURL().then(url=>{
-   db.collection("reels").add({url})
-  })
- })
-}
-function loadReels(){
- db.collection("reels").onSnapshot(s=>{
-  reels.innerHTML="";
-  s.forEach(d=>{
-   reels.innerHTML+=`<div class="reel">🎬 Reel<br>${d.data().url}</div>`
-  })
- })
-}
-
-function logout(){auth.signOut()}
 </script>
+
 </body>
 </html>
