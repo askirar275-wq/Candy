@@ -1,1 +1,72 @@
-gfk
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatApp</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginBox" class="card">
+  <h2>ChatApp Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login / Signup</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+  <!-- HOME -->
+  <div id="home" class="page">
+    <h3>Stories</h3>
+    <input type="file" id="storyFile">
+    <button onclick="addStory()">Add Story</button>
+    <div id="storyList" class="row"></div>
+
+    <h3>Post</h3>
+    <textarea id="postText" placeholder="What's on your mind?"></textarea>
+    <input type="file" id="postFile">
+    <button onclick="addPost()">Post</button>
+
+    <h3>Feed</h3>
+    <div id="feed"></div>
+  </div>
+
+  <!-- REELS -->
+  <div id="reels" class="page hidden">
+    <h3>Reels</h3>
+    <p>(Video system later – UI ready)</p>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat" class="page hidden">
+    <h3>Chat</h3>
+    <p>Coming soon</p>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="profile" class="page hidden">
+    <h3>Profile</h3>
+    <input type="file" id="dpFile">
+    <button onclick="uploadDP()">Upload Photo</button>
+    <input id="bio" placeholder="Bio">
+    <button onclick="saveBio()">Save Bio</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="tabbar">
+    <button onclick="showPage('home')">🏠</button>
+    <button onclick="showPage('reels')">🎬</button>
+    <button onclick="showPage('chat')">💬</button>
+    <button onclick="showPage('profile')">👤</button>
+  </div>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+      </html>
