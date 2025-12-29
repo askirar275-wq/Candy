@@ -1,154 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>ChatApp</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatApp Social</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui, Arial;
-  background:#0b0f1a;
-  color:#fff;
+body{margin:0;background:#0b0f1a;color:#fff;font-family:system-ui}
+.container{max-width:430px;margin:auto;padding:12px}
+.card{background:#12182b;border-radius:14px;padding:12px;margin:10px 0;border:1px solid rgba(255,255,255,.12)}
+input,button,textarea{
+ width:100%;padding:12px;margin:6px 0;
+ border-radius:12px;border:1px solid rgba(255,255,255,.2);
+ background:none;color:#fff
 }
-.container{
-  max-width:420px;
-  margin:auto;
-  padding:20px;
-}
-.card{
-  background:#12182b;
-  padding:16px;
-  border-radius:14px;
-  margin-top:20px;
-  border:1px solid rgba(255,255,255,.15);
-}
-input,button{
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.2);
-  background:none;
-  color:#fff;
-}
-button{
-  cursor:pointer;
-}
-button:active{transform:scale(.95)}
-.msg{
-  padding:10px 14px;
-  border-radius:14px;
-  margin:6px 0;
-  max-width:75%;
-}
-.me{background:#4f8cff;margin-left:auto}
-.other{background:#1b2238}
-#chat{display:none}
+button:active{transform:scale(.96)}
+.story-bar{display:flex;gap:10px;overflow-x:auto}
+.story{min-width:70px;text-align:center}
+.story div{width:60px;height:60px;border-radius:50%;background:#4f8cff;margin:auto}
+.post,.reel{margin:12px 0;padding:12px;border-radius:12px;background:#1b2238}
+.small{opacity:.7;font-size:13px}
+.reels{height:60vh;overflow-y:auto}
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-  <!-- LOGIN -->
-  <div class="card" id="loginBox">
-    <h3>ChatApp Login</h3>
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="signup()">Sign Up</button>
-    <button onclick="login()">Login</button>
-  </div>
+<!-- AUTH -->
+<div class="card" id="loginBox">
+<h3>Login / Signup</h3>
+<input id="username" placeholder="Username">
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="signup()">Sign Up</button>
+<button onclick="login()">Login</button>
+</div>
 
-  <!-- CHAT -->
-  <div class="card" id="chat">
-    <h3>Global Chat</h3>
-    <div id="messages"></div>
-    <input id="msgInput" placeholder="Type message">
-    <button onclick="sendMsg()">Send</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+<!-- APP -->
+<div id="app" style="display:none">
+
+<!-- STORY -->
+<div class="card">
+<h4>Stories</h4>
+<div class="story-bar" id="stories"></div>
+</div>
+
+<!-- ADD POST -->
+<div class="card">
+<textarea id="postText" placeholder="What's on your mind?"></textarea>
+<button onclick="addPost()">Post</button>
+</div>
+
+<!-- FEED -->
+<div class="card">
+<h4>Feed</h4>
+<div id="feed"></div>
+</div>
+
+<!-- REELS -->
+<div class="card">
+<h4>Reels</h4>
+<div class="reels" id="reels"></div>
+</div>
+
+<button onclick="logout()">Logout</button>
+</div>
 
 </div>
 
-<!-- 🔥 FIREBASE COMPAT SDKs -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-/* ✅ YOUR FIREBASE CONFIG (CORRECTLY PLACED) */
-const firebaseConfig = {
-  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
-  authDomain: "chatapp-d38d3.firebaseapp.com",
-  projectId: "chatapp-d38d3",
-  storageBucket: "chatapp-d38d3.appspot.com",
-  messagingSenderId: "321814992234",
-  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+const firebaseConfig={
+ apiKey:"AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+ authDomain:"chatapp-d38d3.firebaseapp.com",
+ projectId:"chatapp-d38d3"
 };
-
-/* Initialize Firebase */
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db   = firebase.firestore();
+const auth=firebase.auth();
+const db=firebase.firestore();
 
 /* AUTH */
 function signup(){
-  auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(()=>alert("Signup successful"))
-    .catch(e=>alert(e.message));
+ if(!username.value)return alert("username?");
+ auth.createUserWithEmailAndPassword(email.value,password.value)
+ .then(c=>{
+  db.collection("users").doc(c.user.uid).set({username:username.value});
+ });
 }
+function login(){auth.signInWithEmailAndPassword(email.value,password.value)}
+function logout(){auth.signOut()}
 
-function login(){
-  auth.signInWithEmailAndPassword(email.value, password.value)
-    .catch(e=>alert(e.message));
-}
-
-function logout(){
-  auth.signOut();
-}
-
-/* AUTH STATE */
-auth.onAuthStateChanged(user=>{
-  if(user){
-    loginBox.style.display="none";
-    chat.style.display="block";
-    loadMessages();
-  }else{
-    loginBox.style.display="block";
-    chat.style.display="none";
-  }
+auth.onAuthStateChanged(u=>{
+ if(u){
+  loginBox.style.display="none";
+  app.style.display="block";
+  loadAll();
+ }else{
+  loginBox.style.display="block";
+  app.style.display="none";
+ }
 });
 
-/* CHAT */
-function sendMsg(){
-  if(!msgInput.value) return;
-  db.collection("messages").add({
-    text: msgInput.value,
-    uid: auth.currentUser.uid,
-    time: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  msgInput.value="";
+/* POST */
+function addPost(){
+ db.collection("posts").add({
+  text:postText.value,
+  uid:auth.currentUser.uid,
+  time:firebase.firestore.FieldValue.serverTimestamp()
+ });
+ postText.value="";
 }
 
-function loadMessages(){
-  db.collection("messages").orderBy("time")
-    .onSnapshot(snap=>{
-      messages.innerHTML="";
-      snap.forEach(d=>{
-        const m=d.data();
-        const div=document.createElement("div");
-        div.className="msg "+(m.uid===auth.currentUser.uid?"me":"other");
-        div.innerText=m.text;
-        messages.appendChild(div);
-      });
-      messages.scrollTop=9999;
-    });
+/* LOAD ALL */
+function loadAll(){
+ loadStories();
+ loadFeed();
+ loadReels();
+}
+
+/* STORIES */
+function loadStories(){
+ db.collection("users").onSnapshot(s=>{
+  stories.innerHTML="";
+  s.forEach(d=>{
+   const u=d.data();
+   const div=document.createElement("div");
+   div.className="story";
+   div.innerHTML=`<div></div><div class="small">${u.username}</div>`;
+   stories.appendChild(div);
+  });
+ });
+}
+
+/* FEED */
+function loadFeed(){
+ db.collection("posts").orderBy("time","desc")
+ .onSnapshot(s=>{
+  feed.innerHTML="";
+  s.forEach(d=>{
+   const p=d.data();
+   const div=document.createElement("div");
+   div.className="post";
+   div.innerHTML=`<b>Post</b><div>${p.text}</div>`;
+   feed.appendChild(div);
+  });
+ });
+}
+
+/* REELS (demo) */
+function loadReels(){
+ db.collection("posts").orderBy("time","desc")
+ .onSnapshot(s=>{
+  reels.innerHTML="";
+  s.forEach(d=>{
+   const r=d.data();
+   const div=document.createElement("div");
+   div.className="reel";
+   div.innerHTML=`🎬 ${r.text}`;
+   reels.appendChild(div);
+  });
+ });
 }
 </script>
-
 </body>
 </html>
