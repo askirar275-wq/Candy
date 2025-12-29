@@ -72,13 +72,31 @@ video{width:100%;border-radius:12px;margin-top:6px}
 <body>
 
 <!-- LOGIN -->
-<div id="login" class="container">
-  <h2>ChatApp Login</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login / Signup</button>
-</div>
+window.login = async ()=>{
+  const emailVal = email.value.trim();
+  const passVal = password.value.trim();
 
+  if(!emailVal || !passVal){
+    alert("Email aur password dono bharna zaruri hai");
+    return;
+  }
+
+  try{
+    await signInWithEmailAndPassword(auth, emailVal, passVal);
+    alert("Login successful");
+  }catch(err){
+    if(err.code === "auth/user-not-found"){
+      try{
+        await createUserWithEmailAndPassword(auth, emailVal, passVal);
+        alert("Account ban gaya, ab login ho gya");
+      }catch(e){
+        alert(e.message);
+      }
+    }else{
+      alert(err.message);
+    }
+  }
+};
 <!-- APP -->
 <div id="app" class="hidden">
 
@@ -128,10 +146,10 @@ video{width:100%;border-radius:12px;margin-top:6px}
 </div>
 
 <div class="bottom-bar">
-  <span>🏠</span>
+  <span>🏩</span>
   <span>🔍</span>
-  <span>🎬</span>
-  <span>💬</span>
+  <span>🎦</span>
+  <span>🔔</span>
   <span>👤</span>
 </div>
 
