@@ -3,197 +3,224 @@
 <head>
 <meta charset="UTF-8">
 <title>ChatApp</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{
-  margin:0;
-  font-family:system-ui,Arial;
-  background:#0b1220;
-  color:#fff;
-}
+body{margin:0;background:#0b1220;color:#fff;font-family:system-ui}
 .hidden{display:none}
-.container{max-width:420px;margin:auto;padding:20px}
-input,button{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  margin-top:10px;
-  font-size:16px;
+.container{max-width:420px;margin:auto;padding:15px;padding-bottom:90px}
+.card{background:#111827;padding:15px;border-radius:16px;margin-bottom:12px}
+input,textarea,button{
+ width:100%;padding:12px;margin-top:8px;
+ border-radius:12px;border:none
 }
-button{
-  background:#2563eb;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
+button{background:#2563eb;color:#fff;font-weight:600}
+.story{width:60px;height:60px;border-radius:50%;border:3px solid orange}
+.row{display:flex;gap:10px;align-items:center}
+img,video{width:100%;border-radius:12px;margin-top:8px}
+.small{font-size:13px;opacity:.8}
+.bottom{
+ position:fixed;bottom:0;left:0;right:0;
+ display:flex;justify-content:space-around;
+ background:#020617;padding:10px
 }
-.card{
-  background:#111827;
-  padding:15px;
-  border-radius:16px;
-  margin-top:15px;
-}
-.story-circle{
-  width:60px;height:60px;border-radius:50%;
-  border:3px solid orange;
-  display:flex;align-items:center;justify-content:center;
-  margin-right:10px;
-}
-.bottom-bar{
-  position:fixed;bottom:0;left:0;right:0;
-  background:#020617;
-  display:flex;justify-content:space-around;
-  padding:10px 0;
-}
-.bottom-bar button{
-  background:none;color:white;font-size:18px;
-}
+.bottom button{background:none;color:white;font-size:22px}
 </style>
 </head>
 <body>
 
-<!-- LOGIN PAGE -->
-<div id="loginPage" class="container">
-  <h2>ChatApp Login</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login / Signup</button>
+<!-- LOGIN -->
+<div id="login" class="container">
+<h2>ChatApp Login</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login / Signup</button>
 </div>
 
-<!-- HOME PAGE -->
-<div id="homePage" class="container hidden">
+<!-- HOME -->
+<div id="home" class="container hidden">
 
-  <div class="card">
-    <h3>Stories</h3>
-    <input type="file" id="storyFile">
-    <button onclick="uploadStory()">Add Story</button>
-    <div id="stories" style="display:flex;margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <input id="postText" placeholder="What's on your mind?">
-    <input type="file" id="postFile">
-    <button onclick="addPost()">Post</button>
-  </div>
-
-  <div class="card">
-    <h3>Feed</h3>
-    <div id="feed"></div>
-  </div>
-
+<div class="card">
+<h3>Stories</h3>
+<input type="file" id="storyFile">
+<button onclick="addStory()">Add Story</button>
+<div id="stories" class="row" style="margin-top:10px"></div>
 </div>
 
-<div class="bottom-bar hidden" id="bottomBar">
-  <button onclick="logout()">👤 Logout</button>
+<div class="card">
+<textarea id="postText" placeholder="What's on your mind?"></textarea>
+<input type="file" id="postImg">
+<button onclick="addPost()">Post</button>
+</div>
+
+<div id="feed"></div>
+</div>
+
+<!-- REELS -->
+<div id="reels" class="container hidden">
+<h3>Reels</h3>
+<div class="card small">Reels logic ready (video scroll next update)</div>
+</div>
+
+<!-- CHAT -->
+<div id="chat" class="container hidden">
+<h3>Chats</h3>
+<div class="card small">Private chat next update</div>
+</div>
+
+<!-- PROFILE -->
+<div id="profile" class="container hidden">
+<div class="card">
+<h3>Profile</h3>
+<input type="file" id="profilePic">
+<input id="bio" placeholder="Your bio">
+<button onclick="saveProfile()">Save</button>
+<img id="profileImg">
+<p id="bioText"></p>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom hidden" id="nav">
+<button onclick="show('home')">🏠</button>
+<button onclick="show('reels')">🎬</button>
+<button onclick="show('chat')">💬</button>
+<button onclick="show('profile')">👤</button>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,doc,setDoc,getDoc,deleteDoc,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import {getStorage,ref,uploadBytes,getDownloadURL} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
-  authDomain: "chatapp-d38d3.firebaseapp.com",
-  projectId: "chatapp-d38d3",
-  storageBucket: "chatapp-d38d3.appspot.com",
-  messagingSenderId: "321814992234",
-  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-// AUTO LOGIN
-onAuthStateChanged(auth, user=>{
-  if(user){
-    loginPage.classList.add("hidden");
-    homePage.classList.remove("hidden");
-    bottomBar.classList.remove("hidden");
-    loadFeed();
-    loadStories();
-  }else{
-    loginPage.classList.remove("hidden");
-    homePage.classList.add("hidden");
-    bottomBar.classList.add("hidden");
-  }
+const app=initializeApp({
+ apiKey:"AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+ authDomain:"chatapp-d38d3.firebaseapp.com",
+ projectId:"chatapp-d38d3",
+ storageBucket:"chatapp-d38d3.appspot.com",
+ appId:"1:321814992234:web:d1d8eb9d63fcafc53ec113"
 });
 
-// LOGIN / SIGNUP
-window.login = async ()=>{
-  try{
-    await signInWithEmailAndPassword(auth,email.value,password.value);
-  }catch(e){
-    if(e.code==="auth/user-not-found"){
-      await createUserWithEmailAndPassword(auth,email.value,password.value);
-    }else{
-      alert(e.message);
-    }
-  }
+const auth=getAuth(app);
+const db=getFirestore(app);
+const st=getStorage(app);
+
+window.show=id=>{
+["home","reels","chat","profile"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
 };
 
-// LOGOUT
-window.logout = ()=>{
-  signOut(auth);
+onAuthStateChanged(auth,u=>{
+ if(u){
+  login.classList.add("hidden");
+  nav.classList.remove("hidden");
+  show("home");
+  loadFeed();loadStories();loadProfile();
+ }
+});
+
+window.login=async()=>{
+ try{await signInWithEmailAndPassword(auth,email.value,password.value)}
+ catch{await createUserWithEmailAndPassword(auth,email.value,password.value)}
 };
 
-// POST
-window.addPost = async ()=>{
-  let img="";
-  if(postFile.files[0]){
-    const r=ref(storage,"posts/"+Date.now());
-    await uploadBytes(r,postFile.files[0]);
-    img=await getDownloadURL(r);
-  }
-  await addDoc(collection(db,"posts"),{
-    text:postText.value,
-    img,
-    time:Date.now()
-  });
-  postText.value="";
-  postFile.value="";
+window.logout=()=>signOut(auth);
+
+/* POSTS */
+window.addPost=async()=>{
+ let img="";
+ if(postImg.files[0]){
+  const r=ref(st,"posts/"+Date.now());
+  await uploadBytes(r,postImg.files[0]);
+  img=await getDownloadURL(r);
+ }
+ await addDoc(collection(db,"posts"),{
+  uid:auth.currentUser.uid,text:postText.value,img,
+  likes:[],time:Date.now()
+ });
+ postText.value="";postImg.value="";
 };
 
-// FEED
 function loadFeed(){
-  const q=query(collection(db,"posts"),orderBy("time","desc"));
-  onSnapshot(q,snap=>{
-    feed.innerHTML="";
-    snap.forEach(d=>{
-      const p=d.data();
-      feed.innerHTML+=`
-        <div class="card">
-          <p>${p.text||""}</p>
-          ${p.img?`<img src="${p.img}" style="width:100%;border-radius:12px">`:""}
-        </div>`;
-    });
+ onSnapshot(query(collection(db,"posts"),orderBy("time","desc")),s=>{
+  feed.innerHTML="";
+  s.forEach(d=>{
+   const p=d.data();
+   feed.innerHTML+=`
+   <div class="card">
+    <p>${p.text||""}</p>
+    ${p.img?`<img src="${p.img}">`:""}
+    <div class="row">
+     <button onclick="likePost('${d.id}')">❤️ ${p.likes.length}</button>
+     <button onclick="comment('${d.id}')">💬</button>
+    </div>
+   </div>`;
   });
+ });
 }
 
-// STORY
-window.uploadStory = async ()=>{
-  const f=storyFile.files[0];
-  if(!f) return;
-  const r=ref(storage,"stories/"+Date.now());
-  await uploadBytes(r,f);
-  const url=await getDownloadURL(r);
-  await addDoc(collection(db,"stories"),{url,time:Date.now()});
+window.likePost=async(id)=>{
+ const r=doc(db,"posts",id);
+ const s=await getDoc(r);
+ const likes=s.data().likes;
+ likes.includes(auth.currentUser.uid)
+ ?updateDoc(r,{likes:arrayRemove(auth.currentUser.uid)})
+ :updateDoc(r,{likes:arrayUnion(auth.currentUser.uid)});
+};
+
+window.comment=id=>{
+ const c=prompt("Comment");
+ if(c) addDoc(collection(db,"posts",id,"comments"),{c});
+};
+
+/* STORIES */
+window.addStory=async()=>{
+ const f=storyFile.files[0];
+ if(!f)return;
+ const r=ref(st,"stories/"+Date.now());
+ await uploadBytes(r,f);
+ const url=await getDownloadURL(r);
+ await addDoc(collection(db,"stories"),{
+  uid:auth.currentUser.uid,url
+ });
 };
 
 function loadStories(){
-  onSnapshot(collection(db,"stories"),snap=>{
-    stories.innerHTML="";
-    snap.forEach(d=>{
-      stories.innerHTML+=`
-        <div class="story-circle">
-          <img src="${d.data().url}" style="width:100%;height:100%;border-radius:50%">
-        </div>`;
-    });
+ onSnapshot(collection(db,"stories"),s=>{
+  stories.innerHTML="";
+  s.forEach(d=>{
+   const st=d.data();
+   stories.innerHTML+=`
+   <div>
+    <img class="story" src="${st.url}">
+    ${st.uid===auth.currentUser.uid
+     ?`<button onclick="deleteDoc(doc(db,'stories','${d.id}'))">🗑️</button>`:""}
+   </div>`;
   });
+ });
+}
+
+/* PROFILE */
+window.saveProfile=async()=>{
+ let img="";
+ if(profilePic.files[0]){
+  const r=ref(st,"profile/"+auth.currentUser.uid);
+  await uploadBytes(r,profilePic.files[0]);
+  img=await getDownloadURL(r);
+ }
+ await setDoc(doc(db,"users",auth.currentUser.uid),{
+  bio:bio.value,img
+ });
+ loadProfile();
+};
+
+async function loadProfile(){
+ const s=await getDoc(doc(db,"users",auth.currentUser.uid));
+ if(s.exists()){
+  profileImg.src=s.data().img||"";
+  bioText.innerText=s.data().bio||"";
+ }
 }
 </script>
 </body>
