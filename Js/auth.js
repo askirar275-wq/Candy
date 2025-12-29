@@ -1,43 +1,66 @@
-import { initializeApp } from
-"https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+// js/auth.js
+import { auth } from "./firebase.js";
 import {
-  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut,
   onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
-  authDomain: "chatapp-d38d3.firebaseapp.com",
-  projectId: "chatapp-d38d3",
-};
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const loginBtn = document.getElementById("loginBtn");
+const msg = document.getElementById("msg");
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+loginBtn.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-// Auto login
-onAuthStateChanged(auth, (user) => {
-  if (user && location.pathname.includes("index")) {
-    location.href = "home.html";
+  msg.innerText = "⏳ Please wait...";
+  msg.style.color = "yellow";
+
+  if (!email || !password) {
+    msg.innerText = "Email & password required";
+    msg.style.color = "red";
+    return;
+  }
+
+  try {
+    // 🔹 Try login first
+    await signInWithEmailAndPassword(auth, email, password);
+
+    msg.innerText = "Login successful ✅";
+    msg.style.color = "lightgreen";
+
+    setTimeout(() => {
+      window.location.href = "home.html";
+    }, 1000);
+
+  } catch (loginError) {
+    // 🔹 If user not found → signup
+    if (loginError.code === "auth/user-not-found") {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        msg.innerText = "Account created & logged in ✅";
+        msg.style.color = "lightgreen";
+
+        setTimeout(() => {
+          window.location.href = "home.html";
+        }, 1000);
+
+      } catch (signupError) {
+        msg.innerText = signupError.message;
+        msg.style.color = "red";
+      }
+    } else {
+      msg.innerText = loginError.message;
+      msg.style.color = "red";
+    }
   }
 });
 
-window.login = async () => {
-  const email = emailInput.value;
-  const pass = passwordInput.value;
-
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    location.href = "home.html";
-  } catch {
-    await createUserWithEmailAndPassword(auth, email, pass);
-    location.href = "home.html";
+/* 🔹 Auto login check */
+onAuthStateChanged(auth, (user) => {
+  if (user && window.location.pathname.includes("index.html")) {
+    window.location.href = "home.html";
   }
-};
-
-window.logout = async () => {
-  await signOut(auth);
-  location.href = "index.html";
-};
+});
