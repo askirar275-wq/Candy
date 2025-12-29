@@ -1,73 +1,198 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Candy Match</title>
-  <link rel="stylesheet" href="css/style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ChatApp PRO</title>
+
+<style>
+:root{
+  --bg:#0b0f1a; --card:#12182b; --text:#fff; --muted:#9aa4bf;
+  --accent:#4f8cff; --accent2:#7bffb1; --border:rgba(255,255,255,.15);
+}
+.light{
+  --bg:#f4f6fb; --card:#fff; --text:#111; --muted:#666; --border:rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,Arial;background:var(--bg);color:var(--text)}
+.app{max-width:430px;margin:auto;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+.header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--border)}
+.header h1{margin:0;font-size:18px}
+.toggle{border:1px solid var(--border);background:none;color:var(--text);padding:6px 12px;border-radius:18px}
+.toggle:active{transform:scale(.9)}
+
+/* CONTENT */
+.content{flex:1;position:relative}
+.page{display:none;height:100%;overflow:auto;padding:14px}
+.page.active{display:block}
+
+/* STORIES STRIP */
+.stories{display:flex;gap:10px;overflow-x:auto}
+.story{min-width:70px;text-align:center}
+.story .ring{width:60px;height:60px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center}
+.story img{width:50px;height:50px;border-radius:50%}
+
+/* CHAT LIST */
+.chat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
+.chat:active{transform:scale(.98)}
+
+/* CHAT SCREEN */
+.chatScreen{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column}
+.chatHeader{padding:12px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.back{border:1px solid var(--border);background:none;color:var(--text);padding:6px 10px;border-radius:14px}
+.messages{flex:1;padding:10px;overflow:auto}
+.msg{max-width:75%;padding:10px 12px;border-radius:14px;margin:6px 0;animation:pop .15s ease}
+.me{margin-left:auto;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.other{background:var(--card);border:1px solid var(--border)}
+.inputBar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
+.inputBar input{flex:1;padding:10px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--text)}
+.send{border:1px solid var(--border);background:none;color:var(--text);padding:10px 14px;border-radius:14px}
+.send:active{transform:scale(.9)}
+
+/* REELS */
+.reel{height:78vh;border-radius:20px;margin-bottom:16px;position:relative;
+background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:flex-end;padding:16px}
+.reelActions{position:absolute;right:10px;bottom:20px;display:flex;flex-direction:column;gap:12px}
+.reelActions button{width:44px;height:44px;border-radius:50%;border:1px solid #fff;background:none;color:#fff;font-size:18px}
+.reelActions button:active{transform:scale(.85)}
+
+/* STORY VIEWER */
+.storyViewer{position:absolute;inset:0;background:#000;display:none;flex-direction:column}
+.progress{height:4px;background:#333;margin:10px}
+.bar{height:100%;width:0;background:#fff}
+.storyBody{flex:1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px}
+
+/* NAV */
+.nav{display:flex;background:var(--card);border-top:1px solid var(--border)}
+.nav button{flex:1;padding:12px;background:none;border:none;color:var(--muted);font-size:18px}
+.nav button.active{color:var(--accent)}
+.nav button:active{transform:scale(.9)}
+
+@keyframes pop{from{transform:scale(.9)}to{transform:scale(1)}}
+</style>
 </head>
+
 <body>
+<div class="app">
+  <div class="header">
+    <h1>ChatApp</h1>
+    <button class="toggle" onclick="toggleMode()">🌗</button>
+  </div>
 
-  <div id="app" style="background:url('images/bg-gradient.png') center/cover no-repeat fixed;">
+  <div class="content">
+
     <!-- HOME -->
-    <main id="home" class="page">
-      <div class="hero-card">
-        <img src="images/logo.png" alt="logo" class="logo" onerror="this.style.display='none'"/>
-        <h1>🍭 Candy Match</h1>
-        <p>स्वीट्स को मिलाओ और लेवल पार करो!</p>
-        <div class="btn-row">
-          <button id="btn-start" class="btn primary">🎮 खेल शुरू करें</button>
-          <button id="btn-map" class="btn">🗺️ Level Map</button>
-          <button id="btn-open-shop" class="btn">🛒 Shop</button>
+    <div class="page active" id="home">
+      <div class="stories">
+        <div class="story" onclick="openStory()"><div class="ring"><img src="https://i.pravatar.cc/100?1"></div><small>You</small></div>
+        <div class="story" onclick="openStory()"><div class="ring"><img src="https://i.pravatar.cc/100?2"></div><small>Aman</small></div>
+        <div class="story" onclick="openStory()"><div class="ring"><img src="https://i.pravatar.cc/100?3"></div><small>Riya</small></div>
+      </div>
+
+      <h3>Chats</h3>
+      <div class="chat" onclick="openChat('Aman')"><b>Aman</b><br><small>Typing…</small></div>
+      <div class="chat" onclick="openChat('Riya')"><b>Riya</b><br><small>Seen ✔✔</small></div>
+    </div>
+
+    <!-- REELS -->
+    <div class="page" id="reels">
+      <div class="reel">
+        <div>🔥 Trending Reel</div>
+        <div class="reelActions">
+          <button>❤️</button><button>💬</button><button>↗️</button>
         </div>
       </div>
-    </main>
-
-    <!-- LEVEL MAP -->
-    <section id="map" class="page hidden">
-      <button class="back btn" data-go="home">← Home</button>
-      <h2>Level Map</h2>
-      <div id="levels" class="levels"></div>
-    </section>
-
-    <!-- GAME -->
-    <section id="game" class="page hidden">
-      <header class="game-header">
-        <button class="back btn" data-go="map">← Map</button>
-        <div class="stats">
-          Score: <span id="score">0</span>
-          &nbsp;&nbsp; Coins: <span id="coins">0</span>
-          &nbsp;&nbsp; Level: <span id="level-num">1</span>
+      <div class="reel">
+        <div>🎵 Music Reel</div>
+        <div class="reelActions">
+          <button>❤️</button><button>💬</button><button>↗️</button>
         </div>
-      </header>
-
-      <div class="board-wrap">
-        <div id="board" class="board" aria-label="game board"></div>
       </div>
+    </div>
 
-      <div class="controls">
-        <button id="btn-restart" class="btn">🔁 Restart</button>
-        <button id="btn-shuffle" class="btn">🔀 Shuffle</button>
-      </div>
-    </section>
+    <!-- PROFILE -->
+    <div class="page" id="profile">
+      <center>
+        <img src="https://i.pravatar.cc/120" style="border-radius:50%">
+        <h3>Your Name</h3>
+        <p class="muted">ChatApp PRO</p>
+      </center>
+    </div>
 
-    <!-- SHOP MODAL -->
-    <div id="shop-modal" class="shop-modal" aria-hidden="true">
-      <div class="shop-panel">
-        <button id="shop-close" class="btn">Close</button>
-        <h3>Shop</h3>
-        <div>Coins: <span id="shop-coins">0</span></div>
-        <div id="shop-items"></div>
+    <!-- CHAT SCREEN -->
+    <div class="chatScreen" id="chatScreen">
+      <div class="chatHeader">
+        <button class="back" onclick="closeChat()">←</button>
+        <b id="chatName">User</b>
       </div>
+      <div class="messages" id="messages">
+        <div class="msg other">Hello 👋</div>
+      </div>
+      <div class="inputBar">
+        <input id="msgInput" placeholder="Type message…">
+        <button class="send" onclick="sendMsg()">Send</button>
+      </div>
+    </div>
+
+    <!-- STORY VIEWER -->
+    <div class="storyViewer" id="storyViewer" onclick="nextStory()">
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="storyBody">Story 👀</div>
     </div>
 
   </div>
 
-  <!-- scripts - order matters -->
-  <script defer src="js/storage.js"></script>
-  <script defer src="js/safe-ui.js"></script>
-  <script defer src="js/level-map.js"></script>
-  <script defer src="js/game.js"></script>
+  <div class="nav">
+    <button class="active" onclick="openPage('home',this)">🏠</button>
+    <button onclick="openPage('reels',this)">🎬</button>
+    <button onclick="openPage('profile',this)">👤</button>
+  </div>
+</div>
 
+<script>
+function openPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleMode(){document.body.classList.toggle('light')}
+
+/* CHAT */
+function openChat(name){
+  document.getElementById('chatName').innerText=name;
+  document.getElementById('chatScreen').style.display='flex';
+}
+function closeChat(){document.getElementById('chatScreen').style.display='none'}
+function sendMsg(){
+  let i=document.getElementById('msgInput');
+  if(!i.value) return;
+  let d=document.createElement('div');
+  d.className='msg me';
+  d.innerText=i.value;
+  document.getElementById('messages').appendChild(d);
+  i.value='';
+  document.getElementById('messages').scrollTop=9999;
+}
+
+/* STORIES */
+let prog=0, timer;
+function openStory(){
+  document.getElementById('storyViewer').style.display='flex';
+  prog=0; document.getElementById('bar').style.width='0%';
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    prog+=2; document.getElementById('bar').style.width=prog+'%';
+    if(prog>=100){closeStory()}
+  },100);
+}
+function nextStory(){prog+=25}
+function closeStory(){
+  clearInterval(timer);
+  document.getElementById('storyViewer').style.display='none';
+}
+</script>
 </body>
-                                   </html>
+</html>
