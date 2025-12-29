@@ -1,12 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-// 🔹 Firebase config (tumhara)
+// 🔹 Firebase config (tumhara hi use kiya hai)
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
@@ -20,42 +19,39 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🔹 Auto login (session remember)
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.getElementById("msg").innerText =
-      "Logged in as " + user.email;
-    // yahan redirect kar sakte ho
-    // location.href = "home.html";
-  }
-});
-
 // 🔹 Login / Signup function
 window.login = async function () {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
   const msg = document.getElementById("msg");
 
+  msg.style.color = "#ff6b6b";
+  msg.innerText = "";
+
   if (!email || !password) {
-    msg.innerText = "Email aur password required";
+    msg.innerText = "Email aur password dono bharo";
     return;
   }
 
   try {
-    // 🔑 Login try
+    // 🔐 try login
     await signInWithEmailAndPassword(auth, email, password);
-    msg.innerText = "Login successful";
-  } catch (error) {
-    // 🆕 Agar user nahi mila to signup
-    if (error.code === "auth/user-not-found") {
+    msg.style.color = "#22c55e";
+    msg.innerText = "Login successful ✅";
+    // yahan redirect kar sakte ho
+    // location.href = "home.html";
+  } catch (err) {
+    // 👤 agar user nahi hai to signup
+    if (err.code === "auth/user-not-found") {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        msg.innerText = "Account created & logged in";
+        msg.style.color = "#22c55e";
+        msg.innerText = "Signup successful ✅";
       } catch (e) {
         msg.innerText = e.message;
       }
     } else {
-      msg.innerText = error.message;
+      msg.innerText = err.message;
     }
   }
 };
