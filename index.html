@@ -8,248 +8,268 @@
 <style>
 body{
   margin:0;
-  font-family:system-ui, Arial;
-  background:#0b0f1a;
+  font-family:system-ui,Arial;
+  background:#0b1220;
   color:#fff;
-  padding-bottom:80px;
 }
-.container{max-width:430px;margin:auto;padding:12px}
+.hidden{display:none}
+.container{padding:14px;padding-bottom:90px}
 .card{
-  background:#12182b;
+  background:#121a2f;
   border-radius:16px;
   padding:14px;
-  margin:12px 0;
-  border:1px solid rgba(255,255,255,.12)
+  margin-bottom:14px;
 }
 input,textarea,button{
   width:100%;
   padding:12px;
-  margin:6px 0;
   border-radius:12px;
-  border:1px solid rgba(255,255,255,.2);
-  background:none;
-  color:#fff
+  border:none;
+  outline:none;
+  background:#1a2340;
+  color:#fff;
+  margin-top:6px;
+}
+button{
+  background:#2563eb;
+  font-weight:600;
 }
 button:active{transform:scale(.95)}
-
-.story-bar{display:flex;gap:14px;overflow-x:auto}
-.story{text-align:center;min-width:70px}
-.circle{
-  width:64px;height:64px;border-radius:50%;
-  padding:3px;
-  background:linear-gradient(45deg,#ff2d55,#ff9500,#ffcc00)
+.story-row{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
 }
-.inner{
-  width:100%;height:100%;
+.story{
+  width:64px;height:64px;
   border-radius:50%;
-  background:#1b2238;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:bold
+  border:3px solid orange;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
 }
-
-.post{
-  background:#1b2238;
+.feed-item{
+  background:#1a2340;
   border-radius:14px;
-  padding:12px;
-  margin:10px 0
+  padding:10px;
+  margin-bottom:10px;
 }
-
 .bottom-bar{
-  position:fixed;bottom:0;left:0;right:0;height:64px;
-  background:#0b0f1a;
-  display:flex;justify-content:space-around;align-items:center;
-  border-top:1px solid rgba(255,255,255,.15)
+  position:fixed;
+  bottom:0;left:0;right:0;
+  background:#0f172a;
+  display:flex;
+  justify-content:space-around;
+  padding:10px 0;
 }
-.tab{
-  background:none;border:none;
-  color:#aaa;font-size:24px
-}
-.tab.active{color:#4f8cff}
+.bottom-bar span{font-size:22px}
+img{max-width:100%;border-radius:12px;margin-top:6px}
+video{width:100%;border-radius:12px;margin-top:6px}
 </style>
 </head>
 
 <body>
-<div class="container">
 
 <!-- LOGIN -->
-<div class="card" id="loginBox">
-  <h3>Login / Signup</h3>
-  <input id="username" placeholder="Username (signup only)">
-  <input id="email" type="email" placeholder="Email">
+<div id="login" class="container">
+  <h2>ChatApp Login</h2>
+  <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
-  <button onclick="signup()">Sign Up</button>
-  <button onclick="login()">Login</button>
+  <button onclick="login()">Login / Signup</button>
 </div>
 
 <!-- APP -->
-<div id="app" style="display:none">
+<div id="app" class="hidden">
 
-<!-- HOME -->
-<div id="home">
+<div class="container">
 
 <!-- STORIES -->
 <div class="card">
-  <h4>Stories</h4>
-
-  <!-- ADD STORY -->
-  <div style="display:flex;gap:10px">
-    <input id="storyText" placeholder="Add your story..." />
-    <button onclick="addStory()">+</button>
-  </div>
-
-  <div class="story-bar" id="stories"></div>
+  <h3>Stories</h3>
+  <input type="file" id="galleryFile" accept="image/*">
+  <button onclick="addStory()">Add Story</button>
+  <div class="story-row" id="stories"></div>
 </div>
 
 <!-- POST -->
 <div class="card">
   <textarea id="postText" placeholder="What's on your mind?"></textarea>
+  <input type="file" id="postFile" accept="image/*">
   <button onclick="addPost()">Post</button>
 </div>
 
 <!-- FEED -->
 <div class="card">
-  <h4>Feed</h4>
+  <h3>Feed</h3>
   <div id="feed"></div>
 </div>
 
+<!-- REELS -->
+<div class="card">
+  <h3>Reels</h3>
+  <input type="file" id="reelFile" accept="video/*">
+  <button onclick="addReel()">Upload Reel</button>
+  <div id="reels"></div>
 </div>
 
 <!-- PROFILE -->
-<div id="profile" style="display:none" class="card">
-  <h3>My Profile</h3>
-  <button onclick="logout()">Logout</button>
+<div class="card">
+  <h3>Profile</h3>
+  <input type="file" id="dpFile" accept="image/*">
+  <input id="username" placeholder="Username">
+  <textarea id="bio" placeholder="Bio"></textarea>
+  <button onclick="saveProfile()">Save Profile</button>
+  <div id="profileView"></div>
 </div>
 
-</div>
+<button onclick="logout()">Logout</button>
+
 </div>
 
-<!-- BOTTOM BAR -->
 <div class="bottom-bar">
-  <button class="tab active" onclick="showTab('home',this)">🏠</button>
-  <button class="tab" onclick="showTab('profile',this)">👤</button>
+  <span>🏠</span>
+  <span>🔍</span>
+  <span>🎬</span>
+  <span>💬</span>
+  <span>👤</span>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</div>
 
-<script>
-const firebaseConfig={
-  apiKey:"AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
-  authDomain:"chatapp-d38d3.firebaseapp.com",
-  projectId:"chatapp-d38d3"
+<!-- FIREBASE + APP LOGIC -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+/* 🔴 FILL THESE */
+const CLOUD_NAME = "YOUR_CLOUD_NAME";
+const UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain: "chatapp-d38d3.firebaseapp.com",
+  projectId: "chatapp-d38d3",
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
 };
-firebase.initializeApp(firebaseConfig);
 
-const auth=firebase.auth();
-const db=firebase.firestore();
-
-/* ONE-TIME LOGIN */
-auth.onAuthStateChanged(user=>{
-  if(user){
-    loginBox.style.display="none";
-    app.style.display="block";
-    loadStories();
-    loadFeed();
-  }else{
-    loginBox.style.display="block";
-    app.style.display="none";
-  }
-});
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 /* AUTH */
-function signup(){
-  if(!username.value) return alert("Enter username");
-  auth.createUserWithEmailAndPassword(email.value,password.value)
-    .then(c=>{
-      db.collection("users").doc(c.user.uid).set({
-        username:username.value
-      });
-    }).catch(e=>alert(e.message));
-}
-function login(){
-  auth.signInWithEmailAndPassword(email.value,password.value)
-    .catch(e=>alert(e.message));
-}
-function logout(){auth.signOut()}
+window.login = async ()=>{
+  try{
+    await signInWithEmailAndPassword(auth,email.value,password.value);
+  }catch{
+    await createUserWithEmailAndPassword(auth,email.value,password.value);
+  }
+};
+window.logout = ()=>signOut(auth);
 
-/* TABS */
-function showTab(tab,btn){
-  home.style.display="none";
-  profile.style.display="none";
-  document.getElementById(tab).style.display="block";
-  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+onAuthStateChanged(auth,u=>{
+  if(u){
+    login.classList.add("hidden");
+    appDiv.classList.remove("hidden");
+  }else{
+    login.classList.remove("hidden");
+    appDiv.classList.add("hidden");
+  }
+});
+const appDiv=document.getElementById("app");
+
+/* CLOUDINARY UPLOAD */
+async function uploadMedia(file,type="image"){
+  if(!file) return "";
+  if(file.size > 2*1024*1024){ alert("Max 2MB"); return ""; }
+  const fd=new FormData();
+  fd.append("file",file);
+  fd.append("upload_preset",UPLOAD_PRESET);
+  const res=await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${type}/upload`,
+    {method:"POST",body:fd}
+  );
+  const data=await res.json();
+  return data.secure_url;
 }
 
-/* STORIES */
-function addStory(){
-  if(!storyText.value.trim()) return;
-  db.collection("stories").add({
-    text:storyText.value,
-    uid:auth.currentUser.uid,
-    hiddenFrom:{},
-    viewers:{},
-    time:firebase.firestore.FieldValue.serverTimestamp()
+/* STORY */
+window.addStory = async ()=>{
+  const img=await uploadMedia(galleryFile.files[0],"image");
+  await addDoc(collection(db,"stories"),{
+    user:auth.currentUser.email,
+    media:img,
+    time:serverTimestamp()
   });
-  storyText.value="";
-}
-
-function loadStories(){
-  const DAY=24*60*60*1000;
-  const now=Date.now();
-
-  db.collection("stories").orderBy("time","desc")
-  .onSnapshot(snap=>{
-    stories.innerHTML="";
-    snap.forEach(d=>{
-      const s=d.data();
-      if(!s.time) return;
-      if(now - s.time.toMillis() > DAY) return;
-      if(s.hiddenFrom && s.hiddenFrom[auth.currentUser.uid]) return;
-
-      const div=document.createElement("div");
-      div.className="story";
-      div.innerHTML=`
-        <div class="circle">
-          <div class="inner">${s.text[0]}</div>
-        </div>
-      `;
-      stories.appendChild(div);
-    });
-    if(!stories.innerHTML){
-      stories.innerHTML="<small style='opacity:.6'>No stories yet</small>";
-    }
+  galleryFile.value="";
+};
+onSnapshot(collection(db,"stories"),s=>{
+  stories.innerHTML="";
+  s.forEach(d=>{
+    stories.innerHTML+=`<div class="story">${d.data().user[0]}</div>`;
   });
-}
+});
 
-/* POSTS */
-function addPost(){
-  if(!postText.value.trim()) return;
-  db.collection("posts").add({
+/* POST */
+window.addPost = async ()=>{
+  const img=await uploadMedia(postFile.files[0],"image");
+  await addDoc(collection(db,"posts"),{
+    user:auth.currentUser.email,
     text:postText.value,
-    uid:auth.currentUser.uid,
-    time:firebase.firestore.FieldValue.serverTimestamp()
+    media:img,
+    time:serverTimestamp()
   });
-  postText.value="";
-}
-function loadFeed(){
-  db.collection("posts").orderBy("time","desc")
-  .onSnapshot(s=>{
-    feed.innerHTML="";
-    s.forEach(d=>{
-      const p=d.data();
-      const div=document.createElement("div");
-      div.className="post";
-      div.innerText=p.text;
-      feed.appendChild(div);
-    });
-    if(!feed.innerHTML){
-      feed.innerHTML="<small style='opacity:.6'>No posts yet</small>";
-    }
+  postText.value=""; postFile.value="";
+};
+onSnapshot(query(collection(db,"posts"),orderBy("time","desc")),s=>{
+  feed.innerHTML="";
+  s.forEach(d=>{
+    const p=d.data();
+    feed.innerHTML+=`
+      <div class="feed-item">
+        <b>${p.user}</b><br>${p.text||""}
+        ${p.media?`<img src="${p.media}">`:""}
+      </div>`;
   });
-}
+});
+
+/* REELS */
+window.addReel = async ()=>{
+  const vid=await uploadMedia(reelFile.files[0],"video");
+  await addDoc(collection(db,"reels"),{
+    user:auth.currentUser.email,
+    url:vid,
+    time:serverTimestamp()
+  });
+  reelFile.value="";
+};
+onSnapshot(query(collection(db,"reels"),orderBy("time","desc")),s=>{
+  reels.innerHTML="";
+  s.forEach(d=>{
+    reels.innerHTML+=`<video src="${d.data().url}" controls muted loop></video>`;
+  });
+});
+
+/* PROFILE */
+window.saveProfile = async ()=>{
+  const dp=await uploadMedia(dpFile.files[0],"image");
+  await addDoc(collection(db,"profiles"),{
+    user:auth.currentUser.email,
+    username:username.value,
+    bio:bio.value,
+    dp
+  });
+};
+onSnapshot(query(collection(db,"profiles"),where("user","==",auth.currentUser?.email)),s=>{
+  profileView.innerHTML="";
+  s.forEach(p=>{
+    profileView.innerHTML=`
+      ${p.data().dp?`<img src="${p.data().dp}" width="80">`:""}
+      <h4>${p.data().username}</h4>
+      <p>${p.data().bio}</p>`;
+  });
+});
 </script>
 </body>
 </html>
