@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ChatApp Login</title>
+<title>ChatApp Ultimate</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <style>
 :root{
@@ -18,139 +19,187 @@
 .light{--bg:#f4f6fb;--card:#fff;--text:#111;--muted:#666;--border:rgba(0,0,0,.1)}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-.app{max-width:420px;margin:auto;height:100vh;display:flex;flex-direction:column}
-.header{padding:12px;background:var(--card);display:flex;justify-content:space-between}
-.page{flex:1;display:none;padding:16px}
-.page.active{display:block}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-top:40px}
-input{width:100%;padding:12px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--text);margin:8px 0}
-button{width:100%;padding:12px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--text);margin-top:10px}
-button:active{transform:scale(.95)}
-.chat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;margin:10px 0}
-.chatScreen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column}
-.messages{flex:1;padding:10px;overflow:auto}
+.app{max-width:430px;margin:auto;height:100vh;display:flex;flex-direction:column}
+header{padding:12px;background:var(--card);display:flex;justify-content:space-between}
+button{border:1px solid var(--border);background:none;color:var(--text);padding:8px 12px;border-radius:14px}
+button:active{transform:scale(.9)}
+.page{flex:1;overflow:auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
+input{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text);margin:6px 0}
+
+/* CHAT */
 .msg{max-width:75%;padding:8px 12px;border-radius:14px;margin:6px 0}
 .me{margin-left:auto;background:var(--accent);color:#fff}
 .other{background:var(--card);border:1px solid var(--border)}
-.inputBar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
+.chatScreen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column}
+.messages{flex:1;overflow:auto;padding:10px}
+
+/* STORY */
+.storyRing{width:60px;height:60px;border-radius:50%;border:2px solid var(--accent);
+display:flex;align-items:center;justify-content:center;margin-right:10px}
+
+/* REEL */
+.reel{height:70vh;border-radius:18px;margin:12px 0;
+background:linear-gradient(135deg,#4f8cff,#7bffb1);
+display:flex;align-items:flex-end;padding:14px;color:#fff}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<div class="header">
-  <b>ChatApp</b>
-  <button onclick="toggleMode()">🌗</button>
-</div>
+<header>
+ <b>ChatApp</b>
+ <button onclick="toggle()">🌗</button>
+</header>
 
-<!-- LOGIN -->
-<div class="page active" id="login">
-  <div class="card">
-    <h3>Login</h3>
-    <input id="loginEmail" placeholder="Email">
-    <input id="loginPass" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-    <p style="text-align:center">No account? <span onclick="show('signup')" style="color:var(--accent)">Sign up</span></p>
-  </div>
-</div>
-
-<!-- SIGNUP -->
-<div class="page" id="signup">
-  <div class="card">
-    <h3>Sign Up</h3>
-    <input id="signEmail" placeholder="Email">
-    <input id="signPass" type="password" placeholder="Password">
-    <button onclick="signup()">Create Account</button>
-    <p style="text-align:center">Already have account? <span onclick="show('login')" style="color:var(--accent)">Login</span></p>
-  </div>
-</div>
-
-<!-- HOME -->
 <div class="page" id="home">
-  <h3>Chats</h3>
-  <div class="chat" onclick="openChat()">Global Chat</div>
-  <button onclick="logout()">Logout</button>
+ <h3>Users (Private Chat)</h3>
+ <div id="users"></div>
+
+ <h3>Stories</h3>
+ <input type="file" id="storyFile">
+ <button onclick="uploadStory()">Add Story</button>
+ <div id="stories"></div>
+
+ <h3>Reels</h3>
+ <input type="file" id="reelFile">
+ <button onclick="uploadReel()">Add Reel</button>
+ <div id="reels"></div>
+
+ <button onclick="logout()">Logout</button>
 </div>
 
 </div>
 
-<!-- CHAT -->
-<div class="chatScreen" id="chatScreen">
-  <div class="header">
-    <button onclick="closeChat()">←</button>
-    <b>Global Chat</b>
-  </div>
-  <div class="messages" id="messages"></div>
-  <div class="inputBar">
-    <input id="msgInput" placeholder="Type message">
-    <button onclick="sendMsg()">Send</button>
-  </div>
+<!-- CHAT SCREEN -->
+<div class="chatScreen" id="chat">
+ <header>
+  <button onclick="closeChat()">←</button>
+  <b id="chatName"></b>
+ </header>
+ <div class="messages" id="msgs"></div>
+ <div style="display:flex;gap:6px;padding:10px">
+  <input id="msg">
+  <button onclick="send()">Send</button>
+ </div>
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG (PASTE YOUR DETAILS) */
+/* 🔥 FIREBASE CONFIG */
 firebase.initializeApp({
  apiKey:"YOUR_API_KEY",
  authDomain:"YOUR_PROJECT.firebaseapp.com",
- projectId:"YOUR_PROJECT_ID"
+ projectId:"YOUR_PROJECT_ID",
+ storageBucket:"YOUR_PROJECT.appspot.com"
 });
 const auth=firebase.auth();
 const db=firebase.firestore();
-
-/* THEME */
-function toggleMode(){document.body.classList.toggle('light')}
-function show(id){
- document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
- document.getElementById(id).classList.add('active');
-}
+const storage=firebase.storage();
 
 /* AUTH */
-function signup(){
- auth.createUserWithEmailAndPassword(
-  signEmail.value,signPass.value
- ).then(()=>show('home')).catch(e=>alert(e.message));
-}
-function login(){
- auth.signInWithEmailAndPassword(
-  loginEmail.value,loginPass.value
- ).then(()=>show('home')).catch(e=>alert(e.message));
-}
-function logout(){
- auth.signOut(); show('login');
-}
-auth.onAuthStateChanged(u=>{if(u)show('home')});
+auth.onAuthStateChanged(u=>{
+ if(u){loadUsers();loadStories();loadReels();}
+ else{
+  auth.signInAnonymously();
+ }
+});
 
-/* CHAT */
-function openChat(){
- document.getElementById("chatScreen").style.display="flex";
- load();
+/* THEME */
+function toggle(){document.body.classList.toggle('light')}
+
+/* USERS + PRIVATE CHAT */
+let currentChat="";
+function loadUsers(){
+ db.collection("users").get().then(s=>{
+  users.innerHTML="";
+  s.forEach(d=>{
+   if(d.id!==auth.currentUser.uid){
+    users.innerHTML+=`<div class="card" onclick="openChat('${d.id}','${d.data().email||"User"}')">${d.data().email||"User"}</div>`;
+   }
+  })
+ })
+ db.collection("users").doc(auth.currentUser.uid).set({
+  email:auth.currentUser.email||"Anonymous"
+ })
 }
-function closeChat(){
- document.getElementById("chatScreen").style.display="none";
-}
-function sendMsg(){
- if(!msgInput.value) return;
- db.collection("messages").add({
-  text:msgInput.value,
-  uid:auth.currentUser.uid,
-  time:firebase.firestore.FieldValue.serverTimestamp()
- });
- msgInput.value="";
-}
-function load(){
- db.collection("messages").orderBy("time").onSnapshot(s=>{
-  messages.innerHTML="";
+
+function openChat(uid,name){
+ currentChat=[auth.currentUser.uid,uid].sort().join("_");
+ chatName.innerText=name;
+ chat.style.display="flex";
+ db.collection("chats").doc(currentChat)
+ .collection("messages").orderBy("time")
+ .onSnapshot(s=>{
+  msgs.innerHTML="";
   s.forEach(d=>{
    let m=d.data();
    let div=document.createElement("div");
    div.className="msg "+(m.uid===auth.currentUser.uid?"me":"other");
    div.innerText=m.text;
-   messages.appendChild(div);
-  });
-  messages.scrollTop=9999;
- });
+   msgs.appendChild(div);
+  })
+  msgs.scrollTop=9999;
+ })
 }
+function closeChat(){chat.style.display="none"}
+function send(){
+ if(!msg.value)return;
+ db.collection("chats").doc(currentChat)
+ .collection("messages").add({
+  text:msg.value,
+  uid:auth.currentUser.uid,
+  time:firebase.firestore.FieldValue.serverTimestamp()
+ })
+ msg.value="";
+}
+
+/* STORIES */
+function uploadStory(){
+ let f=storyFile.files[0];
+ if(!f)return;
+ let ref=storage.ref("stories/"+Date.now());
+ ref.put(f).then(()=>{
+  ref.getDownloadURL().then(url=>{
+   db.collection("stories").add({
+    uid:auth.currentUser.uid,
+    url,
+    time:Date.now()
+   })
+  })
+ })
+}
+function loadStories(){
+ db.collection("stories").orderBy("time","desc")
+ .onSnapshot(s=>{
+  stories.innerHTML="";
+  s.forEach(d=>{
+   stories.innerHTML+=`<img src="${d.data().url}" width="80" style="border-radius:50%;margin:6px">`
+  })
+ })
+}
+
+/* REELS */
+function uploadReel(){
+ let f=reelFile.files[0];
+ if(!f)return;
+ let ref=storage.ref("reels/"+Date.now());
+ ref.put(f).then(()=>{
+  ref.getDownloadURL().then(url=>{
+   db.collection("reels").add({url})
+  })
+ })
+}
+function loadReels(){
+ db.collection("reels").onSnapshot(s=>{
+  reels.innerHTML="";
+  s.forEach(d=>{
+   reels.innerHTML+=`<div class="reel">🎬 Reel<br>${d.data().url}</div>`
+  })
+ })
+}
+
+function logout(){auth.signOut()}
 </script>
 </body>
 </html>
