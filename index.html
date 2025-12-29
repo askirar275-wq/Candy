@@ -1,72 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChatApp</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatApp Login</title>
+
+  <style>
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#0b1220;
+      font-family:Arial,Helvetica,sans-serif;
+      color:#fff;
+    }
+    .box{
+      width:90%;
+      max-width:380px;
+      background:#121c34;
+      padding:25px;
+      border-radius:14px;
+    }
+    h2{text-align:center;margin-bottom:20px}
+    input{
+      width:100%;
+      padding:12px;
+      margin-bottom:12px;
+      border:none;
+      border-radius:8px;
+      outline:none;
+      font-size:15px;
+    }
+    button{
+      width:100%;
+      padding:12px;
+      background:#2f6bff;
+      border:none;
+      border-radius:8px;
+      color:#fff;
+      font-size:16px;
+      cursor:pointer;
+    }
+    button:active{transform:scale(0.97)}
+    p{margin-top:10px;text-align:center;font-size:14px}
+  </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginBox" class="card">
-  <h2>ChatApp Login</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login / Signup</button>
-</div>
+  <div class="box">
+    <h2>ChatApp Login</h2>
 
-<!-- APP -->
-<div id="app" class="hidden">
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
 
-  <!-- HOME -->
-  <div id="home" class="page">
-    <h3>Stories</h3>
-    <input type="file" id="storyFile">
-    <button onclick="addStory()">Add Story</button>
-    <div id="storyList" class="row"></div>
-
-    <h3>Post</h3>
-    <textarea id="postText" placeholder="What's on your mind?"></textarea>
-    <input type="file" id="postFile">
-    <button onclick="addPost()">Post</button>
-
-    <h3>Feed</h3>
-    <div id="feed"></div>
+    <button onclick="login()">Login / Signup</button>
+    <p id="msg"></p>
   </div>
 
-  <!-- REELS -->
-  <div id="reels" class="page hidden">
-    <h3>Reels</h3>
-    <p>(Video system later – UI ready)</p>
-  </div>
-
-  <!-- CHAT -->
-  <div id="chat" class="page hidden">
-    <h3>Chat</h3>
-    <p>Coming soon</p>
-  </div>
-
-  <!-- PROFILE -->
-  <div id="profile" class="page hidden">
-    <h3>Profile</h3>
-    <input type="file" id="dpFile">
-    <button onclick="uploadDP()">Upload Photo</button>
-    <input id="bio" placeholder="Bio">
-    <button onclick="saveBio()">Save Bio</button>
-    <button onclick="logout()">Logout</button>
-  </div>
-
-  <!-- BOTTOM BAR -->
-  <div class="tabbar">
-    <button onclick="showPage('home')">🏠</button>
-    <button onclick="showPage('reels')">🎬</button>
-    <button onclick="showPage('chat')">💬</button>
-    <button onclick="showPage('profile')">👤</button>
-  </div>
-
-</div>
-
-<script type="module" src="js/app.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
-      </html>
+</html>
