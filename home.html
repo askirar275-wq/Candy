@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ChatApp - Home</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>Stories</h2>
+  <div class="stories">
+    <div class="story">+</div>
+    <div class="story">A</div>
+    <div class="story">B</div>
+  </div>
+
+  <h2>Feed</h2>
+  <div id="feed"></div>
+</div>
+
+<!-- Bottom Tab Bar -->
+<div class="tab-bar">
+  <a href="home.html">🏠</a>
+  <a href="reels.html">🎬</a>
+  <a href="profile.html">👤</a>
+  <button onclick="logout()">🚪</button>
+</div>
+
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/posts.js"></script>
+</body>
+</html>
