@@ -1,72 +1,147 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ChatApp Social</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChatApp</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{margin:0;background:#0b0f1a;color:#fff;font-family:system-ui}
-.container{max-width:430px;margin:auto;padding:12px}
-.card{background:#12182b;border-radius:14px;padding:12px;margin:10px 0;border:1px solid rgba(255,255,255,.12)}
-input,button,textarea{
- width:100%;padding:12px;margin:6px 0;
- border-radius:12px;border:1px solid rgba(255,255,255,.2);
- background:none;color:#fff
+body{
+  margin:0;
+  font-family:system-ui, Arial;
+  background:#0b0f1a;
+  color:#fff;
+  padding-bottom:80px;
 }
-button:active{transform:scale(.96)}
-.story-bar{display:flex;gap:10px;overflow-x:auto}
-.story{min-width:70px;text-align:center}
-.story div{width:60px;height:60px;border-radius:50%;background:#4f8cff;margin:auto}
-.post,.reel{margin:12px 0;padding:12px;border-radius:12px;background:#1b2238}
-.small{opacity:.7;font-size:13px}
-.reels{height:60vh;overflow-y:auto}
+.container{max-width:430px;margin:auto;padding:12px}
+.card{
+  background:#12182b;
+  border-radius:14px;
+  padding:12px;
+  margin:10px 0;
+  border:1px solid rgba(255,255,255,.12)
+}
+input,textarea,button{
+  width:100%;padding:12px;margin:6px 0;
+  border-radius:12px;border:1px solid rgba(255,255,255,.2);
+  background:none;color:#fff
+}
+button:active{transform:scale(.95)}
+
+.story-bar{display:flex;gap:12px;overflow-x:auto}
+.story{text-align:center}
+.circle{
+  width:64px;height:64px;border-radius:50%;
+  padding:3px;
+  background:linear-gradient(45deg,#ff2d55,#ff9500,#ffcc00)
+}
+.inner{
+  width:100%;height:100%;
+  border-radius:50%;
+  background:#1b2238;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold
+}
+
+.post{background:#1b2238;border-radius:14px;margin:12px 0;padding:12px}
+.post-actions{display:flex;gap:18px;margin-top:8px}
+
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;height:64px;
+  background:#0b0f1a;display:flex;justify-content:space-around;
+  align-items:center;border-top:1px solid rgba(255,255,255,.15)
+}
+.tab{
+  background:none;border:none;color:#aaa;font-size:24px;
+  position:relative
+}
+.tab.active{color:#4f8cff}
+.badge{
+  position:absolute;top:-4px;right:-6px;
+  background:#ff2d55;color:#fff;
+  font-size:11px;padding:2px 6px;border-radius:999px
+}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<!-- AUTH -->
+<!-- LOGIN -->
 <div class="card" id="loginBox">
-<h3>Login / Signup</h3>
-<input id="username" placeholder="Username">
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="signup()">Sign Up</button>
-<button onclick="login()">Login</button>
+  <h3>Login / Signup</h3>
+  <input id="username" placeholder="Username (signup only)">
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
 </div>
 
 <!-- APP -->
 <div id="app" style="display:none">
 
-<!-- STORY -->
-<div class="card">
-<h4>Stories</h4>
-<div class="story-bar" id="stories"></div>
+<!-- HOME -->
+<div id="home">
+  <div class="card">
+    <h4>Stories</h4>
+    <div class="story-bar" id="stories"></div>
+  </div>
+
+  <div class="card">
+    <textarea id="postText" placeholder="What's on your mind?"></textarea>
+    <button onclick="addPost()">Post</button>
+  </div>
+
+  <div class="card">
+    <h4>Feed</h4>
+    <div id="feed"></div>
+  </div>
 </div>
 
-<!-- ADD POST -->
-<div class="card">
-<textarea id="postText" placeholder="What's on your mind?"></textarea>
-<button onclick="addPost()">Post</button>
-</div>
-
-<!-- FEED -->
-<div class="card">
-<h4>Feed</h4>
-<div id="feed"></div>
+<!-- EXPLORE -->
+<div id="explore" style="display:none" class="card">
+  <h3>Explore</h3>
+  <input id="searchUser" placeholder="Search users..." oninput="searchUsers()">
+  <div id="exploreList"></div>
 </div>
 
 <!-- REELS -->
-<div class="card">
-<h4>Reels</h4>
-<div class="reels" id="reels"></div>
+<div id="reels" style="display:none" class="card">
+  <h3>Reels</h3>
+  <div id="reelList"></div>
 </div>
 
-<button onclick="logout()">Logout</button>
+<!-- CHAT (placeholder) -->
+<div id="chat" style="display:none" class="card">
+  <h3>Chat</h3>
+  <p>Private chat already added earlier</p>
 </div>
 
+<!-- PROFILE -->
+<div id="profile" style="display:none" class="card">
+  <h3>My Profile</h3>
+  <input id="profileUsername">
+  <textarea id="profileBio" rows="3"></textarea>
+  <button onclick="saveProfile()">Save Profile</button>
+
+  <div style="display:flex;gap:20px;margin:10px 0">
+    <div><b id="followerCount">0</b><br>Followers</div>
+    <div><b id="followingCount">0</b><br>Following</div>
+  </div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+</div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <button class="tab active" onclick="showTab('home',this)">🏠<span id="badge" class="badge" style="display:none">0</span></button>
+  <button class="tab" onclick="showTab('explore',this)">🔍</button>
+  <button class="tab" onclick="showTab('reels',this)">🎬</button>
+  <button class="tab" onclick="showTab('chat',this)">💬</button>
+  <button class="tab" onclick="showTab('profile',this)">👤</button>
 </div>
 
 <!-- FIREBASE -->
@@ -76,96 +151,135 @@ button:active{transform:scale(.96)}
 
 <script>
 const firebaseConfig={
- apiKey:"AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
- authDomain:"chatapp-d38d3.firebaseapp.com",
- projectId:"chatapp-d38d3"
+  apiKey:"AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain:"chatapp-d38d3.firebaseapp.com",
+  projectId:"chatapp-d38d3"
 };
 firebase.initializeApp(firebaseConfig);
 
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-/* AUTH */
-function signup(){
- if(!username.value)return alert("username?");
- auth.createUserWithEmailAndPassword(email.value,password.value)
- .then(c=>{
-  db.collection("users").doc(c.user.uid).set({username:username.value});
- });
-}
-function login(){auth.signInWithEmailAndPassword(email.value,password.value)}
-function logout(){auth.signOut()}
+let allUsers=[];
 
-auth.onAuthStateChanged(u=>{
- if(u){
-  loginBox.style.display="none";
-  app.style.display="block";
-  loadAll();
- }else{
-  loginBox.style.display="block";
-  app.style.display="none";
- }
+/* 🔐 ONE-TIME LOGIN */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBox.style.display="none";
+    app.style.display="block";
+    loadAll();
+  }else{
+    loginBox.style.display="block";
+    app.style.display="none";
+  }
 });
 
-/* POST */
-function addPost(){
- db.collection("posts").add({
-  text:postText.value,
-  uid:auth.currentUser.uid,
-  time:firebase.firestore.FieldValue.serverTimestamp()
- });
- postText.value="";
+/* AUTH */
+function signup(){
+  if(!username.value) return alert("Username?");
+  auth.createUserWithEmailAndPassword(email.value,password.value)
+  .then(c=>{
+    db.collection("users").doc(c.user.uid).set({
+      username:username.value,
+      bio:"",
+      followers:{},following:{},blocked:{}
+    });
+  }).catch(e=>alert(e.message));
+}
+function login(){
+  auth.signInWithEmailAndPassword(email.value,password.value)
+  .catch(e=>alert(e.message));
+}
+function logout(){auth.signOut()}
+
+/* TABS */
+function showTab(tab,btn){
+  ["home","explore","reels","chat","profile"].forEach(id=>{
+    document.getElementById(id).style.display="none";
+  });
+  document.getElementById(tab).style.display="block";
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
 }
 
-/* LOAD ALL */
+/* LOAD */
 function loadAll(){
- loadStories();
- loadFeed();
- loadReels();
+  loadStories();
+  loadFeed();
+  loadExplore();
+}
+
+/* POSTS */
+function addPost(){
+  db.collection("posts").add({
+    text:postText.value,
+    uid:auth.currentUser.uid,
+    time:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  postText.value="";
+}
+function loadFeed(){
+  db.collection("posts").orderBy("time","desc")
+  .onSnapshot(s=>{
+    feed.innerHTML="";
+    s.forEach(d=>{
+      const p=d.data();
+      const div=document.createElement("div");
+      div.className="post";
+      div.innerHTML=`${p.text}`;
+      feed.appendChild(div);
+    });
+  });
 }
 
 /* STORIES */
 function loadStories(){
- db.collection("users").onSnapshot(s=>{
-  stories.innerHTML="";
-  s.forEach(d=>{
-   const u=d.data();
-   const div=document.createElement("div");
-   div.className="story";
-   div.innerHTML=`<div></div><div class="small">${u.username}</div>`;
-   stories.appendChild(div);
+  db.collection("stories").orderBy("time","desc")
+  .onSnapshot(s=>{
+    stories.innerHTML="";
+    s.forEach(d=>{
+      const st=d.data();
+      const div=document.createElement("div");
+      div.className="story";
+      div.innerHTML=`
+        <div class="circle"><div class="inner">${st.text?.[0]||"S"}</div></div>
+      `;
+      stories.appendChild(div);
+    });
   });
- });
 }
 
-/* FEED */
-function loadFeed(){
- db.collection("posts").orderBy("time","desc")
- .onSnapshot(s=>{
-  feed.innerHTML="";
-  s.forEach(d=>{
-   const p=d.data();
-   const div=document.createElement("div");
-   div.className="post";
-   div.innerHTML=`<b>Post</b><div>${p.text}</div>`;
-   feed.appendChild(div);
+/* EXPLORE */
+function loadExplore(){
+  db.collection("users").onSnapshot(s=>{
+    allUsers=[];
+    s.forEach(d=>{
+      if(d.id!==auth.currentUser.uid){
+        allUsers.push({id:d.id,...d.data()});
+      }
+    });
+    renderExplore(allUsers);
   });
- });
+}
+function renderExplore(list){
+  exploreList.innerHTML="";
+  list.forEach(u=>{
+    const div=document.createElement("div");
+    div.innerHTML=`<b>@${u.username}</b><br><small>${u.bio||""}</small>`;
+    exploreList.appendChild(div);
+  });
+}
+function searchUsers(){
+  const q=searchUser.value.toLowerCase();
+  renderExplore(allUsers.filter(u=>u.username.toLowerCase().includes(q)));
 }
 
-/* REELS (demo) */
-function loadReels(){
- db.collection("posts").orderBy("time","desc")
- .onSnapshot(s=>{
-  reels.innerHTML="";
-  s.forEach(d=>{
-   const r=d.data();
-   const div=document.createElement("div");
-   div.className="reel";
-   div.innerHTML=`🎬 ${r.text}`;
-   reels.appendChild(div);
+/* PROFILE */
+function saveProfile(){
+  db.collection("users").doc(auth.currentUser.uid).update({
+    username:profileUsername.value,
+    bio:profileBio.value
   });
- });
 }
 </script>
 </body>
