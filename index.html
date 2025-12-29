@@ -16,20 +16,24 @@ body{
 .container{max-width:430px;margin:auto;padding:12px}
 .card{
   background:#12182b;
-  border-radius:14px;
-  padding:12px;
-  margin:10px 0;
+  border-radius:16px;
+  padding:14px;
+  margin:12px 0;
   border:1px solid rgba(255,255,255,.12)
 }
 input,textarea,button{
-  width:100%;padding:12px;margin:6px 0;
-  border-radius:12px;border:1px solid rgba(255,255,255,.2);
-  background:none;color:#fff
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.2);
+  background:none;
+  color:#fff
 }
 button:active{transform:scale(.95)}
 
-.story-bar{display:flex;gap:12px;overflow-x:auto}
-.story{text-align:center}
+.story-bar{display:flex;gap:14px;overflow-x:auto}
+.story{text-align:center;min-width:70px}
 .circle{
   width:64px;height:64px;border-radius:50%;
   padding:3px;
@@ -43,24 +47,24 @@ button:active{transform:scale(.95)}
   font-weight:bold
 }
 
-.post{background:#1b2238;border-radius:14px;margin:12px 0;padding:12px}
-.post-actions{display:flex;gap:18px;margin-top:8px}
+.post{
+  background:#1b2238;
+  border-radius:14px;
+  padding:12px;
+  margin:10px 0
+}
 
 .bottom-bar{
   position:fixed;bottom:0;left:0;right:0;height:64px;
-  background:#0b0f1a;display:flex;justify-content:space-around;
-  align-items:center;border-top:1px solid rgba(255,255,255,.15)
+  background:#0b0f1a;
+  display:flex;justify-content:space-around;align-items:center;
+  border-top:1px solid rgba(255,255,255,.15)
 }
 .tab{
-  background:none;border:none;color:#aaa;font-size:24px;
-  position:relative
+  background:none;border:none;
+  color:#aaa;font-size:24px
 }
 .tab.active{color:#4f8cff}
-.badge{
-  position:absolute;top:-4px;right:-6px;
-  background:#ff2d55;color:#fff;
-  font-size:11px;padding:2px 6px;border-radius:999px
-}
 </style>
 </head>
 
@@ -82,53 +86,37 @@ button:active{transform:scale(.95)}
 
 <!-- HOME -->
 <div id="home">
-  <div class="card">
-    <h4>Stories</h4>
-    <div class="story-bar" id="stories"></div>
+
+<!-- STORIES -->
+<div class="card">
+  <h4>Stories</h4>
+
+  <!-- ADD STORY -->
+  <div style="display:flex;gap:10px">
+    <input id="storyText" placeholder="Add your story..." />
+    <button onclick="addStory()">+</button>
   </div>
 
-  <div class="card">
-    <textarea id="postText" placeholder="What's on your mind?"></textarea>
-    <button onclick="addPost()">Post</button>
-  </div>
-
-  <div class="card">
-    <h4>Feed</h4>
-    <div id="feed"></div>
-  </div>
+  <div class="story-bar" id="stories"></div>
 </div>
 
-<!-- EXPLORE -->
-<div id="explore" style="display:none" class="card">
-  <h3>Explore</h3>
-  <input id="searchUser" placeholder="Search users..." oninput="searchUsers()">
-  <div id="exploreList"></div>
+<!-- POST -->
+<div class="card">
+  <textarea id="postText" placeholder="What's on your mind?"></textarea>
+  <button onclick="addPost()">Post</button>
 </div>
 
-<!-- REELS -->
-<div id="reels" style="display:none" class="card">
-  <h3>Reels</h3>
-  <div id="reelList"></div>
+<!-- FEED -->
+<div class="card">
+  <h4>Feed</h4>
+  <div id="feed"></div>
 </div>
 
-<!-- CHAT (placeholder) -->
-<div id="chat" style="display:none" class="card">
-  <h3>Chat</h3>
-  <p>Private chat already added earlier</p>
 </div>
 
 <!-- PROFILE -->
 <div id="profile" style="display:none" class="card">
   <h3>My Profile</h3>
-  <input id="profileUsername">
-  <textarea id="profileBio" rows="3"></textarea>
-  <button onclick="saveProfile()">Save Profile</button>
-
-  <div style="display:flex;gap:20px;margin:10px 0">
-    <div><b id="followerCount">0</b><br>Followers</div>
-    <div><b id="followingCount">0</b><br>Following</div>
-  </div>
-
   <button onclick="logout()">Logout</button>
 </div>
 
@@ -137,10 +125,7 @@ button:active{transform:scale(.95)}
 
 <!-- BOTTOM BAR -->
 <div class="bottom-bar">
-  <button class="tab active" onclick="showTab('home',this)">🏠<span id="badge" class="badge" style="display:none">0</span></button>
-  <button class="tab" onclick="showTab('explore',this)">🔍</button>
-  <button class="tab" onclick="showTab('reels',this)">🎬</button>
-  <button class="tab" onclick="showTab('chat',this)">💬</button>
+  <button class="tab active" onclick="showTab('home',this)">🏠</button>
   <button class="tab" onclick="showTab('profile',this)">👤</button>
 </div>
 
@@ -160,14 +145,13 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-let allUsers=[];
-
-/* 🔐 ONE-TIME LOGIN */
+/* ONE-TIME LOGIN */
 auth.onAuthStateChanged(user=>{
   if(user){
     loginBox.style.display="none";
     app.style.display="block";
-    loadAll();
+    loadStories();
+    loadFeed();
   }else{
     loginBox.style.display="block";
     app.style.display="none";
@@ -176,41 +160,73 @@ auth.onAuthStateChanged(user=>{
 
 /* AUTH */
 function signup(){
-  if(!username.value) return alert("Username?");
+  if(!username.value) return alert("Enter username");
   auth.createUserWithEmailAndPassword(email.value,password.value)
-  .then(c=>{
-    db.collection("users").doc(c.user.uid).set({
-      username:username.value,
-      bio:"",
-      followers:{},following:{},blocked:{}
-    });
-  }).catch(e=>alert(e.message));
+    .then(c=>{
+      db.collection("users").doc(c.user.uid).set({
+        username:username.value
+      });
+    }).catch(e=>alert(e.message));
 }
 function login(){
   auth.signInWithEmailAndPassword(email.value,password.value)
-  .catch(e=>alert(e.message));
+    .catch(e=>alert(e.message));
 }
 function logout(){auth.signOut()}
 
 /* TABS */
 function showTab(tab,btn){
-  ["home","explore","reels","chat","profile"].forEach(id=>{
-    document.getElementById(id).style.display="none";
-  });
+  home.style.display="none";
+  profile.style.display="none";
   document.getElementById(tab).style.display="block";
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 }
 
-/* LOAD */
-function loadAll(){
-  loadStories();
-  loadFeed();
-  loadExplore();
+/* STORIES */
+function addStory(){
+  if(!storyText.value.trim()) return;
+  db.collection("stories").add({
+    text:storyText.value,
+    uid:auth.currentUser.uid,
+    hiddenFrom:{},
+    viewers:{},
+    time:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  storyText.value="";
+}
+
+function loadStories(){
+  const DAY=24*60*60*1000;
+  const now=Date.now();
+
+  db.collection("stories").orderBy("time","desc")
+  .onSnapshot(snap=>{
+    stories.innerHTML="";
+    snap.forEach(d=>{
+      const s=d.data();
+      if(!s.time) return;
+      if(now - s.time.toMillis() > DAY) return;
+      if(s.hiddenFrom && s.hiddenFrom[auth.currentUser.uid]) return;
+
+      const div=document.createElement("div");
+      div.className="story";
+      div.innerHTML=`
+        <div class="circle">
+          <div class="inner">${s.text[0]}</div>
+        </div>
+      `;
+      stories.appendChild(div);
+    });
+    if(!stories.innerHTML){
+      stories.innerHTML="<small style='opacity:.6'>No stories yet</small>";
+    }
+  });
 }
 
 /* POSTS */
 function addPost(){
+  if(!postText.value.trim()) return;
   db.collection("posts").add({
     text:postText.value,
     uid:auth.currentUser.uid,
@@ -226,59 +242,12 @@ function loadFeed(){
       const p=d.data();
       const div=document.createElement("div");
       div.className="post";
-      div.innerHTML=`${p.text}`;
+      div.innerText=p.text;
       feed.appendChild(div);
     });
-  });
-}
-
-/* STORIES */
-function loadStories(){
-  db.collection("stories").orderBy("time","desc")
-  .onSnapshot(s=>{
-    stories.innerHTML="";
-    s.forEach(d=>{
-      const st=d.data();
-      const div=document.createElement("div");
-      div.className="story";
-      div.innerHTML=`
-        <div class="circle"><div class="inner">${st.text?.[0]||"S"}</div></div>
-      `;
-      stories.appendChild(div);
-    });
-  });
-}
-
-/* EXPLORE */
-function loadExplore(){
-  db.collection("users").onSnapshot(s=>{
-    allUsers=[];
-    s.forEach(d=>{
-      if(d.id!==auth.currentUser.uid){
-        allUsers.push({id:d.id,...d.data()});
-      }
-    });
-    renderExplore(allUsers);
-  });
-}
-function renderExplore(list){
-  exploreList.innerHTML="";
-  list.forEach(u=>{
-    const div=document.createElement("div");
-    div.innerHTML=`<b>@${u.username}</b><br><small>${u.bio||""}</small>`;
-    exploreList.appendChild(div);
-  });
-}
-function searchUsers(){
-  const q=searchUser.value.toLowerCase();
-  renderExplore(allUsers.filter(u=>u.username.toLowerCase().includes(q)));
-}
-
-/* PROFILE */
-function saveProfile(){
-  db.collection("users").doc(auth.currentUser.uid).update({
-    username:profileUsername.value,
-    bio:profileBio.value
+    if(!feed.innerHTML){
+      feed.innerHTML="<small style='opacity:.6'>No posts yet</small>";
+    }
   });
 }
 </script>
