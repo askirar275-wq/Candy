@@ -1,25 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ChatApp Login</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<title>ChatApp</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{box-sizing:border-box;font-family:Arial}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#020024,#090979,#00d4ff);
+  color:#fff;
+}
+.card{
+  width:90%;
+  max-width:350px;
+  background:#0b1228;
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.5);
+  text-align:center;
+}
+input{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:8px;
+  border:none;
+}
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+  cursor:pointer;
+}
+.btn-main{background:#2563eb;color:#fff}
+.btn-google{background:#fff;color:#000}
+.success{color:#22c55e;margin-top:10px}
+.hidden{display:none}
+</style>
 </head>
+
 <body>
 
-<div class="card">
+<!-- LOGIN SCREEN -->
+<div class="card" id="loginBox">
   <h2>ChatApp Login</h2>
 
   <input id="email" type="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-  <button class="btn-primary" onclick="login()">Login / Signup</button>
+  <button class="btn-main" onclick="login()">Login / Signup</button>
   <button class="btn-google" onclick="googleLogin()">Login with Google</button>
 
-  <div id="msg" class="msg"></div>
+  <p id="msg"></p>
 </div>
 
-<script type="module" src="Js/firebase.js"></script>
-<script type="module" src="Js/auth.js"></script>
+<!-- HOME SCREEN -->
+<div class="card hidden" id="homeBox">
+  <h2>Welcome 🎉</h2>
+  <p>You are logged in</p>
+  <button class="btn-main" onclick="logout()">Logout</button>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain: "chatapp-d38d3.firebaseapp.com",
+  projectId: "chatapp-d38d3",
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+/* UI HELPERS */
+function showHome(){
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("homeBox").classList.remove("hidden");
+}
+function showLogin(){
+  document.getElementById("homeBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+}
+
+/* EMAIL LOGIN / SIGNUP */
+window.login = function(){
+  const email = emailInput.value;
+  const password = passwordInput.value;
+
+  signInWithEmailAndPassword(auth,email,password)
+  .then(showHome)
+  .catch(()=>{
+    createUserWithEmailAndPassword(auth,email,password)
+    .then(showHome)
+    .catch(err=>msg.innerText=err.message);
+  });
+}
+
+/* GOOGLE LOGIN */
+window.googleLogin = function(){
+  const provider = new GoogleAuthProvider();
+  signInWithPopup(auth,provider)
+  .then(()=>{
+    msg.innerHTML="✅ Google login successful";
+    showHome();
+  })
+  .catch(err=>msg.innerText=err.message);
+}
+
+/* LOGOUT */
+window.logout = function(){
+  signOut(auth).then(showLogin);
+}
+
+/* AUTO LOGIN */
+onAuthStateChanged(auth,user=>{
+  if(user) showHome();
+  else showLogin();
+});
+</script>
+
 </body>
 </html>
