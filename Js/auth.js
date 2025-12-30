@@ -1,66 +1,61 @@
-// js/auth.js
-import { auth } from "./firebase.js";
+// Js/auth.js
+import { auth, db } from "./firebase.js";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const loginBtn = document.getElementById("loginBtn");
-const msg = document.getElementById("msg");
+import {
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-loginBtn.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-
-  msg.innerText = "⏳ Please wait...";
-  msg.style.color = "yellow";
-
-  if (!email || !password) {
-    msg.innerText = "Email & password required";
-    msg.style.color = "red";
-    return;
+// 🔁 AUTH STATE LISTENER (MOST IMPORTANT)
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("User already logged in:", user.email);
+    window.location.href = "home.html"; // ✅ LOGIN KE BAAD
+  } else {
+    console.log("No user logged in");
   }
+});
+
+// EMAIL / PASSWORD LOGIN
+window.login = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
   try {
-    // 🔹 Try login first
     await signInWithEmailAndPassword(auth, email, password);
-
-    msg.innerText = "Login successful ✅";
-    msg.style.color = "lightgreen";
-
-    setTimeout(() => {
-      window.location.href = "home.html";
-    }, 1000);
-
-  } catch (loginError) {
-    // 🔹 If user not found → signup
-    if (loginError.code === "auth/user-not-found") {
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        msg.innerText = "Account created & logged in ✅";
-        msg.style.color = "lightgreen";
-
-        setTimeout(() => {
-          window.location.href = "home.html";
-        }, 1000);
-
-      } catch (signupError) {
-        msg.innerText = signupError.message;
-        msg.style.color = "red";
-      }
+  } catch (error) {
+    if (error.code === "auth/user-not-found") {
+      await createUserWithEmailAndPassword(auth, email, password);
     } else {
-      msg.innerText = loginError.message;
-      msg.style.color = "red";
+      alert(error.message);
     }
   }
-});
+};
 
-/* 🔹 Auto login check */
-onAuthStateChanged(auth, (user) => {
-  if (user && window.location.pathname.includes("index.html")) {
-    window.location.href = "home.html";
+// GOOGLE LOGIN
+window.googleLogin = async function () {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  const user = result.user;
+
+  const userRef = doc(db, "users", user.uid);
+  const snap = await getDoc(userRef);
+
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      username: "",
+      createdAt: Date.now()
+    });
+    window.location.href = "username.html"; // 🆕 first time
   }
-});
+};
