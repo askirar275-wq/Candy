@@ -1,9 +1,75 @@
-.reel {
-  margin: 15px 0;
+*{
+  box-sizing:border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
 }
 
-.reel video {
-  width: 100%;
-  max-height: 400px;
-  border-radius: 12px;
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:white;
+}
+
+.card{
+  width:100%;
+  max-width:380px;
+  background:#0b1220;
+  border-radius:20px;
+  padding:30px 22px;
+  box-shadow:0 25px 60px rgba(0,0,0,.6);
+  animation:fade .5s ease;
+}
+
+h2{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  margin-bottom:14px;
+  font-size:15px;
+  outline:none;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-size:16px;
+  cursor:pointer;
+  transition:.25s;
+}
+
+.btn-primary{
+  background:#2563eb;
+  color:white;
+}
+
+.btn-primary:active{
+  transform:scale(.96);
+}
+
+.btn-google{
+  background:white;
+  color:black;
+  margin-top:10px;
+}
+
+.msg{
+  margin-top:12px;
+  text-align:center;
+  font-size:14px;
+}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:none}
 }
