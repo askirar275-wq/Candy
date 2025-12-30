@@ -1,37 +1,22 @@
-import { auth, db } from "./firebase.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { app } from "./firebase.js";
 
-import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+const auth = getAuth(app);
 
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// 🔐 Auth protection
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
+// Check user logged in or not
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById("userEmail").innerText =
+      "Logged in as: " + user.email;
+  } else {
+    // Agar login nahi hai to wapas login page
     window.location.href = "index.html";
-    return;
   }
-
-  // 🔎 Load user data
-  const userRef = doc(db, "users", user.uid);
-  const snap = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    window.location.href = "username.html";
-    return;
-  }
-
-  document.getElementById("userName").innerText =
-    "@" + snap.data().username;
 });
 
-// 🚪 Logout
-window.logout = async function () {
-  await signOut(auth);
-  window.location.href = "index.html";
+// Logout
+window.logout = function () {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
 };
