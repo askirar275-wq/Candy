@@ -1,91 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChatApp Login</title>
+  <meta charset="UTF-8">
+  <title>ChatApp Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
 
-<style>
-*{
-  box-sizing:border-box;
-  font-family:system-ui,-apple-system;
-}
-body{
-  margin:0;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#020617;
-  color:white;
-}
-.card{
-  width:90%;
-  max-width:360px;
-  background:#020617;
-  border-radius:18px;
-  padding:26px;
-  box-shadow:0 25px 70px rgba(0,0,0,.6);
-}
-h2{
-  text-align:center;
-  margin-bottom:22px;
-}
-input{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  margin-bottom:14px;
-  font-size:15px;
-}
-button{
-  width:100%;
-  padding:14px;
-  border-radius:14px;
-  border:2px solid #2563eb;
-  background:#2563eb;
-  color:white;
-  font-size:16px;
-  cursor:pointer;
-  transition:.2s;
-}
-button:active{
-  transform:scale(.97);
-}
-.google{
-  background:white;
-  color:black;
-  border-color:white;
-  margin-top:10px;
-}
-#msg{
-  text-align:center;
-  margin-top:14px;
-  font-size:14px;
-}
-</style>
+    .card {
+      width: 320px;
+      background: rgba(255,255,255,0.05);
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.4);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+      margin-top: 10px;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .primary {
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(37,99,235,.4);
+    }
+
+    .google {
+      background: #fff;
+      color: #000;
+    }
+
+    #msg {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="card">
-  <h2>ChatApp Login</h2>
+  <div class="card">
+    <h2>ChatApp Login</h2>
 
-  <input id="email" type="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
 
-  <button onclick="login()">Login / Signup</button>
-  <button class="google" onclick="googleLogin()">Login with Google</button>
+    <button class="primary" onclick="login()">Login / Signup</button>
+    <button class="google" onclick="googleLogin()">Login with Google</button>
 
-  <div id="msg"></div>
-</div>
+    <div id="msg"></div>
+  </div>
 
-<!-- 🔥 Firebase + Auth JS -->
-<script type="module" src="Js/firebase.js"></script>
-<script type="module" src="Js/auth.js"></script>
+  <!-- ✅ SCRIPT ORDER (VERY IMPORTANT) -->
+  <script type="module" src="Js/firebase.js"></script>
+  <script type="module" src="Js/auth.js"></script>
 
 </body>
 </html>
