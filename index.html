@@ -1,102 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ChatApp Social</title>
-
-<!-- ===== STYLE ===== -->
 <style>
 *{box-sizing:border-box;font-family:system-ui}
-body{
-  margin:0;min-height:100vh;
-  background:linear-gradient(135deg,#020617,#0f172a,#0369a1);
-  color:#fff;
-  display:flex;justify-content:center;align-items:center;
-}
-.card{
-  width:100%;max-width:420px;
-  background:rgba(2,6,23,.85);
-  border-radius:18px;
-  padding:18px;
-  box-shadow:0 20px 40px #0008;
-}
-h2{text-align:center;margin:6px 0 14px}
-input,button{
-  width:100%;padding:12px;
-  border-radius:12px;border:none;margin:6px 0;
-}
-input{background:#fff;color:#000}
-button{
-  background:#2563eb;color:#fff;
-  font-weight:600;cursor:pointer;
-}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#020617,#0f172a,#0369a1);color:#fff}
+.wrap{max-width:420px;margin:auto;padding:14px}
+.card{background:rgba(2,6,23,.9);border-radius:18px;padding:14px;box-shadow:0 20px 40px #0008;margin:10px 0}
+h2,h3{text-align:center;margin:8px 0}
+input,button,textarea{width:100%;padding:12px;border-radius:12px;border:none;margin:6px 0}
+input,textarea{color:#000}
+button{background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
 button.alt{background:#fff;color:#000}
+button.warn{background:#22c55e}
 button.danger{background:#ef4444}
 .hidden{display:none}
-.feed{margin-top:12px}
-.post{
-  background:#020617;border-radius:14px;
-  padding:10px;margin-bottom:12px;
-}
-.post img{width:100%;border-radius:12px;margin-top:6px}
+.row{display:flex;gap:8px;align-items:center}
+.feed .post{background:#020617;border-radius:14px;padding:10px;margin:10px 0}
+.post img,.post video{width:100%;border-radius:12px;margin-top:6px}
 .meta{font-size:12px;opacity:.7}
 .like{cursor:pointer;color:#22c55e;margin-top:4px}
-.comment{font-size:13px;opacity:.85;margin-top:4px}
-small{opacity:.7}
+.comment{font-size:13px;opacity:.9;margin-top:4px}
+.storybar{display:flex;gap:8px;overflow:auto}
+.story{min-width:64px;height:64px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px}
+.profile{display:flex;gap:10px;align-items:center}
+.dp{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#111}
+.small{font-size:12px;opacity:.8}
 </style>
 </head>
-
 <body>
-<div class="card">
 
-<!-- ===== LOGIN ===== -->
-<div id="authBox">
+<div class="wrap">
+
+<!-- AUTH -->
+<div id="auth" class="card">
   <h2>ChatApp Social 📸</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+  <input id="email" placeholder="Email"/>
+  <input id="password" type="password" placeholder="Password"/>
   <button onclick="emailLogin()">Login / Signup</button>
   <button class="alt" onclick="googleLogin()">Login with Google</button>
-  <small id="authMsg"></small>
+  <div id="authMsg" class="small"></div>
 </div>
 
-<!-- ===== USERNAME ===== -->
-<div id="usernameBox" class="hidden">
-  <h2>Choose Username</h2>
-  <input id="username" placeholder="username">
+<!-- USERNAME -->
+<div id="unameBox" class="card hidden">
+  <h3>Choose Username</h3>
+  <input id="username" placeholder="username"/>
   <button onclick="saveUsername()">Save</button>
 </div>
 
-<!-- ===== APP ===== -->
-<div id="appBox" class="hidden">
-  <h2>Welcome 🎉</h2>
+<!-- PROFILE -->
+<div id="profileBox" class="card hidden">
+  <div class="profile">
+    <img id="dpImg" class="dp"/>
+    <div>
+      <b id="pname">@user</b><br/>
+      <span class="small"><span id="followers">0</span> followers</span>
+    </div>
+  </div>
+  <input type="file" id="dpFile"/>
+  <button class="warn" onclick="uploadDP()">Update DP</button>
+</div>
 
-  <input id="postText" placeholder="What's happening?">
-  <input type="file" id="postImage">
+<!-- STORY -->
+<div id="storyBox" class="card hidden">
+  <h3>Stories</h3>
+  <div class="storybar" id="stories"></div>
+  <input type="file" id="storyFile"/>
+  <button onclick="addStory()">Add Story</button>
+</div>
+
+<!-- CREATE POST -->
+<div id="createPost" class="card hidden">
+  <textarea id="postText" placeholder="What's happening?"></textarea>
+  <input type="file" id="postMedia"/>
   <button onclick="createPost()">Post</button>
-
-  <div class="feed" id="feed"></div>
-
-  <button class="danger" onclick="logout()">Logout</button>
 </div>
 
+<!-- FEED -->
+<div id="feed" class="feed hidden"></div>
+
+<button id="logoutBtn" class="danger hidden" onclick="logout()">Logout</button>
+
 </div>
 
-<!-- ===== FIREBASE ===== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, onAuthStateChanged,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signOut } from
-  "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc,
-  addDoc, collection, onSnapshot, query, orderBy,
-  updateDoc, arrayUnion } from
-  "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from
-  "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+import { getAuth,onAuthStateChanged,
+  signInWithEmailAndPassword,createUserWithEmailAndPassword,
+  GoogleAuthProvider,signInWithPopup,signOut } from
+"https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore,doc,setDoc,getDoc,addDoc,collection,
+  onSnapshot,query,orderBy,updateDoc,arrayUnion,serverTimestamp } from
+"https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getStorage,ref,uploadBytes,getDownloadURL } from
+"https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
-/* 🔥 YOUR CONFIG */
+/* 🔥 YOUR CONFIG (already correct) */
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
@@ -111,71 +113,93 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* ===== AUTH ===== */
+/* AUTH */
 window.emailLogin = async ()=>{
-  try{
-    await signInWithEmailAndPassword(auth,email.value,password.value);
-  }catch{
-    await createUserWithEmailAndPassword(auth,email.value,password.value);
-  }
+  try{ await signInWithEmailAndPassword(auth,email.value,password.value); }
+  catch{ await createUserWithEmailAndPassword(auth,email.value,password.value); }
 };
+window.googleLogin = async ()=> signInWithPopup(auth,new GoogleAuthProvider());
+window.logout = ()=> signOut(auth);
 
-window.googleLogin = async ()=>{
-  await signInWithPopup(auth,new GoogleAuthProvider());
-};
+/* STATE */
+onAuthStateChanged(auth, async u=>{
+  const logged = !!u;
+  auth.classList.toggle("hidden", logged);
+  logoutBtn.classList.toggle("hidden", !logged);
+  createPost.classList.toggle("hidden", !logged);
+  feed.classList.toggle("hidden", !logged);
+  storyBox.classList.toggle("hidden", !logged);
+  profileBox.classList.toggle("hidden", !logged);
 
-window.logout = ()=>signOut(auth);
+  if(!u){ unameBox.classList.add("hidden"); return; }
 
-/* ===== USER STATE ===== */
-onAuthStateChanged(auth, async user=>{
-  if(!user){
-    authBox.classList.remove("hidden");
-    appBox.classList.add("hidden");
-    usernameBox.classList.add("hidden");
-    return;
-  }
-  authBox.classList.add("hidden");
-  const u = await getDoc(doc(db,"users",user.uid));
-  if(!u.exists()){
-    usernameBox.classList.remove("hidden");
-  }else{
-    usernameBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
-    loadPosts();
+  const ud = await getDoc(doc(db,"users",u.uid));
+  if(!ud.exists()){ unameBox.classList.remove("hidden"); }
+  else{
+    unameBox.classList.add("hidden");
+    pname.textContent="@"+ud.data().username;
+    dpImg.src = ud.data().dp || "";
+    loadFeed(); loadStories();
   }
 });
 
-/* ===== USERNAME ===== */
+/* USERNAME */
 window.saveUsername = async ()=>{
-  await setDoc(doc(db,"users",auth.currentUser.uid),{
-    username:username.value
-  });
-  usernameBox.classList.add("hidden");
-  appBox.classList.remove("hidden");
-  loadPosts();
+  await setDoc(doc(db,"users",auth.currentUser.uid),
+    { username:username.value, followers:[], dp:"" },{merge:true});
+  unameBox.classList.add("hidden");
 };
 
-/* ===== POSTS ===== */
+/* PROFILE DP */
+window.uploadDP = async ()=>{
+  if(!dpFile.files[0]) return;
+  const r=ref(storage,"dp/"+auth.currentUser.uid);
+  await uploadBytes(r,dpFile.files[0]);
+  const url=await getDownloadURL(r);
+  await updateDoc(doc(db,"users",auth.currentUser.uid),{dp:url});
+  dpImg.src=url;
+};
+
+/* STORIES (24h) */
+window.addStory = async ()=>{
+  if(!storyFile.files[0]) return;
+  const r=ref(storage,"stories/"+Date.now());
+  await uploadBytes(r,storyFile.files[0]);
+  const url=await getDownloadURL(r);
+  await addDoc(collection(db,"stories"),{
+    uid:auth.currentUser.uid, media:url, created:Date.now()
+  });
+};
+function loadStories(){
+  const q=query(collection(db,"stories"),orderBy("created","desc"));
+  onSnapshot(q,s=>{
+    stories.innerHTML="";
+    s.forEach(d=>{
+      if(Date.now()-d.data().created < 86400000)
+        stories.innerHTML+=`<div class="story">Story</div>`;
+    });
+  });
+}
+
+/* POSTS */
 window.createPost = async ()=>{
-  let imgURL="";
-  if(postImage.files[0]){
+  let media="";
+  if(postMedia.files[0]){
     const r=ref(storage,"posts/"+Date.now());
-    await uploadBytes(r,postImage.files[0]);
-    imgURL=await getDownloadURL(r);
+    await uploadBytes(r,postMedia.files[0]);
+    media=await getDownloadURL(r);
   }
   await addDoc(collection(db,"posts"),{
-    text:postText.value,
-    img:imgURL,
     uid:auth.currentUser.uid,
-    likes:[],
-    created:new Date()
+    text:postText.value, media,
+    likes:[], created:serverTimestamp()
   });
-  postText.value="";postImage.value="";
+  postText.value=""; postMedia.value="";
 };
 
-function loadPosts(){
+function loadFeed(){
   const q=query(collection(db,"posts"),orderBy("created","desc"));
-  onSnapshot(q,async snap=>{
+  onSnapshot(q, async snap=>{
     feed.innerHTML="";
     for(const d of snap.docs){
       const p=d.data();
@@ -185,18 +209,18 @@ function loadPosts(){
       <div class="post">
         <b>@${name}</b>
         <div>${p.text||""}</div>
-        ${p.img?`<img src="${p.img}">`:""}
+        ${p.media? (p.media.endsWith(".mp4")
+          ?`<video controls src="${p.media}"></video>`
+          :`<img src="${p.media}">`):""}
         <div class="meta">${p.likes.length} likes</div>
         <div class="like" onclick="likePost('${d.id}')">❤️ Like</div>
       </div>`;
     }
   });
 }
-
 window.likePost = async id=>{
-  await updateDoc(doc(db,"posts",id),{
-    likes:arrayUnion(auth.currentUser.uid)
-  });
+  await updateDoc(doc(db,"posts",id),
+    {likes:arrayUnion(auth.currentUser.uid)});
 };
 </script>
 </body>
