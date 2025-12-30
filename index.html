@@ -1,135 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>ChatApp Social</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-  body{font-family:sans-serif;margin:0;padding:0; background:#f0f2f5;}
-  header{background:#fff;padding:15px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
-  input,button{margin:5px 0;padding:10px;border-radius:5px;border:1px solid #ccc;width:100%;}
-  button{background:#007bff;color:#fff;cursor:pointer;}
-  .container{max-width:500px;margin:auto;padding:20px;}
-  #postList img{width:100%;border-radius:10px;margin-top:10px;}
+*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont}
+body{
+  margin:0;
+  min-height:100vh;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+}
+.card{
+  width:100%;
+  max-width:420px;
+  background:#0b1220;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 20px 40px rgba(0,0,0,.4);
+}
+h2{text-align:center;margin:10px 0}
+input,button{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  margin:8px 0;
+  font-size:15px;
+}
+input{background:#111827;color:#fff}
+button{
+  background:#2563eb;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+button:active{transform:scale(.96)}
+.google{background:#fff;color:#000}
+.hidden{display:none}
+.feed{
+  margin-top:10px;
+}
+.post{
+  background:#020617;
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.post img{
+  width:100%;
+  border-radius:12px;
+  margin-top:8px;
+}
+.like{
+  margin-top:6px;
+  cursor:pointer;
+  color:#22c55e;
+}
+.logout{
+  background:#ef4444;
+  margin-top:10px;
+}
 </style>
 </head>
+
 <body>
 
-<header><h2>ChatApp Social</h2></header>
-
-<div class="container" id="authUI">
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">Login / Signup</button>
-  <button onclick="googleLogin()">Login with Google</button>
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+  <h2>ChatApp Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="emailLogin()">Login / Signup</button>
+  <button class="google" onclick="googleLogin()">Login with Google</button>
+  <p id="msg"></p>
 </div>
 
-<div class="container" id="appUI" style="display:none;">
-  <button onclick="logout()">Logout</button>
-  <h3>Create Post</h3>
-  <input type="file" id="fileUpload">
-  <button onclick="uploadPost()">Upload Photo</button>
-  <h3>Feed</h3>
-  <div id="postList"></div>
+<!-- APP -->
+<div class="card hidden" id="appBox">
+  <h2>ChatApp Social 📸</h2>
+
+  <input id="postText" placeholder="What's on your mind?">
+  <input type="file" id="postImage">
+  <button onclick="addPost()">Post</button>
+
+  <div class="feed" id="feed"></div>
+
+  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
 <script type="module">
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
-// ** 🔥 Paste your Firebase config here **
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+const firebaseConfig = {
+  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain: "chatapp-d38d3.firebaseapp.com",
+  projectId: "chatapp-d38d3",
+  storageBucket: "chatapp-d38d3.appspot.com",
+  messagingSenderId: "321814992234",
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+};
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
-    authDomain: "chatapp-d38d3.firebaseapp.com",
-    projectId: "chatapp-d38d3",
-    storageBucket: "chatapp-d38d3.firebasestorage.app",
-    messagingSenderId: "321814992234",
-    appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113",
-    measurementId: "G-NH050BSPC0"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Auth State Change
-onAuthStateChanged(auth,(user)=>{
+// AUTH STATE
+onAuthStateChanged(auth,user=>{
   if(user){
-    document.getElementById("authUI").style.display="none";
-    document.getElementById("appUI").style.display="block";
-    listenPosts();
-  } else {
-    document.getElementById("authUI").style.display="block";
-    document.getElementById("appUI").style.display="none";
+    loginBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+    loadPosts();
+  }else{
+    loginBox.classList.remove("hidden");
+    appBox.classList.add("hidden");
   }
 });
 
-// Login / Signup
-window.login = function(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+// LOGIN
+window.emailLogin = async ()=>{
+  try{
+    await signInWithEmailAndPassword(auth,email.value,password.value);
+  }catch{
+    await createUserWithEmailAndPassword(auth,email.value,password.value);
+  }
+};
 
-  signInWithEmailAndPassword(auth,email,password)
-  .catch(()=>{
-    createUserWithEmailAndPassword(auth,email,password)
-    .catch(err=>alert(err.message))
+window.googleLogin = async ()=>{
+  await signInWithPopup(auth,new GoogleAuthProvider());
+};
+
+// LOGOUT
+window.logout = ()=>signOut(auth);
+
+// ADD POST
+window.addPost = async ()=>{
+  const text = postText.value;
+  const file = postImage.files[0];
+  let img = "";
+  if(file){
+    const r = ref(storage,"posts/"+Date.now()+file.name);
+    await uploadBytes(r,file);
+    img = await getDownloadURL(r);
+  }
+  await addDoc(collection(db,"posts"),{
+    text,
+    img,
+    created:serverTimestamp()
   });
-}
+  postText.value="";
+  postImage.value="";
+};
 
-// Google Login
-window.googleLogin = function(){
-  const provider = new GoogleAuthProvider();
-  signInWithPopup(auth,provider)
-  .catch(err=>alert(err.message));
-}
-
-// Logout
-window.logout = function(){
-  signOut(auth);
-}
-
-// Upload Post
-window.uploadPost = async function(){
-  const file = document.getElementById("fileUpload").files[0];
-  if(!file) return alert("Select a photo");
-
-  const storageRef = ref(storage,"posts/"+Date.now()+"_"+file.name);
-  await uploadBytes(storageRef,file);
-  const url = await getDownloadURL(storageRef);
-
-  await addDoc(collection(db,"posts"),{image:url,created:Date.now()});
-  document.getElementById("fileUpload").value="";
-}
-
-// Listen Posts
-function listenPosts(){
-  const q = query(collection(db,"posts"), orderBy("created","desc"));
-  onSnapshot(q,(snap)=>{
-    const list = document.getElementById("postList");
-    list.innerHTML="";
-    snap.forEach(doc=>{
-      const data = doc.data();
-      list.innerHTML += `<img src="${data.image}">`;
+// LOAD POSTS
+function loadPosts(){
+  const q = query(collection(db,"posts"),orderBy("created","desc"));
+  onSnapshot(q,snap=>{
+    feed.innerHTML="";
+    snap.forEach(d=>{
+      const p=d.data();
+      feed.innerHTML+=`
+        <div class="post">
+          <div>${p.text||""}</div>
+          ${p.img?`<img src="${p.img}">`:""}
+          <div class="like">❤️ Like</div>
+        </div>`;
     });
   });
 }
-
 </script>
 
 </body>
