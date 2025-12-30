@@ -1,21 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Chat</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<title>Home</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="card">
-  <h2>Chat Room</h2>
+<h1>Welcome to ChatApp!</h1>
+<p>You are logged in.</p>
+<button onclick="logout()">Logout</button>
 
-  <div id="chatBox" style="height:260px;overflow:auto;margin-bottom:10px"></div>
+<script type="module">
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-  <input id="msgInput" placeholder="Type message">
-  <button class="btn-primary" onclick="sendMsg()">Send</button>
-</div>
+const auth = getAuth();
 
-<script type="module" src="Js/home.js"></script>
+window.logout = function(){
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+}
+</script>
+
 </body>
 </html>
