@@ -1,64 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>ChatApp • Home</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<link rel="stylesheet" href="css/style.css">
-
-<style>
-body{
-  margin:0;
-  font-family: system-ui, Arial;
-  background:#0b1220;
-  color:#fff;
-}
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:14px 18px;
-  background:#111a2e;
-}
-.username{
-  font-weight:600;
-}
-.logout{
-  background:#ff4d4d;
-  border:none;
-  color:#fff;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
-}
-.card{
-  margin:20px;
-  padding:20px;
-  background:#111a2e;
-  border-radius:14px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatApp Home</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
-<div class="topbar">
-  <div class="username" id="userName">Loading...</div>
-  <button class="logout" onclick="logout()">Logout</button>
-</div>
+  <h2>Welcome to ChatApp 🎉</h2>
+  <p id="userEmail">Loading...</p>
 
-<div class="card">
-  <h2>Welcome to ChatApp 🚀</h2>
-  <p>Login successful. Ab yahan se hum:</p>
-  <ul>
-    <li>Posts</li>
-    <li>Stories</li>
-    <li>Reels</li>
-    <li>Chat system</li>
-  </ul>
-</div>
+  <button onclick="logout()">Logout</button>
 
-<script type="module" src="js/home.js"></script>
+  <script type="module" src="Js/home.js"></script>
 </body>
 </html>
