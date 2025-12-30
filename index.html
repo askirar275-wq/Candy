@@ -1,126 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ChatApp Social</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- ===== STYLE ===== -->
 <style>
-*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont}
+*{box-sizing:border-box;font-family:system-ui}
 body{
-  margin:0;
-  min-height:100vh;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  margin:0;min-height:100vh;
+  background:linear-gradient(135deg,#020617,#0f172a,#0369a1);
   color:#fff;
+  display:flex;justify-content:center;align-items:center;
 }
 .card{
-  width:100%;
-  max-width:420px;
-  background:#0b1220;
+  width:100%;max-width:420px;
+  background:rgba(2,6,23,.85);
   border-radius:18px;
-  padding:20px;
-  box-shadow:0 20px 40px rgba(0,0,0,.4);
+  padding:18px;
+  box-shadow:0 20px 40px #0008;
 }
-h2{text-align:center;margin:10px 0}
+h2{text-align:center;margin:6px 0 14px}
 input,button{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:none;
-  margin:8px 0;
-  font-size:15px;
+  width:100%;padding:12px;
+  border-radius:12px;border:none;margin:6px 0;
 }
-input{background:#111827;color:#fff}
+input{background:#fff;color:#000}
 button{
-  background:#2563eb;
-  color:#fff;
-  font-weight:600;
-  cursor:pointer;
+  background:#2563eb;color:#fff;
+  font-weight:600;cursor:pointer;
 }
-button:active{transform:scale(.96)}
-.google{background:#fff;color:#000}
+button.alt{background:#fff;color:#000}
+button.danger{background:#ef4444}
 .hidden{display:none}
-.feed{
-  margin-top:10px;
-}
+.feed{margin-top:12px}
 .post{
-  background:#020617;
-  border-radius:14px;
-  padding:12px;
-  margin-bottom:12px;
+  background:#020617;border-radius:14px;
+  padding:10px;margin-bottom:12px;
 }
-.post img{
-  width:100%;
-  border-radius:12px;
-  margin-top:8px;
-}
-.like{
-  margin-top:6px;
-  cursor:pointer;
-  color:#22c55e;
-}
-.logout{
-  background:#ef4444;
-  margin-top:10px;
-}
+.post img{width:100%;border-radius:12px;margin-top:6px}
+.meta{font-size:12px;opacity:.7}
+.like{cursor:pointer;color:#22c55e;margin-top:4px}
+.comment{font-size:13px;opacity:.85;margin-top:4px}
+small{opacity:.7}
 </style>
 </head>
 
 <body>
+<div class="card">
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
-  <h2>ChatApp Login</h2>
+<!-- ===== LOGIN ===== -->
+<div id="authBox">
+  <h2>ChatApp Social 📸</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
   <button onclick="emailLogin()">Login / Signup</button>
-  <button class="google" onclick="googleLogin()">Login with Google</button>
-  <p id="msg"></p>
+  <button class="alt" onclick="googleLogin()">Login with Google</button>
+  <small id="authMsg"></small>
 </div>
 
-<!-- APP -->
-<div class="card hidden" id="appBox">
-  <h2>ChatApp Social 📸</h2>
+<!-- ===== USERNAME ===== -->
+<div id="usernameBox" class="hidden">
+  <h2>Choose Username</h2>
+  <input id="username" placeholder="username">
+  <button onclick="saveUsername()">Save</button>
+</div>
 
-  <input id="postText" placeholder="What's on your mind?">
+<!-- ===== APP ===== -->
+<div id="appBox" class="hidden">
+  <h2>Welcome 🎉</h2>
+
+  <input id="postText" placeholder="What's happening?">
   <input type="file" id="postImage">
-  <button onclick="addPost()">Post</button>
+  <button onclick="createPost()">Post</button>
 
   <div class="feed" id="feed"></div>
 
-  <button class="logout" onclick="logout()">Logout</button>
+  <button class="danger" onclick="logout()">Logout</button>
 </div>
 
+</div>
+
+<!-- ===== FIREBASE ===== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+import { getAuth, onAuthStateChanged,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  GoogleAuthProvider, signInWithPopup, signOut } from
+  "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc,
+  addDoc, collection, onSnapshot, query, orderBy,
+  updateDoc, arrayUnion } from
+  "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from
+  "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
+/* 🔥 YOUR CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
@@ -135,19 +111,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// AUTH STATE
-onAuthStateChanged(auth,user=>{
-  if(user){
-    loginBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
-    loadPosts();
-  }else{
-    loginBox.classList.remove("hidden");
-    appBox.classList.add("hidden");
-  }
-});
-
-// LOGIN
+/* ===== AUTH ===== */
 window.emailLogin = async ()=>{
   try{
     await signInWithEmailAndPassword(auth,email.value,password.value);
@@ -160,45 +124,80 @@ window.googleLogin = async ()=>{
   await signInWithPopup(auth,new GoogleAuthProvider());
 };
 
-// LOGOUT
 window.logout = ()=>signOut(auth);
 
-// ADD POST
-window.addPost = async ()=>{
-  const text = postText.value;
-  const file = postImage.files[0];
-  let img = "";
-  if(file){
-    const r = ref(storage,"posts/"+Date.now()+file.name);
-    await uploadBytes(r,file);
-    img = await getDownloadURL(r);
+/* ===== USER STATE ===== */
+onAuthStateChanged(auth, async user=>{
+  if(!user){
+    authBox.classList.remove("hidden");
+    appBox.classList.add("hidden");
+    usernameBox.classList.add("hidden");
+    return;
   }
-  await addDoc(collection(db,"posts"),{
-    text,
-    img,
-    created:serverTimestamp()
+  authBox.classList.add("hidden");
+  const u = await getDoc(doc(db,"users",user.uid));
+  if(!u.exists()){
+    usernameBox.classList.remove("hidden");
+  }else{
+    usernameBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+    loadPosts();
+  }
+});
+
+/* ===== USERNAME ===== */
+window.saveUsername = async ()=>{
+  await setDoc(doc(db,"users",auth.currentUser.uid),{
+    username:username.value
   });
-  postText.value="";
-  postImage.value="";
+  usernameBox.classList.add("hidden");
+  appBox.classList.remove("hidden");
+  loadPosts();
 };
 
-// LOAD POSTS
+/* ===== POSTS ===== */
+window.createPost = async ()=>{
+  let imgURL="";
+  if(postImage.files[0]){
+    const r=ref(storage,"posts/"+Date.now());
+    await uploadBytes(r,postImage.files[0]);
+    imgURL=await getDownloadURL(r);
+  }
+  await addDoc(collection(db,"posts"),{
+    text:postText.value,
+    img:imgURL,
+    uid:auth.currentUser.uid,
+    likes:[],
+    created:new Date()
+  });
+  postText.value="";postImage.value="";
+};
+
 function loadPosts(){
-  const q = query(collection(db,"posts"),orderBy("created","desc"));
-  onSnapshot(q,snap=>{
+  const q=query(collection(db,"posts"),orderBy("created","desc"));
+  onSnapshot(q,async snap=>{
     feed.innerHTML="";
-    snap.forEach(d=>{
+    for(const d of snap.docs){
       const p=d.data();
+      const u=await getDoc(doc(db,"users",p.uid));
+      const name=u.exists()?u.data().username:"user";
       feed.innerHTML+=`
-        <div class="post">
-          <div>${p.text||""}</div>
-          ${p.img?`<img src="${p.img}">`:""}
-          <div class="like">❤️ Like</div>
-        </div>`;
-    });
+      <div class="post">
+        <b>@${name}</b>
+        <div>${p.text||""}</div>
+        ${p.img?`<img src="${p.img}">`:""}
+        <div class="meta">${p.likes.length} likes</div>
+        <div class="like" onclick="likePost('${d.id}')">❤️ Like</div>
+      </div>`;
+    }
   });
 }
-</script>
 
+window.likePost = async id=>{
+  await updateDoc(doc(db,"posts",id),{
+    likes:arrayUnion(auth.currentUser.uid)
+  });
+};
+</script>
 </body>
 </html>
