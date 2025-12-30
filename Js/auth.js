@@ -1,50 +1,49 @@
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import { auth } from "./firebase.js";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-const msg = document.getElementById("msg");
+import {
+  getFirestore,
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// 🔐 Email Login / Signup
+const db = getFirestore();
+
+// Email login / signup
 window.login = async function () {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-
-  if (!email || !password) {
-    msg.innerText = "❌ Email & Password required";
-    msg.style.color = "orange";
-    return;
-  }
+  const email = emailInput.value;
+  const password = passwordInput.value;
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    msg.innerText = "✅ Login successful";
-    msg.style.color = "lightgreen";
-  } catch (err) {
-    if (err.code === "auth/user-not-found") {
-      await createUserWithEmailAndPassword(auth, email, password);
-      msg.innerText = "✅ Account created & logged in";
-      msg.style.color = "lightgreen";
-    } else {
-      msg.innerText = "❌ " + err.message;
-      msg.style.color = "red";
-    }
+    checkUsername();
+  } catch {
+    await createUserWithEmailAndPassword(auth, email, password);
+    window.location.href = "username.html";
   }
 };
 
-// 🔵 Google Login (POPUP ONLY)
+// Google login
 window.googleLogin = async function () {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-    msg.innerText = "✅ Google login successful";
-    msg.style.color = "lightgreen";
-  } catch (err) {
-    msg.innerText = "❌ " + err.message;
-    msg.style.color = "red";
-  }
+  const provider = new GoogleAuthProvider();
+  await signInWithPopup(auth, provider);
+  checkUsername();
 };
+
+// Username check
+async function checkUsername() {
+  const user = auth.currentUser;
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    window.location.href = "home.html";
+  } else {
+    window.location.href = "username.html";
+  }
+}
