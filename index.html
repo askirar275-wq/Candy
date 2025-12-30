@@ -1,227 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ChatApp Social</title>
-<style>
-*{box-sizing:border-box;font-family:system-ui}
-body{margin:0;min-height:100vh;background:linear-gradient(135deg,#020617,#0f172a,#0369a1);color:#fff}
-.wrap{max-width:420px;margin:auto;padding:14px}
-.card{background:rgba(2,6,23,.9);border-radius:18px;padding:14px;box-shadow:0 20px 40px #0008;margin:10px 0}
-h2,h3{text-align:center;margin:8px 0}
-input,button,textarea{width:100%;padding:12px;border-radius:12px;border:none;margin:6px 0}
-input,textarea{color:#000}
-button{background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
-button.alt{background:#fff;color:#000}
-button.warn{background:#22c55e}
-button.danger{background:#ef4444}
-.hidden{display:none}
-.row{display:flex;gap:8px;align-items:center}
-.feed .post{background:#020617;border-radius:14px;padding:10px;margin:10px 0}
-.post img,.post video{width:100%;border-radius:12px;margin-top:6px}
-.meta{font-size:12px;opacity:.7}
-.like{cursor:pointer;color:#22c55e;margin-top:4px}
-.comment{font-size:13px;opacity:.9;margin-top:4px}
-.storybar{display:flex;gap:8px;overflow:auto}
-.story{min-width:64px;height:64px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px}
-.profile{display:flex;gap:10px;align-items:center}
-.dp{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#111}
-.small{font-size:12px;opacity:.8}
-</style>
-</head>
-<body>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Login</title>
 
-<div class="wrap">
-
-<!-- AUTH -->
-<div id="auth" class="card">
-  <h2>ChatApp Social 📸</h2>
-  <input id="email" placeholder="Email"/>
-  <input id="password" type="password" placeholder="Password"/>
-  <button onclick="emailLogin()">Login / Signup</button>
-  <button class="alt" onclick="googleLogin()">Login with Google</button>
-  <div id="authMsg" class="small"></div>
-</div>
-
-<!-- USERNAME -->
-<div id="unameBox" class="card hidden">
-  <h3>Choose Username</h3>
-  <input id="username" placeholder="username"/>
-  <button onclick="saveUsername()">Save</button>
-</div>
-
-<!-- PROFILE -->
-<div id="profileBox" class="card hidden">
-  <div class="profile">
-    <img id="dpImg" class="dp"/>
-    <div>
-      <b id="pname">@user</b><br/>
-      <span class="small"><span id="followers">0</span> followers</span>
-    </div>
-  </div>
-  <input type="file" id="dpFile"/>
-  <button class="warn" onclick="uploadDP()">Update DP</button>
-</div>
-
-<!-- STORY -->
-<div id="storyBox" class="card hidden">
-  <h3>Stories</h3>
-  <div class="storybar" id="stories"></div>
-  <input type="file" id="storyFile"/>
-  <button onclick="addStory()">Add Story</button>
-</div>
-
-<!-- CREATE POST -->
-<div id="createPost" class="card hidden">
-  <textarea id="postText" placeholder="What's happening?"></textarea>
-  <input type="file" id="postMedia"/>
-  <button onclick="createPost()">Post</button>
-</div>
-
-<!-- FEED -->
-<div id="feed" class="feed hidden"></div>
-
-<button id="logoutBtn" class="danger hidden" onclick="logout()">Logout</button>
-
-</div>
-
+<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth,onAuthStateChanged,
-  signInWithEmailAndPassword,createUserWithEmailAndPassword,
-  GoogleAuthProvider,signInWithPopup,signOut } from
-"https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore,doc,setDoc,getDoc,addDoc,collection,
-  onSnapshot,query,orderBy,updateDoc,arrayUnion,serverTimestamp } from
-"https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-import { getStorage,ref,uploadBytes,getDownloadURL } from
-"https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-/* 🔥 YOUR CONFIG (already correct) */
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
   projectId: "chatapp-d38d3",
-  storageBucket: "chatapp-d38d3.appspot.com",
+  storageBucket: "chatapp-d38d3.firebasestorage.app",
   messagingSenderId: "321814992234",
-  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113",
+  measurementId: "G-NH050BSPC0"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
 
-/* AUTH */
-window.emailLogin = async ()=>{
-  try{ await signInWithEmailAndPassword(auth,email.value,password.value); }
-  catch{ await createUserWithEmailAndPassword(auth,email.value,password.value); }
-};
-window.googleLogin = async ()=> signInWithPopup(auth,new GoogleAuthProvider());
-window.logout = ()=> signOut(auth);
+window.register = function(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-/* STATE */
-onAuthStateChanged(auth, async u=>{
-  const logged = !!u;
-  auth.classList.toggle("hidden", logged);
-  logoutBtn.classList.toggle("hidden", !logged);
-  createPost.classList.toggle("hidden", !logged);
-  feed.classList.toggle("hidden", !logged);
-  storyBox.classList.toggle("hidden", !logged);
-  profileBox.classList.toggle("hidden", !logged);
-
-  if(!u){ unameBox.classList.add("hidden"); return; }
-
-  const ud = await getDoc(doc(db,"users",u.uid));
-  if(!ud.exists()){ unameBox.classList.remove("hidden"); }
-  else{
-    unameBox.classList.add("hidden");
-    pname.textContent="@"+ud.data().username;
-    dpImg.src = ud.data().dp || "";
-    loadFeed(); loadStories();
-  }
-});
-
-/* USERNAME */
-window.saveUsername = async ()=>{
-  await setDoc(doc(db,"users",auth.currentUser.uid),
-    { username:username.value, followers:[], dp:"" },{merge:true});
-  unameBox.classList.add("hidden");
-};
-
-/* PROFILE DP */
-window.uploadDP = async ()=>{
-  if(!dpFile.files[0]) return;
-  const r=ref(storage,"dp/"+auth.currentUser.uid);
-  await uploadBytes(r,dpFile.files[0]);
-  const url=await getDownloadURL(r);
-  await updateDoc(doc(db,"users",auth.currentUser.uid),{dp:url});
-  dpImg.src=url;
-};
-
-/* STORIES (24h) */
-window.addStory = async ()=>{
-  if(!storyFile.files[0]) return;
-  const r=ref(storage,"stories/"+Date.now());
-  await uploadBytes(r,storyFile.files[0]);
-  const url=await getDownloadURL(r);
-  await addDoc(collection(db,"stories"),{
-    uid:auth.currentUser.uid, media:url, created:Date.now()
-  });
-};
-function loadStories(){
-  const q=query(collection(db,"stories"),orderBy("created","desc"));
-  onSnapshot(q,s=>{
-    stories.innerHTML="";
-    s.forEach(d=>{
-      if(Date.now()-d.data().created < 86400000)
-        stories.innerHTML+=`<div class="story">Story</div>`;
-    });
-  });
+  createUserWithEmailAndPassword(auth, email, password)
+  .then(() => {
+    alert("Account Created ✅");
+  })
+  .catch(err => alert(err.message));
 }
 
-/* POSTS */
-window.createPost = async ()=>{
-  let media="";
-  if(postMedia.files[0]){
-    const r=ref(storage,"posts/"+Date.now());
-    await uploadBytes(r,postMedia.files[0]);
-    media=await getDownloadURL(r);
-  }
-  await addDoc(collection(db,"posts"),{
-    uid:auth.currentUser.uid,
-    text:postText.value, media,
-    likes:[], created:serverTimestamp()
-  });
-  postText.value=""; postMedia.value="";
-};
+window.login = function(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-function loadFeed(){
-  const q=query(collection(db,"posts"),orderBy("created","desc"));
-  onSnapshot(q, async snap=>{
-    feed.innerHTML="";
-    for(const d of snap.docs){
-      const p=d.data();
-      const u=await getDoc(doc(db,"users",p.uid));
-      const name=u.exists()?u.data().username:"user";
-      feed.innerHTML+=`
-      <div class="post">
-        <b>@${name}</b>
-        <div>${p.text||""}</div>
-        ${p.media? (p.media.endsWith(".mp4")
-          ?`<video controls src="${p.media}"></video>`
-          :`<img src="${p.media}">`):""}
-        <div class="meta">${p.likes.length} likes</div>
-        <div class="like" onclick="likePost('${d.id}')">❤️ Like</div>
-      </div>`;
-    }
-  });
+  signInWithEmailAndPassword(auth, email, password)
+  .then(() => {
+    alert("Login Successful ✅");
+  })
+  .catch(err => alert(err.message));
 }
-window.likePost = async id=>{
-  await updateDoc(doc(db,"posts",id),
-    {likes:arrayUnion(auth.currentUser.uid)});
-};
 </script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial}
+body{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#ece5dd;
+}
+.card{
+  width:100%;
+  max-width:380px;
+  background:#fff;
+  border-radius:15px;
+  padding:30px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+}
+.logo{
+  text-align:center;
+  font-size:32px;
+  color:#25d366;
+  margin-bottom:20px;
+}
+input{
+  width:100%;
+  padding:14px;
+  margin-bottom:15px;
+  border-radius:50px;
+  border:2px solid #25d366;
+  outline:none;
+}
+.btn{
+  width:100%;
+  padding:14px;
+  border-radius:50px;
+  border:2px solid #25d366;
+  background:white;
+  color:#25d366;
+  font-size:16px;
+  cursor:pointer;
+  transition:0.2s;
+}
+.btn:hover{
+  background:#25d366;
+  color:white;
+}
+.btn:active{
+  transform:scale(0.95);
+}
+.note{
+  text-align:center;
+  margin-top:15px;
+  color:#666;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+  <div class="logo">WhatsApp</div>
+
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+
+  <button class="btn" onclick="login()">Login</button>
+  <br><br>
+  <button class="btn" onclick="register()">Register</button>
+
+  <div class="note">Firebase WhatsApp Clone</div>
+</div>
 </body>
 </html>
