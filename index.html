@@ -1,55 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ChatApp Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatApp Login</title>
 
-  <style>
-    body{
-      background:#0b1220;
-      color:white;
-      font-family:Arial;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-    }
-    .box{
-      width:320px;
-      background:#111a2e;
-      padding:20px;
-      border-radius:12px;
-    }
-    input,button{
-      width:100%;
-      padding:12px;
-      margin:8px 0;
-      border-radius:8px;
-      border:none;
-      font-size:16px;
-    }
-    button{
-      background:#2563eb;
-      color:white;
-      cursor:pointer;
-    }
-  </style>
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+*{
+  box-sizing:border-box;
+  font-family:system-ui,-apple-system;
+}
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#020617;
+  color:white;
+}
+.card{
+  width:90%;
+  max-width:360px;
+  background:#020617;
+  border-radius:18px;
+  padding:26px;
+  box-shadow:0 25px 70px rgba(0,0,0,.6);
+}
+h2{
+  text-align:center;
+  margin-bottom:22px;
+}
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  margin-bottom:14px;
+  font-size:15px;
+}
+button{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:2px solid #2563eb;
+  background:#2563eb;
+  color:white;
+  font-size:16px;
+  cursor:pointer;
+  transition:.2s;
+}
+button:active{
+  transform:scale(.97);
+}
+.google{
+  background:white;
+  color:black;
+  border-color:white;
+  margin-top:10px;
+}
+#msg{
+  text-align:center;
+  margin-top:14px;
+  font-size:14px;
+}
+</style>
 </head>
 
 <body>
-  <div class="box">
-    <h2>ChatApp Login</h2>
 
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
+<div class="card">
+  <h2>ChatApp Login</h2>
 
-    <button onclick="login()">Login / Signup</button>
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
 
-    <p id="msg"></p>
-  </div>
+  <button onclick="login()">Login / Signup</button>
+  <button class="google" onclick="googleLogin()">Login with Google</button>
 
-  <!-- 🔴 IMPORTANT: correct path -->
-  <script type="module" src="./Js/auth.js"></script>
+  <div id="msg"></div>
+</div>
+
+<!-- 🔥 Firebase + Auth JS -->
+<script type="module" src="Js/firebase.js"></script>
+<script type="module" src="Js/auth.js"></script>
+
 </body>
 </html>
