@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ChatApp Home</title>
+  <meta charset="UTF-8">
+  <title>Chat</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <h2>Welcome to ChatApp 🎉</h2>
-  <p id="userEmail">Loading...</p>
+<div class="card">
+  <h2>Chat Room</h2>
 
-  <button onclick="logout()">Logout</button>
+  <div id="chatBox" style="height:260px;overflow:auto;margin-bottom:10px"></div>
 
-  <script type="module" src="Js/home.js"></script>
+  <input id="msgInput" placeholder="Type message">
+  <button class="btn-primary" onclick="sendMsg()">Send</button>
+</div>
+
+<script type="module" src="Js/home.js"></script>
 </body>
 </html>
