@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Home</title>
+<style>
+body{background:#020617;color:#fff;font-family:Arial;text-align:center}
+button{padding:12px 20px;border-radius:12px;border:none;background:#2563eb;color:#fff}
+</style>
+</head>
+<body>
+
+<h1>🎉 App Opened</h1>
+<p>Welcome to your app</p>
+<button onclick="logout()">Logout</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
+  authDomain: "chatapp-d38d3.firebaseapp.com",
+  projectId: "chatapp-d38d3",
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.logout = ()=>{
+  signOut(auth).then(()=>location.href="index.html");
+};
+</script>
+
+</body>
+</html>
