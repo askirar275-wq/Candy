@@ -1,29 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ChatApp</title>
 
 <script type="module">
-/* ================= IMPORTS ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult
+  getAuth,onAuthStateChanged,
+  GoogleAuthProvider,signInWithRedirect,getRedirectResult
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc, updateDoc,
-  collection, getDocs, addDoc,
-  query, orderBy, onSnapshot, serverTimestamp
+  getFirestore,doc,setDoc,getDoc,
+  collection,getDocs,addDoc,
+  query,orderBy,onSnapshot,serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* ================= FIREBASE ================= */
+/* FIREBASE */
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
@@ -37,79 +31,43 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ================= GLOBAL ================= */
+/* GLOBAL */
 let currentUser=null;
-let currentChatId=null;
-let isGroup=false;
+let currentChatUser=null;
 let unsub=null;
-let allNewChatUsers=[];
+let forwardMessage=null;
 
-/* ================= AUTH ACTIONS ================= */
-window.login = async()=>{
-  await signInWithEmailAndPassword(auth,email.value.trim(),password.value.trim());
-};
-
-window.register = async()=>{
-  const cred = await createUserWithEmailAndPassword(auth,email.value.trim(),password.value.trim());
-  await setDoc(doc(db,"users",cred.user.uid),{
-    uid:cred.user.uid,
-    email:cred.user.email,
-    name:"",
-    photo:"",
-    online:true,
-    lastSeen:serverTimestamp()
-  });
-};
-
+/* GOOGLE LOGIN */
 const provider = new GoogleAuthProvider();
-window.googleLogin = async()=>{
-  await signInWithRedirect(auth,provider);
-};
+window.googleLogin = ()=> signInWithRedirect(auth,provider);
 
-window.logout = async()=>{
-  if(currentUser){
-    await updateDoc(doc(db,"users",currentUser.uid),{
-      online:false,lastSeen:serverTimestamp()
-    });
-  }
-  await signOut(auth);
-};
-
-/* ===== Handle Google Redirect ===== */
-getRedirectResult(auth).then(async(result)=>{
-  if(result && result.user){
-    const u=result.user;
-    await setDoc(doc(db,"users",u.uid),{
-      uid:u.uid,
-      email:u.email,
-      name:u.displayName||"",
-      photo:u.photoURL||"",
+getRedirectResult(auth).then(async(res)=>{
+  if(res?.user){
+    await setDoc(doc(db,"users",res.user.uid),{
+      uid:res.user.uid,
+      email:res.user.email,
+      name:res.user.displayName||"",
+      photo:res.user.photoURL||"",
       online:true,
       lastSeen:serverTimestamp()
     },{merge:true});
   }
-}).catch(()=>{});
+});
 
-/* ================= AUTH STATE ================= */
-onAuthStateChanged(auth, async(user)=>{
+/* AUTH STATE */
+onAuthStateChanged(auth,async(user)=>{
   if(user){
     currentUser=user;
-    await updateDoc(doc(db,"users",user.uid),{
-      online:true,lastSeen:serverTimestamp()
-    });
     loginBox.style.display="none";
     homeBox.style.display="flex";
-    chatBox.style.display="none";
     loadUsers();
-    loadGroups();
   }else{
     loginBox.style.display="flex";
     homeBox.style.display="none";
-    chatBox.style.display="none";
   }
 });
 
-/* ================= LOAD USERS (CHATS TAB) ================= */
+/* USERS LIST */
 async function loadUsers(){
   users.innerHTML="";
   const snap=await getDocs(collection(db,"users"));
@@ -118,85 +76,58 @@ async function loadUsers(){
       const u=d.data();
       const div=document.createElement("div");
       div.className="user";
-      div.innerHTML=`
-        <img src="${u.photo||'https://via.placeholder.com/40'}">
-        <span>${u.name||u.email}</span>
-      `;
-      div.onclick=()=>openChat(d.id,false,u.name||u.email);
+      div.textContent=u.name||u.email;
+      div.onclick=()=>openChat(d.id,u.name||u.email);
       users.appendChild(div);
     }
   });
 }
 
-/* ================= GROUPS ================= */
-async function loadGroups(){
-  groups.innerHTML="";
-  const snap=await getDocs(collection(db,"groups"));
-  snap.forEach(d=>{
-    const g=d.data();
-    if(g.members && g.members.includes(currentUser.uid)){
-      const div=document.createElement("div");
-      div.className="user";
-      div.innerHTML="👥 <span>"+g.name+"</span>";
-      div.onclick=()=>openChat(d.id,true,g.name);
-      groups.appendChild(div);
-    }
-  });
-}
-
-window.createGroup = async()=>{
-  const name=prompt("Group name");
-  if(!name) return;
-  await addDoc(collection(db,"groups"),{
-    name,
-    members:[currentUser.uid],
-    createdBy:currentUser.uid,
-    createdAt:Date.now()
-  });
-  loadGroups();
-};
-
-/* ================= CHAT ================= */
+/* CHAT */
 function chatId(a,b){return [a,b].sort().join("_");}
 
-function openChat(id,group,title){
+function openChat(uid,name){
+  currentChatUser=uid;
   homeBox.style.display="none";
   chatBox.style.display="flex";
-  chatTitle.textContent=title;
+  chatTitle.textContent=name;
   messages.innerHTML="";
-  isGroup=group;
-  currentChatId=id;
-  if(unsub) unsub();
+  if(unsub)unsub();
 
-  const q = group
-    ? query(collection(db,"groups",id,"messages"),orderBy("time"))
-    : query(collection(db,"chats",chatId(currentUser.uid,id),"messages"),orderBy("time"));
+  const q=query(
+    collection(db,"chats",chatId(currentUser.uid,uid),"messages"),
+    orderBy("time")
+  );
 
-  unsub=onSnapshot(q,(snap)=>{
+  unsub=onSnapshot(q,snap=>{
     messages.innerHTML="";
     snap.forEach(d=>{
       const m=d.data();
       const div=document.createElement("div");
       div.className="msg "+(m.from===currentUser.uid?"me":"other");
-      div.innerHTML=(group?`<small>${m.sender||""}</small><br>`:"")+m.text;
+
+      div.oncontextmenu=(e)=>{
+        e.preventDefault();
+        if(confirm("Forward this message?")){
+          openForward(m);
+        }
+      };
+
+      div.innerHTML=`
+        ${m.forwarded?'<small>Forwarded</small><br>':''}
+        ${m.text}
+      `;
       messages.appendChild(div);
-      messages.scrollTop=messages.scrollHeight;
     });
   });
 }
 
-window.sendMsg = async()=>{
-  if(!msg.value.trim()) return;
-  if(isGroup){
-    await addDoc(collection(db,"groups",currentChatId,"messages"),{
-      text:msg.value,from:currentUser.uid,
-      sender:currentUser.email,time:Date.now()
-    });
-  }else{
-    await addDoc(collection(db,"chats",chatId(currentUser.uid,currentChatId),"messages"),{
-      text:msg.value,from:currentUser.uid,time:Date.now()
-    });
-  }
+window.sendMsg=async()=>{
+  if(!msg.value.trim())return;
+  await addDoc(
+    collection(db,"chats",chatId(currentUser.uid,currentChatUser),"messages"),
+    {text:msg.value,from:currentUser.uid,time:Date.now()}
+  );
   msg.value="";
 };
 
@@ -205,94 +136,58 @@ window.backHome=()=>{
   homeBox.style.display="flex";
 };
 
-/* ================= NEW CHAT + SEARCH ================= */
-window.openNewChat = async()=>{
-  newChatBox.style.display="flex";
-  newChatUsers.innerHTML="";
-  newChatSearch.value="";
-  allNewChatUsers=[];
-
-  const snap=await getDocs(collection(db,"users"));
-  snap.forEach(d=>{
-    if(d.id!==currentUser.uid){
-      const u=d.data();
-      allNewChatUsers.push({
-        uid:d.id,
-        name:u.name||"",
-        email:u.email||"",
-        photo:u.photo||""
-      });
-    }
-  });
-  renderNewChatUsers(allNewChatUsers);
-};
-
-function renderNewChatUsers(list){
-  newChatUsers.innerHTML="";
-  list.forEach(u=>{
-    const div=document.createElement("div");
-    div.className="user";
-    div.innerHTML=`
-      <img src="${u.photo||'https://via.placeholder.com/40'}">
-      <span>${u.name||u.email}</span>
-    `;
-    div.onclick=()=>{
-      closeNewChat();
-      openChat(u.uid,false,u.name||u.email);
-    };
-    newChatUsers.appendChild(div);
+/* FORWARD */
+function openForward(message){
+  forwardMessage=message;
+  forwardBox.style.display="flex";
+  forwardUsers.innerHTML="";
+  getDocs(collection(db,"users")).then(snap=>{
+    snap.forEach(d=>{
+      if(d.id!==currentUser.uid){
+        const div=document.createElement("div");
+        div.className="user";
+        div.textContent=d.data().name||d.data().email;
+        div.onclick=()=>forwardTo(d.id);
+        forwardUsers.appendChild(div);
+      }
+    });
   });
 }
 
-window.filterNewChatUsers=()=>{
-  const q=newChatSearch.value.toLowerCase();
-  const f=allNewChatUsers.filter(u=>
-    u.name.toLowerCase().includes(q) ||
-    u.email.toLowerCase().includes(q)
+async function forwardTo(uid){
+  await addDoc(
+    collection(db,"chats",chatId(currentUser.uid,uid),"messages"),
+    {
+      text:forwardMessage.text,
+      from:currentUser.uid,
+      time:Date.now(),
+      forwarded:true
+    }
   );
-  renderNewChatUsers(f);
-};
-
-window.closeNewChat=()=>{
-  newChatBox.style.display="none";
-};
+  forwardBox.style.display="none";
+}
 </script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
-body{height:100vh;background:#ece5dd;display:flex;justify-content:center;align-items:center}
-
-/* LOGIN */
-.card{width:100%;max-width:420px;background:#fff;padding:24px;border-radius:16px}
-input,.btn{width:100%;padding:14px;border-radius:50px;margin-bottom:12px;border:2px solid #25d366}
-.btn{background:#25d366;color:#fff}
-
-/* HOME */
-.home{width:100%;max-width:420px;height:90vh;background:#fff;border-radius:16px;display:none;flex-direction:column;overflow:hidden}
-.topbar{background:#075e54;color:#fff;padding:14px;font-size:18px}
-.tabs{display:flex}
-.tab{flex:1;padding:12px;border:none;background:none}
-.tab.active{color:#25d366;font-weight:600;border-bottom:3px solid #25d366}
-.tab-page{display:none;flex:1;overflow:auto}
-.tab-page.active{display:block}
-.user{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid #eee}
-.user img{width:40px;height:40px;border-radius:50%}
-
-/* CHAT */
-.chat{width:100%;max-width:420px;height:90vh;background:#fff;border-radius:16px;display:none;flex-direction:column}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{height:100vh;background:#ece5dd;display:flex;align-items:center;justify-content:center}
+.card,.home,.chat,.new-chat{
+  width:100%;max-width:420px;height:90vh;
+  background:#fff;border-radius:12px;
+  display:none;flex-direction:column
+}
+.card{display:flex;align-items:center;justify-content:center;padding:20px}
+.btn{padding:14px;border:none;border-radius:30px;background:#25d366;color:#fff;width:100%}
+.users{flex:1;overflow:auto}
+.user{padding:14px;border-bottom:1px solid #eee;cursor:pointer}
+.top{background:#075e54;color:#fff;padding:14px}
 .messages{flex:1;padding:10px;overflow:auto;background:#efeae2}
-.msg{max-width:70%;padding:10px;border-radius:12px;margin-bottom:8px}
+.msg{max-width:70%;padding:10px;border-radius:10px;margin-bottom:8px}
 .me{background:#dcf8c6;margin-left:auto}
 .other{background:#fff}
 .send{display:flex;padding:10px;gap:8px}
-
-/* FAB */
-.fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;font-size:32px;border:none}
-
-/* NEW CHAT */
-.new-chat{position:fixed;inset:0;background:#fff;display:none;flex-direction:column}
-.search-box{padding:10px}
-.search-box input{width:100%;padding:12px;border-radius:25px;border:none;background:#f0f0f0}
+.send input{flex:1}
+small{opacity:.6}
 </style>
 </head>
 
@@ -300,50 +195,35 @@ input,.btn{width:100%;padding:14px;border-radius:50px;margin-bottom:12px;border:
 
 <!-- LOGIN -->
 <div class="card" id="loginBox">
-  <h2 style="text-align:center;color:#25d366">ChatApp</h2><br>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button class="btn" onclick="login()">Login</button>
-  <button class="btn" onclick="register()">Register</button>
-  <button class="btn" onclick="googleLogin()">Google Login</button>
+  <button class="btn" onclick="googleLogin()">Continue with Google</button>
 </div>
 
 <!-- HOME -->
 <div class="home" id="homeBox">
-  <div class="topbar">ChatApp</div>
-  <div class="tabs">
-    <button class="tab active">Chats</button>
-    <button class="tab">Status</button>
-    <button class="tab">Groups</button>
-    <button class="tab">Calls</button>
-  </div>
-  <div class="tab-page active">
-    <div class="users" id="users"></div>
-  </div>
-  <div class="tab-page">
-    <div class="users" id="groups"></div>
-  </div>
-</div>
-
-<button class="fab" onclick="openNewChat()">+</button>
-
-<!-- NEW CHAT -->
-<div class="new-chat" id="newChatBox">
-  <div class="topbar"><button onclick="closeNewChat()">⬅</button> New Chat</div>
-  <div class="search-box">
-    <input id="newChatSearch" placeholder="Search" oninput="filterNewChatUsers()">
-  </div>
-  <div class="users" id="newChatUsers"></div>
+  <div class="top">Chats</div>
+  <div class="users" id="users"></div>
 </div>
 
 <!-- CHAT -->
 <div class="chat" id="chatBox">
-  <div class="topbar"><button onclick="backHome()">⬅</button> <span id="chatTitle"></span></div>
+  <div class="top">
+    <button onclick="backHome()">⬅</button>
+    <span id="chatTitle"></span>
+  </div>
   <div class="messages" id="messages"></div>
   <div class="send">
     <input id="msg" placeholder="Message">
     <button class="btn" onclick="sendMsg()">Send</button>
   </div>
+</div>
+
+<!-- FORWARD -->
+<div class="new-chat" id="forwardBox">
+  <div class="top">
+    <button onclick="forwardBox.style.display='none'">⬅</button>
+    Forward to
+  </div>
+  <div class="users" id="forwardUsers"></div>
 </div>
 
 </body>
