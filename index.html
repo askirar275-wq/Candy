@@ -3,26 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Clone</title>
+<title>ChatApp</title>
 
 <script type="module">
+/* ================= IMPORTS ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { 
-  getAuth,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
+import {
+  getAuth,onAuthStateChanged,
   signInWithEmailAndPassword,
-  signOut
+  createUserWithEmailAndPassword,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
 import {
-  getFirestore,
-  doc,
-  setDoc,
-  collection,
-  getDocs
+  getFirestore,doc,setDoc,getDoc,updateDoc,
+  collection,getDocs,addDoc,
+  query,orderBy,onSnapshot,serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+import {
+  getStorage,ref,uploadBytes,getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
   authDomain: "chatapp-d38d3.firebaseapp.com",
@@ -35,128 +40,185 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-/* ---------- AUTH ---------- */
-window.register = async () => {
-  const email = emailInput.value.trim();
-  const pass = passwordInput.value.trim();
-  if(pass.length < 6) return alert("Password min 6 characters");
+/* ================= GLOBAL ================= */
+let currentUser=null;
+let currentChatId=null;
+let isGroup=false;
+let unsub=null;
 
-  const userCred = await createUserWithEmailAndPassword(auth,email,pass);
+/* ================= AUTH ================= */
+window.login = async()=>{
+  await signInWithEmailAndPassword(auth,email.value,password.value);
+};
 
-  await setDoc(doc(db,"users",userCred.user.uid),{
-    email,
-    uid: userCred.user.uid,
-    createdAt: Date.now()
+window.register = async()=>{
+  const cred = await createUserWithEmailAndPassword(auth,email.value,password.value);
+  await setDoc(doc(db,"users",cred.user.uid),{
+    uid:cred.user.uid,
+    email:cred.user.email,
+    name:"",
+    photo:"",
+    online:true,
+    lastSeen:serverTimestamp()
   });
-
-  alert("Account Created ✅");
 };
 
-window.login = async () => {
-  await signInWithEmailAndPassword(
-    auth,
-    emailInput.value.trim(),
-    passwordInput.value.trim()
-  );
+window.googleLogin = async()=>{
+  const provider = new GoogleAuthProvider();
+  const res = await signInWithPopup(auth,provider);
+  await setDoc(doc(db,"users",res.user.uid),{
+    uid:res.user.uid,
+    email:res.user.email,
+    name:res.user.displayName||"",
+    photo:res.user.photoURL||"",
+    online:true,
+    lastSeen:serverTimestamp()
+  },{merge:true});
 };
 
-window.logout = async () => {
+window.logout = async()=>{
+  await updateDoc(doc(db,"users",currentUser.uid),{
+    online:false,
+    lastSeen:serverTimestamp()
+  });
   await signOut(auth);
 };
 
-/* ---------- AUTH STATE ---------- */
-onAuthStateChanged(auth, async (user)=>{
+/* ================= AUTH STATE ================= */
+onAuthStateChanged(auth,async user=>{
   if(user){
+    currentUser=user;
     loginBox.style.display="none";
     homeBox.style.display="flex";
-    currentUser.textContent = user.email;
-    loadUsers(user.uid);
+    await updateDoc(doc(db,"users",user.uid),{online:true});
+    loadUsers();
+    loadGroups();
   }else{
     loginBox.style.display="flex";
     homeBox.style.display="none";
+    chatBox.style.display="none";
   }
 });
 
-/* ---------- LOAD USERS ---------- */
-async function loadUsers(myUid){
-  usersList.innerHTML="";
-  const snap = await getDocs(collection(db,"users"));
-  snap.forEach(docu=>{
-    if(docu.id !== myUid){
-      const div = document.createElement("div");
+/* ================= USERS ================= */
+async function loadUsers(){
+  users.innerHTML="";
+  const snap=await getDocs(collection(db,"users"));
+  snap.forEach(d=>{
+    if(d.id!==currentUser.uid){
+      const u=d.data();
+      const div=document.createElement("div");
       div.className="user";
-      div.textContent = docu.data().email;
-      usersList.appendChild(div);
+      div.innerHTML=`<img src="${u.photo||'https://via.placeholder.com/40'}"><span>${u.name||u.email}</span>`;
+      div.onclick=()=>openChat(d.id,false,u.name||u.email);
+      users.appendChild(div);
     }
   });
 }
+
+/* ================= GROUPS ================= */
+async function loadGroups(){
+  const snap=await getDocs(collection(db,"groups"));
+  snap.forEach(d=>{
+    const g=d.data();
+    if(g.members.includes(currentUser.uid)){
+      const div=document.createElement("div");
+      div.className="user";
+      div.innerHTML=`👥 ${g.name}`;
+      div.onclick=()=>openChat(d.id,true,g.name);
+      users.appendChild(div);
+    }
+  });
+}
+
+window.createGroup = async()=>{
+  const name=prompt("Group name");
+  if(!name) return;
+  await addDoc(collection(db,"groups"),{
+    name,
+    members:[currentUser.uid],
+    createdBy:currentUser.uid,
+    createdAt:Date.now()
+  });
+  loadGroups();
+};
+
+/* ================= CHAT ================= */
+function chatId(a,b){return [a,b].sort().join("_");}
+
+function openChat(id,group,title){
+  homeBox.style.display="none";
+  chatBox.style.display="flex";
+  chatTitle.textContent=title;
+  messages.innerHTML="";
+  isGroup=group;
+  currentChatId=id;
+
+  if(unsub) unsub();
+
+  const q = group
+  ? query(collection(db,"groups",id,"messages"),orderBy("time"))
+  : query(collection(db,"chats",chatId(currentUser.uid,id),"messages"),orderBy("time"));
+
+  unsub = onSnapshot(q,snap=>{
+    messages.innerHTML="";
+    snap.forEach(d=>{
+      const m=d.data();
+      const div=document.createElement("div");
+      div.className="msg "+(m.from===currentUser.uid?"me":"other");
+      div.innerHTML=(group?`<small>${m.sender}</small><br>`:"")+m.text;
+      messages.appendChild(div);
+      messages.scrollTop=messages.scrollHeight;
+    });
+  });
+}
+
+window.sendMsg = async()=>{
+  if(!msg.value.trim()) return;
+
+  if(isGroup){
+    await addDoc(collection(db,"groups",currentChatId,"messages"),{
+      text:msg.value,
+      from:currentUser.uid,
+      sender:currentUser.email,
+      time:Date.now()
+    });
+  }else{
+    await addDoc(collection(db,"chats",chatId(currentUser.uid,currentChatId),"messages"),{
+      text:msg.value,
+      from:currentUser.uid,
+      time:Date.now()
+    });
+  }
+  msg.value="";
+};
+
+window.backHome=()=>{
+  chatBox.style.display="none";
+  homeBox.style.display="flex";
+};
 </script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial}
-body{height:100vh;background:#ece5dd;display:flex;align-items:center;justify-content:center}
-
-/* LOGIN */
-.card{
-  width:100%;
-  max-width:380px;
-  background:#fff;
-  padding:30px;
-  border-radius:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,.15);
-}
-.logo{text-align:center;font-size:32px;color:#25d366;margin-bottom:20px}
-input{
-  width:100%;padding:14px;margin-bottom:15px;
-  border-radius:50px;border:2px solid #25d366;outline:none
-}
-.btn{
-  width:100%;padding:14px;border-radius:50px;
-  border:2px solid #25d366;background:#fff;
-  color:#25d366;font-size:16px;cursor:pointer;
-  transition:.2s
-}
-.btn:hover{background:#25d366;color:#fff}
-.btn:active{transform:scale(.95)}
-
-/* HOME */
-.home{
-  width:100%;
-  max-width:420px;
-  height:90vh;
-  background:#fff;
-  border-radius:16px;
-  display:none;
-  flex-direction:column;
-  overflow:hidden;
-}
-.top{
-  background:#075e54;
-  color:#fff;
-  padding:15px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.users{
-  flex:1;
-  overflow-y:auto;
-}
-.user{
-  padding:15px;
-  border-bottom:1px solid #eee;
-  cursor:pointer;
-}
-.user:hover{background:#f5f5f5}
-.logout{
-  background:#fff;
-  border:2px solid #fff;
-  color:#075e54;
-  padding:6px 12px;
-  border-radius:20px;
-  cursor:pointer;
-}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
+body{height:100vh;background:#ece5dd;display:flex;justify-content:center;align-items:center}
+.card,.home,.chat{width:100%;max-width:420px;height:90vh;background:#fff;border-radius:16px;display:none;flex-direction:column}
+.card{display:flex;padding:24px}
+input,.btn{padding:14px;border-radius:50px;margin-bottom:12px;border:2px solid #25d366}
+.btn{background:#25d366;color:#fff}
+.top{background:#075e54;color:#fff;padding:14px;font-size:18px}
+.users{flex:1;overflow:auto}
+.user{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid #eee}
+.user img{width:40px;height:40px;border-radius:50%}
+.messages{flex:1;padding:10px;overflow:auto;background:#efeae2}
+.msg{max-width:70%;padding:10px;border-radius:12px;margin-bottom:8px}
+.me{background:#dcf8c6;margin-left:auto}
+.other{background:#fff}
+.send{display:flex;padding:10px}
+.send input{flex:1}
+small{opacity:.6}
 </style>
 </head>
 
@@ -164,20 +226,32 @@ input{
 
 <!-- LOGIN -->
 <div class="card" id="loginBox">
-  <div class="logo">WhatsApp</div>
-  <input id="emailInput" type="email" placeholder="Email">
-  <input id="passwordInput" type="password" placeholder="Password">
-  <button class="btn" onclick="login()">Login</button><br><br>
+  <h2 style="text-align:center;color:#25d366">ChatApp</h2><br>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button class="btn" onclick="login()">Login</button>
   <button class="btn" onclick="register()">Register</button>
+  <button class="btn" onclick="googleLogin()">Google Login</button>
 </div>
 
 <!-- HOME -->
 <div class="home" id="homeBox">
+  <div class="top">ChatApp</div>
+  <button class="btn" onclick="createGroup()">➕ Create Group</button>
+  <div class="users" id="users"></div>
+</div>
+
+<!-- CHAT -->
+<div class="chat" id="chatBox">
   <div class="top">
-    <div id="currentUser"></div>
-    <button class="logout" onclick="logout()">Logout</button>
+    <button onclick="backHome()">⬅</button>
+    <span id="chatTitle"></span>
   </div>
-  <div class="users" id="usersList"></div>
+  <div class="messages" id="messages"></div>
+  <div class="send">
+    <input id="msg" placeholder="Message">
+    <button class="btn" onclick="sendMsg()">Send</button>
+  </div>
 </div>
 
 </body>
