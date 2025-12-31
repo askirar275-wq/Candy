@@ -3,13 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Login</title>
+<title>WhatsApp Clone</title>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
-from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { 
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7U96MP2BheQ1ilIUqd2UgycPs8KVC-Gc",
@@ -17,106 +29,156 @@ const firebaseConfig = {
   projectId: "chatapp-d38d3",
   storageBucket: "chatapp-d38d3.firebasestorage.app",
   messagingSenderId: "321814992234",
-  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113",
-  measurementId: "G-NH050BSPC0"
+  appId: "1:321814992234:web:d1d8eb9d63fcafc53ec113"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-window.register = function(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+/* ---------- AUTH ---------- */
+window.register = async () => {
+  const email = emailInput.value.trim();
+  const pass = passwordInput.value.trim();
+  if(pass.length < 6) return alert("Password min 6 characters");
 
-  createUserWithEmailAndPassword(auth, email, password)
-  .then(() => {
-    alert("Account Created ✅");
-  })
-  .catch(err => alert(err.message));
-}
+  const userCred = await createUserWithEmailAndPassword(auth,email,pass);
 
-window.login = function(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  await setDoc(doc(db,"users",userCred.user.uid),{
+    email,
+    uid: userCred.user.uid,
+    createdAt: Date.now()
+  });
 
-  signInWithEmailAndPassword(auth, email, password)
-  .then(() => {
-    alert("Login Successful ✅");
-  })
-  .catch(err => alert(err.message));
+  alert("Account Created ✅");
+};
+
+window.login = async () => {
+  await signInWithEmailAndPassword(
+    auth,
+    emailInput.value.trim(),
+    passwordInput.value.trim()
+  );
+};
+
+window.logout = async () => {
+  await signOut(auth);
+};
+
+/* ---------- AUTH STATE ---------- */
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    loginBox.style.display="none";
+    homeBox.style.display="flex";
+    currentUser.textContent = user.email;
+    loadUsers(user.uid);
+  }else{
+    loginBox.style.display="flex";
+    homeBox.style.display="none";
+  }
+});
+
+/* ---------- LOAD USERS ---------- */
+async function loadUsers(myUid){
+  usersList.innerHTML="";
+  const snap = await getDocs(collection(db,"users"));
+  snap.forEach(docu=>{
+    if(docu.id !== myUid){
+      const div = document.createElement("div");
+      div.className="user";
+      div.textContent = docu.data().email;
+      usersList.appendChild(div);
+    }
+  });
 }
 </script>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial}
-body{
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#ece5dd;
-}
+body{height:100vh;background:#ece5dd;display:flex;align-items:center;justify-content:center}
+
+/* LOGIN */
 .card{
   width:100%;
   max-width:380px;
   background:#fff;
-  border-radius:15px;
   padding:30px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
 }
-.logo{
-  text-align:center;
-  font-size:32px;
-  color:#25d366;
-  margin-bottom:20px;
-}
+.logo{text-align:center;font-size:32px;color:#25d366;margin-bottom:20px}
 input{
-  width:100%;
-  padding:14px;
-  margin-bottom:15px;
-  border-radius:50px;
-  border:2px solid #25d366;
-  outline:none;
+  width:100%;padding:14px;margin-bottom:15px;
+  border-radius:50px;border:2px solid #25d366;outline:none
 }
 .btn{
+  width:100%;padding:14px;border-radius:50px;
+  border:2px solid #25d366;background:#fff;
+  color:#25d366;font-size:16px;cursor:pointer;
+  transition:.2s
+}
+.btn:hover{background:#25d366;color:#fff}
+.btn:active{transform:scale(.95)}
+
+/* HOME */
+.home{
   width:100%;
-  padding:14px;
-  border-radius:50px;
-  border:2px solid #25d366;
-  background:white;
-  color:#25d366;
-  font-size:16px;
+  max-width:420px;
+  height:90vh;
+  background:#fff;
+  border-radius:16px;
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+}
+.top{
+  background:#075e54;
+  color:#fff;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.users{
+  flex:1;
+  overflow-y:auto;
+}
+.user{
+  padding:15px;
+  border-bottom:1px solid #eee;
   cursor:pointer;
-  transition:0.2s;
 }
-.btn:hover{
-  background:#25d366;
-  color:white;
-}
-.btn:active{
-  transform:scale(0.95);
-}
-.note{
-  text-align:center;
-  margin-top:15px;
-  color:#666;
-  font-size:14px;
+.user:hover{background:#f5f5f5}
+.logout{
+  background:#fff;
+  border:2px solid #fff;
+  color:#075e54;
+  padding:6px 12px;
+  border-radius:20px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
-<div class="card">
+
+<!-- LOGIN -->
+<div class="card" id="loginBox">
   <div class="logo">WhatsApp</div>
-
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-
-  <button class="btn" onclick="login()">Login</button>
-  <br><br>
+  <input id="emailInput" type="email" placeholder="Email">
+  <input id="passwordInput" type="password" placeholder="Password">
+  <button class="btn" onclick="login()">Login</button><br><br>
   <button class="btn" onclick="register()">Register</button>
-
-  <div class="note">Firebase WhatsApp Clone</div>
 </div>
+
+<!-- HOME -->
+<div class="home" id="homeBox">
+  <div class="top">
+    <div id="currentUser"></div>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+  <div class="users" id="usersList"></div>
+</div>
+
 </body>
 </html>
