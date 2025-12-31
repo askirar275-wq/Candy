@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>ChatApp</title>
 
 <script type="module">
 /* ================= IMPORTS ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import {
-  getAuth,onAuthStateChanged,
+  getAuth, onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithRedirect,
+  getRedirectResult
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
 import {
-  getFirestore,doc,setDoc,getDoc,updateDoc,
-  collection,getDocs,addDoc,
-  query,orderBy,onSnapshot,serverTimestamp
+  getFirestore, doc, setDoc, getDoc, updateDoc,
+  collection, getDocs, addDoc,
+  query, orderBy, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 import {
-  getStorage,ref,uploadBytes,getDownloadURL
+  getStorage, ref, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
 /* ================= FIREBASE ================= */
@@ -43,161 +44,187 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 /* ================= GLOBAL ================= */
-let currentUser=null;
-let currentChatId=null;
-let isGroup=false;
-let unsub=null;
+let currentUser = null;
+let currentChatId = null;
+let isGroup = false;
+let unsub = null;
 
-/* ================= AUTH ================= */
-window.login = async()=>{
-  await signInWithEmailAndPassword(auth,email.value,password.value);
+/* ================= AUTH ACTIONS ================= */
+window.login = async () => {
+  await signInWithEmailAndPassword(auth, email.value.trim(), password.value.trim());
 };
 
-window.register = async()=>{
-  const cred = await createUserWithEmailAndPassword(auth,email.value,password.value);
-  await setDoc(doc(db,"users",cred.user.uid),{
-    uid:cred.user.uid,
-    email:cred.user.email,
-    name:"",
-    photo:"",
-    online:true,
-    lastSeen:serverTimestamp()
+window.register = async () => {
+  const cred = await createUserWithEmailAndPassword(auth, email.value.trim(), password.value.trim());
+  await setDoc(doc(db, "users", cred.user.uid), {
+    uid: cred.user.uid,
+    email: cred.user.email,
+    name: "",
+    photo: "",
+    online: true,
+    lastSeen: serverTimestamp()
   });
 };
 
-window.googleLogin = async()=>{
-  const provider = new GoogleAuthProvider();
-  const res = await signInWithPopup(auth,provider);
-  await setDoc(doc(db,"users",res.user.uid),{
-    uid:res.user.uid,
-    email:res.user.email,
-    name:res.user.displayName||"",
-    photo:res.user.photoURL||"",
-    online:true,
-    lastSeen:serverTimestamp()
-  },{merge:true});
+const provider = new GoogleAuthProvider();
+window.googleLogin = async () => {
+  await signInWithRedirect(auth, provider);
 };
 
-window.logout = async()=>{
-  await updateDoc(doc(db,"users",currentUser.uid),{
-    online:false,
-    lastSeen:serverTimestamp()
-  });
+window.logout = async () => {
+  if (currentUser) {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      online: false,
+      lastSeen: serverTimestamp()
+    });
+  }
   await signOut(auth);
 };
 
+/* ================= HANDLE GOOGLE REDIRECT (IMPORTANT) ================= */
+getRedirectResult(auth)
+  .then(async (result) => {
+    if (result && result.user) {
+      const u = result.user;
+      await setDoc(doc(db, "users", u.uid), {
+        uid: u.uid,
+        email: u.email,
+        name: u.displayName || "",
+        photo: u.photoURL || "",
+        online: true,
+        lastSeen: serverTimestamp()
+      }, { merge: true });
+
+      // Direct HOME
+      loginBox.style.display = "none";
+      homeBox.style.display = "flex";
+      loadUsers();
+      loadGroups();
+    }
+  })
+  .catch(err => console.error("Redirect error:", err));
+
 /* ================= AUTH STATE ================= */
-onAuthStateChanged(auth,async user=>{
-  if(user){
-    currentUser=user;
-    loginBox.style.display="none";
-    homeBox.style.display="flex";
-    await updateDoc(doc(db,"users",user.uid),{online:true});
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    await updateDoc(doc(db, "users", user.uid), {
+      online: true,
+      lastSeen: serverTimestamp()
+    });
+
+    loginBox.style.display = "none";
+    homeBox.style.display = "flex";
+    chatBox.style.display = "none";
+
     loadUsers();
     loadGroups();
-  }else{
-    loginBox.style.display="flex";
-    homeBox.style.display="none";
-    chatBox.style.display="none";
+  } else {
+    loginBox.style.display = "flex";
+    homeBox.style.display = "none";
+    chatBox.style.display = "none";
   }
 });
 
 /* ================= USERS ================= */
-async function loadUsers(){
-  users.innerHTML="";
-  const snap=await getDocs(collection(db,"users"));
-  snap.forEach(d=>{
-    if(d.id!==currentUser.uid){
-      const u=d.data();
-      const div=document.createElement("div");
-      div.className="user";
-      div.innerHTML=`<img src="${u.photo||'https://via.placeholder.com/40'}"><span>${u.name||u.email}</span>`;
-      div.onclick=()=>openChat(d.id,false,u.name||u.email);
+async function loadUsers() {
+  users.innerHTML = "";
+  const snap = await getDocs(collection(db, "users"));
+  snap.forEach(d => {
+    if (d.id !== currentUser.uid) {
+      const u = d.data();
+      const div = document.createElement("div");
+      div.className = "user";
+      div.innerHTML = `
+        <img src="${u.photo || 'https://via.placeholder.com/40'}">
+        <span>${u.name || u.email}</span>
+      `;
+      div.onclick = () => openChat(d.id, false, u.name || u.email);
       users.appendChild(div);
     }
   });
 }
 
 /* ================= GROUPS ================= */
-async function loadGroups(){
-  const snap=await getDocs(collection(db,"groups"));
-  snap.forEach(d=>{
-    const g=d.data();
-    if(g.members.includes(currentUser.uid)){
-      const div=document.createElement("div");
-      div.className="user";
-      div.innerHTML=`👥 ${g.name}`;
-      div.onclick=()=>openChat(d.id,true,g.name);
+async function loadGroups() {
+  const snap = await getDocs(collection(db, "groups"));
+  snap.forEach(d => {
+    const g = d.data();
+    if (g.members && g.members.includes(currentUser.uid)) {
+      const div = document.createElement("div");
+      div.className = "user";
+      div.innerHTML = `👥 <span>${g.name}</span>`;
+      div.onclick = () => openChat(d.id, true, g.name);
       users.appendChild(div);
     }
   });
 }
 
-window.createGroup = async()=>{
-  const name=prompt("Group name");
-  if(!name) return;
-  await addDoc(collection(db,"groups"),{
+window.createGroup = async () => {
+  const name = prompt("Group name");
+  if (!name) return;
+  await addDoc(collection(db, "groups"), {
     name,
-    members:[currentUser.uid],
-    createdBy:currentUser.uid,
-    createdAt:Date.now()
+    members: [currentUser.uid],
+    createdBy: currentUser.uid,
+    createdAt: Date.now()
   });
   loadGroups();
 };
 
 /* ================= CHAT ================= */
-function chatId(a,b){return [a,b].sort().join("_");}
+function chatId(a, b) { return [a, b].sort().join("_"); }
 
-function openChat(id,group,title){
-  homeBox.style.display="none";
-  chatBox.style.display="flex";
-  chatTitle.textContent=title;
-  messages.innerHTML="";
-  isGroup=group;
-  currentChatId=id;
+function openChat(id, group, title) {
+  homeBox.style.display = "none";
+  chatBox.style.display = "flex";
+  chatTitle.textContent = title;
+  messages.innerHTML = "";
+  isGroup = group;
+  currentChatId = id;
 
-  if(unsub) unsub();
+  if (unsub) unsub();
 
   const q = group
-  ? query(collection(db,"groups",id,"messages"),orderBy("time"))
-  : query(collection(db,"chats",chatId(currentUser.uid,id),"messages"),orderBy("time"));
+    ? query(collection(db, "groups", id, "messages"), orderBy("time"))
+    : query(collection(db, "chats", chatId(currentUser.uid, id), "messages"), orderBy("time"));
 
-  unsub = onSnapshot(q,snap=>{
-    messages.innerHTML="";
-    snap.forEach(d=>{
-      const m=d.data();
-      const div=document.createElement("div");
-      div.className="msg "+(m.from===currentUser.uid?"me":"other");
-      div.innerHTML=(group?`<small>${m.sender}</small><br>`:"")+m.text;
+  unsub = onSnapshot(q, snap => {
+    messages.innerHTML = "";
+    snap.forEach(d => {
+      const m = d.data();
+      const div = document.createElement("div");
+      div.className = "msg " + (m.from === currentUser.uid ? "me" : "other");
+      div.innerHTML = (group ? `<small>${m.sender || ""}</small><br>` : "") + m.text;
       messages.appendChild(div);
-      messages.scrollTop=messages.scrollHeight;
+      messages.scrollTop = messages.scrollHeight;
     });
   });
 }
 
-window.sendMsg = async()=>{
-  if(!msg.value.trim()) return;
+window.sendMsg = async () => {
+  if (!msg.value.trim()) return;
 
-  if(isGroup){
-    await addDoc(collection(db,"groups",currentChatId,"messages"),{
-      text:msg.value,
-      from:currentUser.uid,
-      sender:currentUser.email,
-      time:Date.now()
+  if (isGroup) {
+    await addDoc(collection(db, "groups", currentChatId, "messages"), {
+      text: msg.value,
+      from: currentUser.uid,
+      sender: currentUser.email,
+      time: Date.now()
     });
-  }else{
-    await addDoc(collection(db,"chats",chatId(currentUser.uid,currentChatId),"messages"),{
-      text:msg.value,
-      from:currentUser.uid,
-      time:Date.now()
+  } else {
+    await addDoc(collection(db, "chats", chatId(currentUser.uid, currentChatId), "messages"), {
+      text: msg.value,
+      from: currentUser.uid,
+      time: Date.now()
     });
   }
-  msg.value="";
+  msg.value = "";
 };
 
-window.backHome=()=>{
-  chatBox.style.display="none";
-  homeBox.style.display="flex";
+window.backHome = () => {
+  chatBox.style.display = "none";
+  homeBox.style.display = "flex";
 };
 </script>
 
@@ -216,7 +243,7 @@ input,.btn{padding:14px;border-radius:50px;margin-bottom:12px;border:2px solid #
 .msg{max-width:70%;padding:10px;border-radius:12px;margin-bottom:8px}
 .me{background:#dcf8c6;margin-left:auto}
 .other{background:#fff}
-.send{display:flex;padding:10px}
+.send{display:flex;padding:10px;gap:8px}
 .send input{flex:1}
 small{opacity:.6}
 </style>
